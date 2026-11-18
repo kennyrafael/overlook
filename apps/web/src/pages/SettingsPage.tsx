@@ -14,6 +14,7 @@ import { useProjects } from '../store/projects';
 import { useTools } from '../store/tools';
 import { desktop, type DesktopPrefs } from '../desktop';
 import { ToolList } from '../components/ToolList';
+import { AppDataCards } from '../components/AppDataCards';
 
 type PriceRow = ModelPrice & { key: string };
 
@@ -142,6 +143,7 @@ export default function SettingsPage() {
         <Card title="Tools on this computer" className="mt-3">
           <ToolList tools={tools} />
         </Card>
+        <AppDataCards toast={toast} onChanged={() => { api.settings().then(setSettings); }} />
       </div>
       <div className="col-12">
         <Card title="Cost estimates" subTitle="USD per million tokens. Matched by model-id prefix; the longest match wins.">

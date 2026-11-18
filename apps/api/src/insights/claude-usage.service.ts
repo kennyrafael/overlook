@@ -1,14 +1,16 @@
-import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
-import { createReadStream } from 'fs';
+import { Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { readdir, stat } from 'fs/promises';
 import { join } from 'path';
-import { createInterface } from 'readline';
+import { In, Repository } from 'typeorm';
 import type { ClaudeDay, ClaudeOverview, ClaudeSession, TokenUsage } from '@overlook/shared';
 import { SettingsService } from '../config/settings.service';
 import { claudeRoots } from '../discovery/claude-roots';
 import { ProjectsService } from '../projects/projects.service';
 import { mapLimit } from './limit';
-import { LogAccumulator, LogSummary, PriceTable, UsageBucket, ZERO_TOKENS, addTokens, bucketCost, bucketTokens } from './session-log';
+import { LogParserPool } from './log-parser-pool';
+import { ParseCacheEntity } from './parse-cache.entity';
+import { PARSER_VERSION, isUnrecognized, LogSummary, PriceTable, UsageBucket, ZERO_TOKENS, addTokens, bucketCost, bucketTokens } from './session-log';
 
 interface CachedFile { size: number; mtimeMs: number; summary: LogSummary }
 
@@ -34,12 +36,54 @@ const OTHER_NAME = 'Other (not a project)';
  * new or changed sessions are re-read.
  */
 @Injectable()
-export class ClaudeUsageService implements OnApplicationBootstrap {
+export class ClaudeUsageService implements OnApplicationBootstrap, OnModuleDestroy {
   private readonly log = new Logger(ClaudeUsageService.name);
   private files = new Map<string, CachedFile>();
   private scanning: Promise<void> | null = null;
+  private loaded: Promise<void> | null = null;
+  private pool = new LogParserPool(2);
+  /** Parsed summaries not yet written to SQLite. */
+  private dirty = new Set<string>();
 
-  constructor(private projects: ProjectsService, private settings: SettingsService) {}
+  constructor(
+    private projects: ProjectsService,
+    private settings: SettingsService,
+    @InjectRepository(ParseCacheEntity) private cache: Repository<ParseCacheEntity>,
+  ) {}
+
+  async onModuleDestroy() {
+    await this.pool.close();
+    await this.flush().catch(() => undefined);
+  }
+
+  /** Loads the persisted parse cache once, so a restart does not re-read unchanged logs. */
+  private loadCache(): Promise<void> {
+    this.loaded ??= (async () => {
+      const t = Date.now();
+      try {
+        for (const r of await this.cache.findBy({ version: PARSER_VERSION })) {
+          try { this.files.set(r.file, { size: r.size, mtimeMs: r.mtimeMs, summary: JSON.parse(r.summary) }); } catch { /* re-parse */ }
+        }
+        this.log.log(`Loaded ${this.files.size} cached log summaries in ${Date.now() - t} ms`);
+      } catch (e) {
+        this.log.warn(`Could not load the parse cache: ${e}`);
+      }
+    })();
+    return this.loaded;
+  }
+
+  /** Writes new summaries and drops rows for deleted logs or older parser versions. */
+  private async flush(gone: string[] = []) {
+    const files = [...this.dirty];
+    this.dirty.clear();
+    const rows = files.flatMap((f) => {
+      const c = this.files.get(f);
+      return c ? [{ file: f, size: c.size, mtimeMs: c.mtimeMs, version: PARSER_VERSION, summary: JSON.stringify(c.summary) }] : [];
+    });
+    for (let i = 0; i < rows.length; i += 200) await this.cache.save(rows.slice(i, i + 200));
+    for (let i = 0; i < gone.length; i += 500) await this.cache.delete({ file: In(gone.slice(i, i + 500)) });
+    await this.cache.createQueryBuilder().delete().where('version != :v', { v: PARSER_VERSION }).execute();
+  }
 
   onApplicationBootstrap() {
     // Warm the cache in the background so the first page load is fast.
@@ -67,6 +111,14 @@ export class ClaudeUsageService implements OnApplicationBootstrap {
     const models = new Map<string, ClaudeOverview['byModel'][number]>();
     const projects = new Map<string, ClaudeOverview['byProject'][number]>();
     const outSessions: ClaudeSession[] = [];
+    let unrecognized = 0;
+    const unrecognizedExamples: string[] = [];
+    for (const [file, c] of this.files) {
+      if (c.summary.format && isUnrecognized(c.summary.format)) {
+        unrecognized++;
+        if (unrecognizedExamples.length < 3) unrecognizedExamples.push(file);
+      }
+    }
     const totals = { sessions: 0, prompts: 0, turns: 0, tokens: { ...ZERO_TOKENS }, costUsd: 0, unpricedTurns: 0 };
     const dayOf = (d: string) => days.get(d) ?? days.set(d, { date: d, sessions: 0, turns: 0, tokens: { ...ZERO_TOKENS }, costUsd: 0, costByModel: {} }).get(d)!;
 
@@ -151,17 +203,21 @@ export class ClaudeUsageService implements OnApplicationBootstrap {
       byModel: [...models.values()].sort((a, b) => b.costUsd - a.costUsd || b.turns - a.turns),
       byProject: [...projects.values()].sort((a, b) => b.costUsd - a.costUsd),
       sessions: outSessions.sort((a, b) => b.endedAt.localeCompare(a.endedAt)),
+      logFormat: { files: this.files.size, unrecognizedFiles: unrecognized, examples: unrecognizedExamples },
     };
   }
 
   /** Re-reads any new or changed log files; returns the session file layout. */
   private async refresh(): Promise<SessionFiles[]> {
+    await this.loadCache();
     const layout = await this.layout((await this.settings.get()).useWsl);
     if (!this.scanning) {
       const all = layout.flatMap((s) => [s.main, ...s.subagents]);
-      this.scanning = mapLimit(all, 4, (f) => this.parseIfChanged(f)).then(() => {
+      this.scanning = mapLimit(all, 4, (f) => this.parseIfChanged(f)).then(async () => {
         const live = new Set(all);
-        for (const k of this.files.keys()) if (!live.has(k)) this.files.delete(k);
+        const gone: string[] = [];
+        for (const k of this.files.keys()) if (!live.has(k)) { this.files.delete(k); gone.push(k); }
+        await this.flush(gone).catch((e) => this.log.warn(`Could not save the parse cache: ${e}`));
       }).finally(() => { this.scanning = null; });
     }
     await this.scanning;
@@ -204,11 +260,11 @@ export class ClaudeUsageService implements OnApplicationBootstrap {
     try { st = await stat(file); } catch { return; }
     const cached = this.files.get(file);
     if (cached && cached.size === st.size && cached.mtimeMs === st.mtimeMs) return;
-    const acc = new LogAccumulator();
     try {
-      const rl = createInterface({ input: createReadStream(file, { encoding: 'utf8' }), crlfDelay: Infinity });
-      for await (const line of rl) acc.add(line);
-      this.files.set(file, { size: st.size, mtimeMs: st.mtimeMs, summary: acc.summary() });
+      const summary = await this.pool.parse(file);
+      this.files.set(file, { size: st.size, mtimeMs: st.mtimeMs, summary });
+      this.dirty.add(file);
+      if (isUnrecognized(summary.format)) this.log.warn(`Unrecognized log format: ${file}`);
     } catch (e) {
       this.log.warn(`Could not read ${file}: ${e}`);
     }

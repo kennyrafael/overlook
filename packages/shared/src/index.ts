@@ -63,6 +63,8 @@ export interface ProjectGit {
 export interface GitOverview {
   generatedAt: string;
   days: number;
+  /** False when no git executable was found; projects is then empty. */
+  gitAvailable: boolean;
   projects: ProjectGit[];
 }
 
@@ -108,6 +110,8 @@ export interface ClaudeOverview {
   byModel: { model: string; turns: number; tokens: TokenUsage; costUsd: number; priced: boolean }[];
   byProject: { projectId: string | null; name: string; sessions: number; turns: number; tokens: TokenUsage; costUsd: number; lastActivityAt: string | null }[];
   sessions: ClaudeSession[];
+  /** Session logs read, and those that do not look like any Claude Code format we know. */
+  logFormat: { files: number; unrecognizedFiles: number; examples: string[] };
 }
 
 /** USD per million tokens. Cache writes are priced from input × multiplier (5-minute / 1-hour TTL). */
@@ -274,4 +278,44 @@ export interface SavedView {
   name: string;
   filters: ViewFilters;
   createdAt: string;
+}
+
+/** One kind of network request the app can make. Shown in Settings → Network activity. */
+export interface NetworkCall {
+  what: string;
+  destination: string;
+  when: string;
+  sends: string;
+  /** False for calls planned in a later version. */
+  active: boolean;
+}
+
+/**
+ * Every outbound call the app can make. Project data, plans and Claude logs are never sent.
+ * Keep this list complete: the privacy promise depends on it.
+ */
+export const NETWORK_CALLS: NetworkCall[] = [
+  {
+    what: 'Update check',
+    destination: 'api.github.com (Overlook releases)',
+    when: 'At start-up and once a day (desktop app only)',
+    sends: 'App version and operating system, as in any download request',
+    active: false,
+  },
+];
+
+export interface SystemInfo {
+  dataDir: string;
+  logDir: string;
+  network: NetworkCall[];
+}
+
+/** Settings → Export: everything the user configured, as JSON. */
+export interface AppDataExport {
+  app: 'overlook';
+  format: 1;
+  exportedAt: string;
+  settings: Settings;
+  projectOverrides: { id: string; name: string | null; status: string | null; tags: string[]; pinned: boolean }[];
+  views: { id: string; name: string; filters: ViewFilters; createdAt: string }[];
 }

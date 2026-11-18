@@ -3,6 +3,8 @@ import { NestFactory } from '@nestjs/core';
 import { API_PORT } from '@overlook/shared';
 import { AppModule } from './app.module';
 import { configure } from './configure';
+import { logDir } from './database/database.config';
+import { FileLogger } from './common/file-logger';
 
 /** Electron utilityProcess message port (only present when started by the desktop app). */
 interface ParentPort {
@@ -12,7 +14,7 @@ interface ParentPort {
 
 async function bootstrap() {
   const port = Number(process.env.CPD_PORT) || API_PORT;
-  const app = configure(await NestFactory.create(AppModule));
+  const app = configure(await NestFactory.create(AppModule, { logger: new FileLogger(logDir) }));
   try {
     await app.listen(port, '127.0.0.1');
   } catch (e) {

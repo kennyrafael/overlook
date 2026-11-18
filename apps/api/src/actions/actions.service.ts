@@ -105,7 +105,7 @@ export class ActionsService {
     return found;
   }
 
-  private openFolder(path: string) {
+  openFolder(path: string) {
     if (IS_WIN) return launch('explorer.exe', [path], path);
     if (IS_MAC) return launch('open', [path], path);
     return launch('xdg-open', [path], path);

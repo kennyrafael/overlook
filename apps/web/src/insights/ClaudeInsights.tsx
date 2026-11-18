@@ -210,7 +210,11 @@ export default function ClaudeInsights({ projectIds, single }: Props) {
         {rangeControl}
         <small className="text-500 ml-auto"><i className="pi pi-info-circle mr-1" />Costs are estimates at API list prices (editable in Settings), not your subscription bill.</small>
       </div>
-      {!t.sessions ? <Message severity="info" text="No Claude Code sessions in this period." /> : (
+      {data.logFormat?.unrecognizedFiles > 0 && (
+        <Message severity="warn" data-testid="log-format-warning"
+          text={`Unrecognized log format in ${data.logFormat.unrecognizedFiles} of ${data.logFormat.files} Claude Code session logs; they are skipped, so totals may be low. A newer Claude Code may have changed its format. Check for an Overlook update.`} />
+      )}
+      {!t.sessions ?<Message severity="info" text="No Claude Code sessions in this period." /> : (
         <div className="grid">
           <div className="col-6 md:col-4 xl:col-2"><Kpi label="Sessions" value={t.sessions} icon="pi pi-comments" sub={`${t.prompts} prompts`} /></div>
           <div className="col-6 md:col-4 xl:col-2"><Kpi label="Model turns" value={formatCompact(t.turns)} icon="pi pi-sync" sub={`${(t.turns / Math.max(1, t.prompts)).toFixed(1)} per prompt`} /></div>

@@ -11,6 +11,7 @@ import { InsightsModule } from './insights/insights.module';
 import { EventsModule } from './events/events.module';
 import { ActionsModule } from './actions/actions.module';
 import { ViewsModule } from './views/views.module';
+import { SystemModule } from './system/system.module';
 
 // Built UI. The desktop app can point elsewhere with CPD_WEB_DIST.
 const webDist = process.env.CPD_WEB_DIST ?? join(__dirname, '..', '..', 'web', 'dist');
@@ -28,6 +29,7 @@ const webDist = process.env.CPD_WEB_DIST ?? join(__dirname, '..', '..', 'web', '
     InsightsModule,
     ActionsModule,
     ViewsModule,
+    SystemModule,
   ],
   controllers: [HealthController],
 })

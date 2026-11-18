@@ -140,6 +140,7 @@ export default function GitInsights({ projectIds, single }: Props) {
 
   if (error) return <Message severity="error" text={`Could not read git data: ${error}`} />;
   if (!data) return <Skeleton height="16rem" />;
+  if (data.gitAvailable === false) return <GitMissing />;
   if (!rows.length) return <Message severity="info" text="No git repositories found for these projects." />;
 
   const attention = rows.filter((r) => r.dirtyFiles > 0 || r.ahead > 0 || r.behind > 0 || (!r.upstream && r.branch) || r.error);
@@ -212,5 +213,20 @@ export default function GitInsights({ projectIds, single }: Props) {
         </Card>
       </div>
     </div>
+  );
+}
+
+function GitMissing() {
+  return (
+    <Message severity="info" data-testid="git-missing" className="w-full justify-content-start" content={
+      <div className="flex flex-column gap-1">
+        <strong>Git is not installed</strong>
+        <span>Git statistics need git on your PATH. Projects, plans and Claude usage work without it.</span>
+        <span>
+          Install it from <a href="https://git-scm.com/downloads" target="_blank" rel="noreferrer">git-scm.com/downloads</a>
+          {' '}(on Windows: <code>winget install Git.Git</code>), then reopen this page.
+        </span>
+      </div>
+    } />
   );
 }

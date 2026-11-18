@@ -22,6 +22,36 @@ export interface LogSummary {
   prompts: number;
   promptDays: Record<string, number>;
   buckets: UsageBucket[];
+  /** Format check; see `isUnrecognized`. */
+  format: LogFormatStats;
+}
+
+/** Counters used to tell "Claude Code changed its log format" from ordinary noise. */
+export interface LogFormatStats {
+  /** Non-empty lines. */
+  lines: number;
+  /** Lines that look like JSON records with a string "type". */
+  typed: number;
+  /** Assistant records, and those with a model and usage we could read. */
+  assistant: number;
+  assistantUsable: number;
+  /** Lines that could not be read (bad JSON in a record we wanted, unexpected shapes). */
+  errors: number;
+}
+
+/** Bump when LogSummary or its meaning changes, so persisted cache rows are re-parsed. */
+export const PARSER_VERSION = 2;
+
+/**
+ * True when a log does not look like any Claude Code format we know: most lines are not typed
+ * JSON records, most records we wanted could not be read, or there are assistant records but
+ * none has usage we can read.
+ */
+export function isUnrecognized(f: LogFormatStats): boolean {
+  if (f.lines === 0) return false;
+  if (f.typed / f.lines < 0.5) return true;
+  if (f.assistant >= 3 && f.assistantUsable === 0) return true;
+  return f.errors / f.lines > 0.5;
 }
 
 /**
@@ -38,12 +68,27 @@ export class LogAccumulator {
   endedAt: number | null = null;
   prompts = 0;
   promptDays: Record<string, number> = {};
+  format: LogFormatStats = { lines: 0, typed: 0, assistant: 0, assistantUsable: 0, errors: 0 };
 
+  /** Never throws: unexpected shapes are counted in `format` and skipped. */
   add(line: string) {
+    if (!line.trim()) return;
+    this.format.lines++;
+    if (/^\s*\{.*"type"\s*:\s*"/.test(line)) this.format.typed++;
+    try {
+      this.read(line);
+    } catch {
+      this.format.errors++;
+    }
+  }
+
+  private read(line: string) {
     // Cheap pre-filter: most lines are tool output we do not need to parse.
-    const isAssistant = line.includes('"type":"assistant"');
-    const isUser = !isAssistant && line.includes('"type":"user"');
-    const isTitle = !isAssistant && !isUser && (line.includes('"custom-title"') || line.includes('"type":"summary"'));
+    // Tolerates whitespace around ':' in case the writer's JSON style changes.
+    const kind = /"type"s*:s*"(assistant|user|summary|custom-title)"/.exec(line)?.[1];
+    const isAssistant = kind === 'assistant';
+    const isUser = kind === 'user';
+    const isTitle = kind === 'summary' || kind === 'custom-title';
     if (!isAssistant && !isUser && !isTitle) return;
     if (isUser && line.includes('"tool_result"')) {
       this.touch(line);
@@ -51,7 +96,8 @@ export class LogAccumulator {
     }
 
     let j: any;
-    try { j = JSON.parse(line); } catch { return; }
+    try { j = JSON.parse(line); } catch { this.format.errors++; return; }
+    if (!j || typeof j !== 'object') return;
 
     if (j.type === 'custom-title' && typeof j.customTitle === 'string') { this.title = j.customTitle; return; }
     if (j.type === 'summary' && typeof j.summary === 'string') { this.title ??= j.summary; return; }
@@ -78,27 +124,30 @@ export class LogAccumulator {
     }
 
     if (j.type === 'assistant') {
+      this.format.assistant++;
       const msg = j.message;
       const u = msg?.usage;
-      const model: string | undefined = msg?.model;
-      if (!u || !model || model === '<synthetic>' || Number.isNaN(ts)) return;
-      const id: string = msg.id ?? j.requestId ?? j.uuid;
-      if (id) {
+      const model: unknown = msg?.model;
+      if (model === '<synthetic>') { this.format.assistantUsable++; return; }
+      if (!u || typeof u !== 'object' || typeof model !== 'string' || !model || Number.isNaN(ts)) return;
+      this.format.assistantUsable++;
+      const id: unknown = msg.id ?? j.requestId ?? j.uuid;
+      if (typeof id === 'string' && id) {
         if (this.seen.has(id)) return;
         this.seen.add(id);
       }
       const day = localDay(new Date(ts));
       const key = `${day}|${model}`;
       const b = this.buckets.get(key) ?? { day, model, turns: 0, input: 0, output: 0, cacheWrite5m: 0, cacheWrite1h: 0, cacheRead: 0 };
-      const cw = u.cache_creation;
+      const cw = u.cache_creation && typeof u.cache_creation === 'object' ? u.cache_creation : null;
       const cw1h = Number(cw?.ephemeral_1h_input_tokens ?? 0);
       const cw5m = cw ? Number(cw.ephemeral_5m_input_tokens ?? 0) : Number(u.cache_creation_input_tokens ?? 0);
       b.turns += 1;
-      b.input += Number(u.input_tokens ?? 0);
-      b.output += Number(u.output_tokens ?? 0);
-      b.cacheWrite5m += cw5m;
-      b.cacheWrite1h += cw1h;
-      b.cacheRead += Number(u.cache_read_input_tokens ?? 0);
+      b.input += tokens(u.input_tokens);
+      b.output += tokens(u.output_tokens);
+      b.cacheWrite5m += tokens(cw5m);
+      b.cacheWrite1h += tokens(cw1h);
+      b.cacheRead += tokens(u.cache_read_input_tokens);
       this.buckets.set(key, b);
     }
   }
@@ -117,8 +166,15 @@ export class LogAccumulator {
     return {
       sessionId: this.sessionId, title: this.title, startedAt: this.startedAt, endedAt: this.endedAt,
       prompts: this.prompts, promptDays: this.promptDays, buckets: [...this.buckets.values()],
+      format: { ...this.format },
     };
   }
+}
+
+/** Token counts from the log: anything that is not a finite, non-negative number counts as 0. */
+function tokens(x: unknown): number {
+  const n = Number(x ?? 0);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
 export interface PriceTable {

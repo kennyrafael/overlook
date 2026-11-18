@@ -1,0 +1,3 @@
+{"kind": "turn", "role": "assistant", "llm": "claude-next", "tokens": {"in": 5, "out": 9}, "at": "2027-01-01T00:00:00Z"}
+{"kind": "turn", "role": "user", "text": "hi", "at": "2027-01-01T00:00:01Z"}
+{"kind": "turn", "role": "assistant", "llm": "claude-next", "tokens": {"in": 5, "out": 9}, "at": "2027-01-01T00:00:02Z"}

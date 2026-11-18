@@ -14,3 +14,15 @@ export function git(cwd: string, args: string[]): Promise<string> {
     }, (err, stdout) => (err ? reject(err) : resolve(stdout)));
   });
 }
+
+let available: { at: number; ok: boolean } | null = null;
+
+/** Whether a git executable is on PATH. A "missing" answer is re-checked after a minute, so installing git is picked up without a restart. */
+export async function gitAvailable(): Promise<boolean> {
+  if (available && (available.ok || Date.now() - available.at < 60_000)) return available.ok;
+  const ok = await new Promise<boolean>((resolve) => {
+    execFile('git', ['--version'], { timeout: GIT_TIMEOUT_MS, windowsHide: true }, (err) => resolve(!err));
+  });
+  available = { at: Date.now(), ok };
+  return ok;
+}

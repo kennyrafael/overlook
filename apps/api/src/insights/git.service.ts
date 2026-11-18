@@ -4,7 +4,7 @@ import { join, relative } from 'path';
 import type { GitOverview, ProjectGit, RepoStats } from '@overlook/shared';
 import { ProjectRef, ProjectsService } from '../projects/projects.service';
 import { mapLimit } from './limit';
-import { git } from '../common/git';
+import { git, gitAvailable } from '../common/git';
 
 const DAYS = 90;
 const CACHE_TTL_MS = 60_000;
@@ -60,7 +60,7 @@ export class GitService implements OnApplicationBootstrap {
 
   /** Re-reads one project's repositories and patches the cache. Returns true if anything changed. */
   async refreshProject(projectId: string): Promise<boolean> {
-    if (!this.cache) return false; // nothing cached yet; the next overview() computes everything
+    if (!this.cache?.data.gitAvailable) return false; // nothing cached yet (or no git); the next overview() computes everything
     const ref = (await this.projects.refs()).find((r) => r.id === projectId && r.exists);
     if (!ref) return false;
     const repos = await mapLimit(repoJobs([ref]), 4, (j) => this.repo(j.path, j.root));
@@ -80,13 +80,14 @@ export class GitService implements OnApplicationBootstrap {
   }
 
   private async compute(): Promise<GitOverview> {
+    if (!(await gitAvailable())) return { generatedAt: new Date().toISOString(), days: DAYS, gitAvailable: false, projects: [] };
     const refs = (await this.projects.refs()).filter((r) => r.exists);
     const jobs = repoJobs(refs);
     const stats = await mapLimit(jobs, 6, (j) => this.repo(j.path, j.root));
     const projects: ProjectGit[] = refs
       .map((r) => ({ projectId: r.id, name: r.name, repos: stats.filter((_, i) => jobs[i].projectId === r.id) }))
       .filter((p) => p.repos.length > 0);
-    return { generatedAt: new Date().toISOString(), days: DAYS, projects };
+    return { generatedAt: new Date().toISOString(), days: DAYS, gitAvailable: true, projects };
   }
 
   private async repo(path: string, root: string): Promise<RepoStats> {

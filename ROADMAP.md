@@ -81,13 +81,13 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [ ] Acceptance: onboarding works on a VM with no VS Code, no Windows Terminal and Claude Code only in WSL
 
 ## Phase 2: Robustness for other people's machines
-- [ ] Replace `synchronize: true` with TypeORM migrations; generate the baseline migration; test upgrade from an old database
-- [ ] Claude log parser: tolerate unknown/changed fields, report "unrecognized log format" instead of failing; add fixtures from several Claude Code versions
-- [ ] Handle missing git gracefully (Git page explains how to install; discovery still works)
+- [x] Replace `synchronize: true` with TypeORM migrations; generate the baseline migration; test upgrade from an old database
+- [x] Claude log parser: tolerate unknown/changed fields, report "unrecognized log format" instead of failing; add fixtures from several Claude Code versions
+- [x] Handle missing git gracefully (Git page explains how to install; discovery still works)
 - [ ] Large-history performance: test with 5 GB of logs; parse in a worker thread; persist the parse cache in SQLite so restarts are instant
-- [ ] Settings import/export (JSON) and "reset app data"
-- [ ] Logs to a file in userData with rotation; "Open log folder" in Settings
-- [ ] "Network activity" section in Settings listing every call the app can make (update check only)
+- [x] Settings import/export (JSON) and "reset app data"
+- [x] Logs to a file in userData with rotation; "Open log folder" in Settings
+- [x] "Network activity" section in Settings listing every call the app can make (update check only)
 - [ ] Acceptance: upgrading from a v0 database keeps all overrides; 5 GB of logs parse without freezing the UI and restart loads in under 3 s; an unknown log format shows a warning, not an error
 
 ## Phase 3: macOS (unsigned)

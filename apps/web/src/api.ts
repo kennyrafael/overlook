@@ -1,4 +1,4 @@
-import type { ClaudeOverview, GitOverview, Project, ProjectAction, ProjectDetail, ProjectPatch, SavedView, Settings, TaskStatus, ViewFilters, SystemTools } from '@overlook/shared';
+import type { ClaudeOverview, GitOverview, Project, ProjectAction, ProjectDetail, ProjectPatch, SavedView, Settings, TaskStatus, ViewFilters, SystemTools, SystemInfo, AppDataExport } from '@overlook/shared';
 
 export class ApiError extends Error {
   constructor(message: string, public status: number) { super(message); }
@@ -52,6 +52,12 @@ export const api = {
     request<SavedView>(`/views/${id}`, { method: 'PUT', body: JSON.stringify(patch) }),
   deleteView: (id: string) => request<{ ok: true }>(`/views/${id}`, { method: 'DELETE' }),
   tools: () => request<SystemTools>('/system/tools'),
+  systemInfo: () => request<SystemInfo>('/system/info'),
+  openLogs: () => request<{ ok: true }>('/system/open-logs', { method: 'POST' }),
+  exportData: () => request<AppDataExport>('/system/export'),
+  importData: (data: unknown) =>
+    request<{ settings: number; projectOverrides: number; views: number }>('/system/import', { method: 'POST', body: JSON.stringify(data) }),
+  resetData: () => request<{ ok: true }>('/system/reset', { method: 'POST', body: JSON.stringify({ confirm: 'reset' }) }),
   settings: () => request<Settings>('/settings'),
   saveSettings: (s: Partial<Settings>) =>
     request<Settings>('/settings', { method: 'PUT', body: JSON.stringify(s) }),

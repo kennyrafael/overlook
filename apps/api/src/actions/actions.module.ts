@@ -9,5 +9,6 @@ import { SettingsModule } from '../config/settings.module';
   imports: [ProjectsModule, SettingsModule],
   controllers: [ActionsController, SystemController],
   providers: [ActionsService],
+  exports: [ActionsService],
 })
 export class ActionsModule {}
