@@ -25,6 +25,7 @@ body {
 .brand-inline { display: inline-flex; align-items: center; gap: 0.5rem; }
 
 .layout-menu-button { display: none !important; }
+.topbar-mark { display: none; flex-shrink: 0; }
 
 .heatmap { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 2px; }
 .heatmap-weekdays { display: grid; grid-template-rows: 14px repeat(7, 14px); gap: 3px; font-size: 10px; color: var(--text-color-secondary); }
@@ -54,6 +55,11 @@ body {
 @media (max-width: 768px) {
   .layout-sidebar { display: none; }
   .layout-menu-button { display: inline-flex !important; }
-  .layout-topbar { padding: 0.5rem 1rem; }
+  .layout-topbar { padding: 0.5rem 0.75rem; gap: 0.5rem; }
+  .layout-topbar h2 { font-size: 1.1rem !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar-mark { display: block; }
+  .palette-trigger .p-button-label, .palette-trigger .p-badge { display: none; }
+  .live-tag .p-tag-value { display: none; }
+  .live-tag .p-tag-icon { margin: 0; }
   .layout-content { padding: 1rem; }
 }

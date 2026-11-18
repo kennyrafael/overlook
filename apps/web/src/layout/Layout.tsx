@@ -66,6 +66,7 @@ export default function Layout() {
         <header className="layout-topbar">
           <div className="flex align-items-center gap-2">
             <Button className="layout-menu-button" rounded text icon="pi pi-bars" aria-label="Open menu" onClick={() => setMenuOpen(true)} />
+            <OverlookMark size={26} className="topbar-mark" />
             <h2 className="m-0 text-xl">{current}</h2>
           </div>
           <div className="flex align-items-center gap-2">
@@ -73,7 +74,7 @@ export default function Layout() {
               badge="Ctrl K" badgeClassName="p-badge-secondary" aria-label="Open command palette (Ctrl+K)"
               onClick={() => window.dispatchEvent(new Event('cpd:open-palette'))} />
             {(connected || everConnected) && (
-              <Tag severity={connected ? 'success' : 'warning'}
+              <Tag className="live-tag" severity={connected ? 'success' : 'warning'}
                 icon={connected ? 'pi pi-circle-fill' : 'pi pi-spin pi-spinner'}
                 value={connected ? 'Live' : 'Reconnecting…'}
                 title={connected ? 'Updates appear as files change' : 'Lost connection to the dashboard server'} />
