@@ -148,3 +148,12 @@ loader) and `picomatch` (via Vite, no fixed release yet). Neither receives outsi
 app; the offered fix is a breaking downgrade.
 
 See [PLAN.md](PLAN.md) for the original plan.
+
+## License and trademarks
+
+Overlook is released under the [MIT License](LICENSE) by AgentHub. Third-party licenses are listed
+in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+Overlook is an independent project. It is not affiliated with, endorsed by or sponsored by
+Anthropic, PBC. "Claude" and "Claude Code" are trademarks of Anthropic, used here only to describe
+the tool this app works with.

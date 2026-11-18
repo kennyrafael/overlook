@@ -48,7 +48,11 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [x] Check EUIPO/WIPO trademark search for "Overlook" and "AgentHub" in software classes (9, 42)
 - [ ] Set up `overlook.agenthub.eu`; check GitHub org/repo and npm names are free
 - [x] Rename UI title, README, package names to Overlook (`@overlook/*`); keep "for Claude Code" as a descriptor only
-- [ ] Review Anthropic's brand guidelines and terms for descriptive use of "Claude Code"
+- [x] Review Anthropic's trademark guidelines (2026-11-18): no logos or brand elements without approval; no implied affiliation
+- [x] Add a "not affiliated with Anthropic" notice to the README
+- [ ] Replace the sparkle icon in the UI and app icon with an original Overlook mark (avoid looking like Claude's logo or colours)
+- [ ] Use "Claude Code" only in plain text as a description (tagline, docs); never in the app name, icon, domain or ads headline
+- [ ] Show the "not affiliated" notice in the About dialog and on the landing page footer
 - [x] Add `LICENSE` (MIT, Copyright (c) 2026 AgentHub)
 - [x] Check dependency licenses (no GPL/AGPL); generate a third-party notices file (`npm run notices`)
 - [ ] Show `THIRD_PARTY_NOTICES.md` in an About dialog (and ship it inside the installer)
