@@ -1,0 +1,11 @@
+// Cloudflare Worker serving Overlook downloads from R2. Deployed by Workers Builds (Git integration)
+// with root directory `workers/downloads`, on every push to main.
+{
+  "name": "overlook-downloads",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "r2_buckets": [
+    { "binding": "BUCKET", "bucket_name": "overlook" }
+  ]
+}
