@@ -1,0 +1,8 @@
+node_modules
+dist
+*.sqlite
+*.sqlite-journal
+.env
+e2e/.fixture.json
+test-results
+playwright-report

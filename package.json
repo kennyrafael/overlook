@@ -1,0 +1,24 @@
+{
+  "name": "overlook",
+  "license": "MIT",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run build -w @overlook/shared && concurrently -n api,web -c blue,magenta \"npm run dev -w @overlook/api\" \"npm run dev -w @overlook/web\"",
+    "build": "npm run build -w @overlook/shared && npm run build -w @overlook/api && npm run build -w @overlook/web",
+    "start": "node scripts/start.mjs",
+    "typecheck": "npm run build -w @overlook/shared && npm run typecheck --workspaces --if-present",
+    "test:smoke": "npm run build && playwright test",
+    "start:open": "node scripts/start.mjs --open",
+    "test": "npm run build -w @overlook/shared && npm test -w @overlook/api && npm run test:e2e -w @overlook/api"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "concurrently": "^9.1.0",
+    "typescript": "~5.7.3"
+  }
+}
