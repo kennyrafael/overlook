@@ -55,11 +55,11 @@ export default function Layout() {
   return (
     <div className="layout">
       <aside className="layout-sidebar">
-        <div className="brand"><OverlookMark className="text-primary" />Overlook</div>
+        <div className="brand"><OverlookMark />Overlook</div>
         <Menu model={items} />
       </aside>
       <Sidebar visible={menuOpen} onHide={() => setMenuOpen(false)} className="layout-mobile-menu"
-        header={<span className="brand-inline font-bold"><OverlookMark className="text-primary" />Overlook</span>}>
+        header={<span className="brand-inline font-bold"><OverlookMark />Overlook</span>}>
         <Menu model={items} className="w-full border-none" />
       </Sidebar>
       <div className="layout-main">
