@@ -185,6 +185,10 @@ export interface Settings {
   maxDepth: number;
   /** Merge in folders Claude Code has been used in (~/.claude/projects). */
   useClaudeHistory: boolean;
+  /** Also read Claude Code history inside running WSL distros (Windows only). */
+  useWsl: boolean;
+  /** The first-run setup has been completed or skipped. */
+  onboarded: boolean;
   /** Include the desktop app's per-session scratch workspaces. */
   includeScratch: boolean;
   /** Show projects whose folder no longer exists. */
@@ -204,6 +208,8 @@ export const DEFAULT_SETTINGS: Settings = {
   staleDays: 14,
   maxDepth: 3,
   useClaudeHistory: true,
+  useWsl: true,
+  onboarded: false,
   includeScratch: false,
   includeMissing: false,
   theme: 'dark',
@@ -232,6 +238,21 @@ export interface ProgressPoint {
   milestonesTotal: number;
   tasksDone: number;
   tasksTotal: number;
+}
+
+/** Local tools the quick actions and onboarding rely on (detected on the server's machine). */
+export interface SystemTools {
+  platform: string;
+  git: boolean;
+  /** Claude Code CLI (`claude`) on PATH. */
+  claude: boolean;
+  vscode: boolean;
+  /** What "Open terminal" will use. */
+  terminal: 'Windows Terminal' | 'Command Prompt' | 'Terminal' | 'terminal emulator' | null;
+  /** Running WSL distros where Claude Code history was found. */
+  wslClaude: string[];
+  /** Where Claude Code history is read from (local folder plus any WSL folders). */
+  claudeHistory: { label: string; dir: string }[];
 }
 
 export type ProjectAction = 'vscode' | 'terminal' | 'explorer' | 'claude';

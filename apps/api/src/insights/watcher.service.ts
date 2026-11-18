@@ -4,7 +4,7 @@ import { existsSync } from 'fs';
 import { basename, dirname, join, relative, sep } from 'path';
 import { Subscription } from 'rxjs';
 import { SettingsService } from '../config/settings.service';
-import { claudeProjectsDir } from '../discovery/claude-history.reader';
+import { claudeRoots } from '../discovery/claude-roots';
 import { pathKey } from '../discovery/path-utils';
 import { EventsService } from '../events/events.service';
 import { ProjectsService } from '../projects/projects.service';
@@ -133,19 +133,21 @@ export class WatcherService implements OnApplicationBootstrap, OnModuleDestroy {
       this.watchers.push(w);
     }
 
-    // Claude session logs.
-    const root = claudeProjectsDir();
+    // Claude session logs (local, and inside running WSL distros, which need polling).
+    const roots = (await claudeRoots(settings.useWsl)).filter((r) => existsSync(r.dir));
     const claudeOwner = new Map<string, string>();
-    for (const r of refs) for (const d of r.claudeDirs) claudeOwner.set(d.toLowerCase(), r.id);
-    if (existsSync(root)) {
-      const w = watch(root, {
+    for (const r of refs) for (const d of r.claudeDirs) claudeOwner.set(pathKey(d), r.id);
+    for (const root of roots) {
+      const remote = root.dir.startsWith('\\\\');
+      const w = watch(root.dir, {
         depth: 3, ignoreInitial: true, ignorePermissionErrors: true,
+        usePolling: remote, interval: remote ? 5000 : undefined,
         ignored: (p, stats) => !!stats?.isFile() && !p.endsWith('.jsonl'),
       });
       w.on('all', (_evt, file) => {
         if (!file.endsWith('.jsonl')) return;
-        const dir = relative(root, file).split(sep)[0]?.toLowerCase();
-        this.pendingClaude.add(claudeOwner.get(dir) ?? '');
+        const dir = join(root.dir, relative(root.dir, file).split(sep)[0] ?? '');
+        this.pendingClaude.add(claudeOwner.get(pathKey(dir)) ?? '');
         this.claudeDebounce.run('claude', () => {
           const ids = [...this.pendingClaude].filter(Boolean);
           this.pendingClaude.clear();
@@ -156,7 +158,7 @@ export class WatcherService implements OnApplicationBootstrap, OnModuleDestroy {
       this.watchers.push(w);
     }
 
-    this.log.log(`Watching ${dirOwner.size} project folders, ${gitPaths.length} git paths, Claude logs: ${existsSync(root)}`);
+    this.log.log(`Watching ${dirOwner.size} project folders, ${gitPaths.length} git paths, Claude log folders: ${roots.map((r) => r.label).join(', ') || 'none'}`);
   }
 
   private async onPlanChange(projectId: string, file: string) {

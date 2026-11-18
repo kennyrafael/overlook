@@ -53,6 +53,7 @@ writeFileSync(join(out, 'package.json'), JSON.stringify({
 
 const copy = (from, to, filter) => cpSync(join(root, from), join(out, to), { recursive: true, filter });
 copy('apps/desktop/dist', 'desktop', noMaps);
+copy('apps/desktop/resources/icon.png', 'desktop/icon.png'); // window and tray icon
 copy('apps/api/dist', 'api/dist', noMaps);
 copy('apps/web/dist', 'web/dist');
 copy('LICENSE', 'LICENSE');

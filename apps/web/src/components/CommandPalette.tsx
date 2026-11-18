@@ -7,6 +7,7 @@ import { ACTION_META, runProjectAction } from '../actions/projectActions';
 import { useFilters } from '../store/filters';
 import { useProjects } from '../store/projects';
 import { useViews } from '../store/views';
+import { actionAvailable, useTools } from '../store/tools';
 import { useTheme } from '../theme/ThemeContext';
 import { appToast } from '../toast';
 
@@ -51,6 +52,7 @@ export default function CommandPalette() {
   const { toggle: toggleTheme, mode } = useTheme();
   const projects = useProjects((s) => s.projects);
   const views = useViews((s) => s.views);
+  const tools = useTools((s) => s.tools);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
@@ -81,7 +83,7 @@ export default function CommandPalette() {
     for (const p of projects) {
       list.push({ id: `project:${p.id}`, group: 'Projects', label: p.name, hint: `${p.progress}% · ${p.status}`, icon: p.pinned ? 'pi pi-star-fill' : 'pi pi-folder', keywords: `open project ${p.path} ${p.tags.join(' ')}`, run: go(`/projects/${p.id}`) });
       if (p.exists) {
-        for (const a of ACTION_ORDER) {
+        for (const a of ACTION_ORDER.filter((x) => actionAvailable(tools, x))) {
           list.push({ id: `action:${a}:${p.id}`, group: 'Actions', label: `${p.name}: ${ACTION_META[a].label}`, icon: ACTION_META[a].icon, keywords: a, run: () => runProjectAction(p, a) });
         }
         list.push({ id: `board:${p.id}`, group: 'Actions', label: `${p.name}: Show board`, icon: 'pi pi-th-large', keywords: 'kanban tasks', run: () => { useFilters.getState().set({ projectIds: [p.id] }); navigate('/board'); } });
@@ -97,7 +99,7 @@ export default function CommandPalette() {
       { id: 'cmd:clear', group: 'Commands', label: 'Clear all filters', icon: 'pi pi-filter-slash', keywords: 'reset filters', run: () => useFilters.getState().clear() },
     );
     return list;
-  }, [projects, views, navigate, mode, toggleTheme]);
+  }, [projects, views, tools, navigate, mode, toggleTheme]);
 
   const results = useMemo(() => {
     const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);

@@ -5,13 +5,18 @@
  * per-launch token (sent as an httpOnly cookie only this window has), and shows the UI in a
  * locked-down BrowserWindow. Nothing here talks to the internet.
  */
-import { app, BrowserWindow, dialog, Menu, session, shell, utilityProcess, type UtilityProcess } from 'electron';
+import {
+  app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, session, shell, Tray, utilityProcess,
+  type IpcMainInvokeEvent, type UtilityProcess,
+} from 'electron';
 import { randomBytes } from 'crypto';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { createServer } from 'net';
 import { join } from 'path';
 
 const TOKEN_COOKIE = 'cpd_token';
 const READY_TIMEOUT_MS = 30_000;
+const SHUTDOWN_TIMEOUT_MS = 4_000;
 
 // Layout inside the packaged app (and the staging folder): desktop/, api/dist/, web/dist/.
 // In development (`npm start` in apps/desktop) the same paths resolve inside the monorepo.
@@ -19,9 +24,38 @@ const appRoot = app.isPackaged ? app.getAppPath() : join(__dirname, '..', '..');
 const desktopDir = app.isPackaged ? join(appRoot, 'desktop') : __dirname;
 const serverEntry = join(appRoot, 'api', 'dist', 'main.js');
 const webDist = join(appRoot, 'web', 'dist');
+const iconPath = app.isPackaged ? join(desktopDir, 'icon.png') : join(__dirname, '..', 'resources', 'icon.png');
 
 let server: UtilityProcess | null = null;
 let mainWindow: BrowserWindow | null = null;
+let tray: Tray | null = null;
+let origin = '';
+let quitting = false;
+
+// ---------------------------------------------------------------------------------------------
+// Desktop preferences (stored next to the database in the per-user app folder)
+// ---------------------------------------------------------------------------------------------
+
+interface DesktopPrefs {
+  /** Closing the window keeps Overlook running in the tray (live updates continue). */
+  closeToTray: boolean;
+}
+const DEFAULT_PREFS: DesktopPrefs = { closeToTray: false };
+const prefsFile = () => join(app.getPath('userData'), 'desktop.json');
+
+function readPrefs(): DesktopPrefs {
+  try {
+    const raw = JSON.parse(readFileSync(prefsFile(), 'utf8'));
+    return { closeToTray: raw?.closeToTray === true };
+  } catch {
+    return { ...DEFAULT_PREFS };
+  }
+}
+let prefs = DEFAULT_PREFS;
+
+// ---------------------------------------------------------------------------------------------
+// Server process
+// ---------------------------------------------------------------------------------------------
 
 /** Asks the OS for a free port on 127.0.0.1. */
 function freePort(): Promise<number> {
@@ -49,22 +83,40 @@ function startServer(port: number, token: string): Promise<void> {
     };
     const child = utilityProcess.fork(serverEntry, [], { env, stdio: 'pipe', serviceName: 'Overlook server' });
     server = child;
-    child.stdout?.on('data', (d) => process.stdout.write(d));
-    child.stderr?.on('data', (d) => process.stderr.write(d));
+    child.stdout?.on('data', (d: Buffer) => process.stdout.write(d));
+    child.stderr?.on('data', (d: Buffer) => process.stderr.write(d));
     const timer = setTimeout(() => reject(new Error('The local server did not start in time.')), READY_TIMEOUT_MS);
     child.on('message', (m: { type?: string }) => {
       if (m?.type === 'ready') { clearTimeout(timer); resolve(); }
     });
-    child.once('exit', (code) => {
+    child.once('exit', (code: number) => {
       clearTimeout(timer);
       server = null;
+      if (!quitting) {
+        dialog.showErrorBox('Overlook stopped', `The local server stopped unexpectedly (exit code ${code}).`);
+        app.exit(1);
+      }
       reject(new Error(`The local server stopped (exit code ${code}).`));
     });
   });
 }
 
-/** Security settings for every window and web contents the app creates. */
-function harden(origin: string) {
+/** Asks the server to close its watchers and database, then waits (killing it after a timeout). */
+function stopServer(): Promise<void> {
+  const child = server;
+  if (!child) return Promise.resolve();
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => { child.kill(); resolve(); }, SHUTDOWN_TIMEOUT_MS);
+    child.once('exit', () => { clearTimeout(timer); resolve(); });
+    child.postMessage({ type: 'shutdown' });
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Security
+// ---------------------------------------------------------------------------------------------
+
+function harden() {
   const ses = session.defaultSession;
 
   // Content Security Policy for our own pages. PrimeReact sets inline styles, so styles allow 'unsafe-inline'.
@@ -109,13 +161,55 @@ function openExternal(url: string) {
   } catch { /* ignore malformed URLs */ }
 }
 
-async function createWindow(origin: string) {
+// ---------------------------------------------------------------------------------------------
+// IPC (one handler per action; every call is checked to come from our own page)
+// ---------------------------------------------------------------------------------------------
+
+function fromApp(event: IpcMainInvokeEvent): boolean {
+  const url = event.senderFrame?.url ?? '';
+  return !!mainWindow && event.sender === mainWindow.webContents && (url === origin || url.startsWith(origin + '/'));
+}
+
+function registerIpc() {
+  ipcMain.handle('overlook:pick-folders', async (event) => {
+    if (!fromApp(event) || !mainWindow) return [];
+    const res = await dialog.showOpenDialog(mainWindow, {
+      title: 'Choose folders that contain your projects',
+      properties: ['openDirectory', 'multiSelections', 'dontAddToRecent'],
+    });
+    return res.canceled ? [] : res.filePaths;
+  });
+
+  ipcMain.handle('overlook:get-prefs', (event) => (fromApp(event) ? { ...prefs } : null));
+
+  ipcMain.handle('overlook:set-prefs', (event, patch: unknown) => {
+    if (!fromApp(event) || typeof patch !== 'object' || patch === null) return null;
+    const p = patch as Record<string, unknown>;
+    if (typeof p.closeToTray === 'boolean') prefs = { ...prefs, closeToTray: p.closeToTray };
+    try { writeFileSync(prefsFile(), JSON.stringify(prefs, null, 2)); } catch { /* keep in memory */ }
+    return { ...prefs };
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Window and tray
+// ---------------------------------------------------------------------------------------------
+
+function showWindow() {
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 380,
     minHeight: 500,
     title: 'Overlook',
+    icon: existsSync(iconPath) ? iconPath : undefined,
     backgroundColor: '#111827',
     show: false,
     autoHideMenuBar: true,
@@ -130,17 +224,41 @@ async function createWindow(origin: string) {
     },
   });
   mainWindow.once('ready-to-show', () => mainWindow?.show());
+  mainWindow.on('close', (event) => {
+    if (!quitting && prefs.closeToTray) {
+      event.preventDefault();
+      mainWindow?.hide();
+    }
+  });
   mainWindow.on('closed', () => { mainWindow = null; });
   await mainWindow.loadURL(origin + '/');
 }
 
+function createTray() {
+  if (!existsSync(iconPath)) return;
+  tray = new Tray(nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 }));
+  tray.setToolTip('Overlook');
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: 'Open Overlook', click: showWindow },
+    { type: 'separator' },
+    { label: 'Quit', click: () => { quitting = true; app.quit(); } },
+  ]));
+  tray.on('click', showWindow);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Lifecycle
+// ---------------------------------------------------------------------------------------------
+
 async function boot() {
   Menu.setApplicationMenu(null);
+  prefs = readPrefs();
   const port = await freePort();
   const token = randomBytes(32).toString('hex');
-  const origin = `http://127.0.0.1:${port}`;
+  origin = `http://127.0.0.1:${port}`;
 
-  harden(origin);
+  harden();
+  registerIpc();
   // The token travels as an httpOnly cookie, so the UI (fetch, EventSource) sends it without any code change
   // and page scripts cannot read it.
   await session.defaultSession.cookies.set({
@@ -148,21 +266,39 @@ async function boot() {
   });
 
   await startServer(port, token);
-  await createWindow(origin);
+  await createWindow();
+  createTray();
 }
 
-app.setAppUserModelId('eu.agenthub.overlook');
-app.enableSandbox();
+// One running copy only: a second launch focuses the existing window instead.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', showWindow);
 
-app.whenReady().then(boot).catch((err: Error) => {
-  dialog.showErrorBox('Overlook could not start', err.message);
-  app.exit(1);
-});
+  app.setAppUserModelId('eu.agenthub.overlook');
+  app.enableSandbox();
 
-app.on('window-all-closed', () => app.quit());
+  app.whenReady().then(boot).catch((err: Error) => {
+    if (quitting) return;
+    dialog.showErrorBox('Overlook could not start', err.message);
+    app.exit(1);
+  });
 
-app.on('before-quit', () => {
-  // Graceful stop: the server's shutdown hooks close watchers and the database.
-  server?.kill();
-  server = null;
-});
+  app.on('window-all-closed', () => {
+    if (!prefs.closeToTray) app.quit();
+  });
+
+  // Stop the server cleanly (watchers, database) before exiting.
+  let stopped = false;
+  app.on('before-quit', (event) => {
+    quitting = true;
+    if (stopped) return;
+    event.preventDefault();
+    void stopServer().finally(() => {
+      stopped = true;
+      tray?.destroy();
+      app.quit();
+    });
+  });
+}

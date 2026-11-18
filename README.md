@@ -163,6 +163,10 @@ npm run test:desktop    # smoke tests against release/win-unpacked/Overlook.exe 
 - Installers: `Overlook-Setup-<version>-x64.exe` and `-arm64.exe`. They are unsigned, so Windows SmartScreen
   shows "Windows protected your PC": choose **More info → Run anyway**.
 - Moving from the browser version: close the app, then run `node scripts/copy-old-data.mjs`.
+- First launch opens a short setup: what stays local, which tools were found, and which folders to scan.
+- Only one copy runs; launching again brings the window back. With **Keep running in the tray** on
+  (Settings → Desktop app), closing the window keeps live updates going; quit from the tray icon.
+- Claude Code history inside running WSL distros is included (Settings → Include Claude Code in WSL).
 - The icon is rendered from `brand/mark.svg` with `npm run icon -w @overlook/desktop`.
 
 ## License and trademarks

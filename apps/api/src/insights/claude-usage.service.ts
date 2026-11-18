@@ -5,7 +5,7 @@ import { join } from 'path';
 import { createInterface } from 'readline';
 import type { ClaudeDay, ClaudeOverview, ClaudeSession, TokenUsage } from '@overlook/shared';
 import { SettingsService } from '../config/settings.service';
-import { claudeProjectsDir } from '../discovery/claude-history.reader';
+import { claudeRoots } from '../discovery/claude-roots';
 import { ProjectsService } from '../projects/projects.service';
 import { mapLimit } from './limit';
 import { LogAccumulator, LogSummary, PriceTable, UsageBucket, ZERO_TOKENS, addTokens, bucketCost, bucketTokens } from './session-log';
@@ -13,7 +13,8 @@ import { LogAccumulator, LogSummary, PriceTable, UsageBucket, ZERO_TOKENS, addTo
 interface CachedFile { size: number; mtimeMs: number; summary: LogSummary }
 
 interface SessionFiles {
-  dirName: string;
+  /** Absolute session folder path (matches ProjectRef.claudeDirs). */
+  dir: string;
   id: string;
   main: string;
   subagents: string[];
@@ -70,7 +71,7 @@ export class ClaudeUsageService implements OnApplicationBootstrap {
     const dayOf = (d: string) => days.get(d) ?? days.set(d, { date: d, sessions: 0, turns: 0, tokens: { ...ZERO_TOKENS }, costUsd: 0, costByModel: {} }).get(d)!;
 
     for (const s of sessions) {
-      const project = byDir.get(s.dirName) ?? null;
+      const project = byDir.get(s.dir) ?? null;
       if (wanted && (!project || !wanted.has(project.id))) continue;
 
       const parts = [s.main, ...s.subagents].map((f) => this.files.get(f)?.summary).filter((x): x is LogSummary => !!x);
@@ -155,7 +156,7 @@ export class ClaudeUsageService implements OnApplicationBootstrap {
 
   /** Re-reads any new or changed log files; returns the session file layout. */
   private async refresh(): Promise<SessionFiles[]> {
-    const layout = await this.layout();
+    const layout = await this.layout((await this.settings.get()).useWsl);
     if (!this.scanning) {
       const all = layout.flatMap((s) => [s.main, ...s.subagents]);
       this.scanning = mapLimit(all, 4, (f) => this.parseIfChanged(f)).then(() => {
@@ -167,17 +168,23 @@ export class ClaudeUsageService implements OnApplicationBootstrap {
     return layout;
   }
 
-  private async layout(): Promise<SessionFiles[]> {
-    const root = claudeProjectsDir();
-    let dirs: string[] = [];
-    try {
-      dirs = (await readdir(root, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name);
-    } catch {
-      return [];
-    }
+  private async layout(includeWsl: boolean): Promise<SessionFiles[]> {
     const out: SessionFiles[] = [];
-    for (const dirName of dirs) {
-      const dir = join(root, dirName);
+    for (const root of await claudeRoots(includeWsl)) {
+      let dirs: string[] = [];
+      try {
+        dirs = (await readdir(root.dir, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => join(root.dir, d.name));
+      } catch {
+        continue;
+      }
+      out.push(...await this.sessionsIn(dirs));
+    }
+    return out;
+  }
+
+  private async sessionsIn(dirs: string[]): Promise<SessionFiles[]> {
+    const out: SessionFiles[] = [];
+    for (const dir of dirs) {
       let entries: string[];
       try { entries = await readdir(dir); } catch { continue; }
       for (const f of entries.filter((e) => e.endsWith('.jsonl'))) {
@@ -186,7 +193,7 @@ export class ClaudeUsageService implements OnApplicationBootstrap {
         try {
           subagents = (await readdir(join(dir, id, 'subagents'))).filter((e) => e.endsWith('.jsonl')).map((e) => join(dir, id, 'subagents', e));
         } catch { /* no subagents */ }
-        out.push({ dirName, id, main: join(dir, f), subagents });
+        out.push({ dir, id, main: join(dir, f), subagents });
       }
     }
     return out;

@@ -19,7 +19,7 @@ export interface DiscoveredProject {
   lastActivityAt: Date | null;
   milestones: Milestone[];
   planFiles: string[];
-  /** Folder names under ~/.claude/projects that belong to this project. */
+  /** Claude session folders (absolute paths, local or WSL) that belong to this project. */
   claudeDirs: string[];
 }
 
@@ -50,7 +50,7 @@ export class DiscoveryService {
 
     if (settings.useClaudeHistory) {
       // Shortest paths first so parents exist before children get folded in.
-      const entries = (await this.history.read()).sort((a, b) => a.path.length - b.path.length);
+      const entries = (await this.history.read(settings.useWsl)).sort((a, b) => a.path.length - b.path.length);
       for (const e of entries) {
         if (!settings.includeScratch && isScratchWorkspace(e.path)) continue;
         const path = stripWorktree(e.path);
@@ -58,7 +58,7 @@ export class DiscoveryService {
         if (parent) {
           if (parent.source === 'root') parent.source = 'both';
           parent.claudeSessions += e.sessions;
-          parent.claudeDirs.push(e.dirName);
+          parent.claudeDirs.push(e.dir);
           if (pathKey(path) !== pathKey(parent.path) && !parent.subpaths.some((s) => pathKey(s) === pathKey(path))) {
             parent.subpaths.push(path);
           }
@@ -78,7 +78,7 @@ export class DiscoveryService {
           lastActivityAt: e.lastActivityAt,
           milestones: [],
           planFiles: [],
-          claudeDirs: [e.dirName],
+          claudeDirs: [e.dir],
         });
       }
     }

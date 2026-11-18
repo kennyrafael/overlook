@@ -191,6 +191,25 @@ describe('quick actions', () => {
     assert.equal((await api(`/projects/${alpha.id}/actions/rm`, { method: 'POST' })).status, 400);
     assert.equal((await api('/projects/unknown/actions/explorer', { method: 'POST' })).status, 404);
   });
+  test('tool detection reports what is installed', async () => {
+    const { status, body } = await api('/system/tools');
+    assert.equal(status, 200);
+    for (const k of ['git', 'claude', 'vscode']) assert.equal(typeof body[k], 'boolean', k);
+    assert.ok(Array.isArray(body.wslClaude));
+    // The fixture's Claude history folder is reported as the local source.
+    assert.ok(body.claudeHistory.some((h: { label: string }) => h.label === 'local'));
+  });
+});
+
+describe('first-run setup', () => {
+  test('onboarded and useWsl are settings that can be saved', async () => {
+    const before = (await api('/settings')).body;
+    assert.equal(typeof before.onboarded, 'boolean');
+    assert.equal(typeof before.useWsl, 'boolean');
+    const after = (await api('/settings', { method: 'PUT', body: JSON.stringify({ onboarded: true, useWsl: 'yes' }) })).body;
+    assert.equal(after.onboarded, true);
+    assert.equal(after.useWsl, before.useWsl, 'wrong type is ignored');
+  });
 });
 
 describe('local-only protection', () => {

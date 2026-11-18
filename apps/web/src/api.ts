@@ -1,4 +1,4 @@
-import type { ClaudeOverview, GitOverview, Project, ProjectAction, ProjectDetail, ProjectPatch, SavedView, Settings, TaskStatus, ViewFilters } from '@overlook/shared';
+import type { ClaudeOverview, GitOverview, Project, ProjectAction, ProjectDetail, ProjectPatch, SavedView, Settings, TaskStatus, ViewFilters, SystemTools } from '@overlook/shared';
 
 export class ApiError extends Error {
   constructor(message: string, public status: number) { super(message); }
@@ -51,6 +51,7 @@ export const api = {
   updateView: (id: string, patch: { name?: string; filters?: ViewFilters }) =>
     request<SavedView>(`/views/${id}`, { method: 'PUT', body: JSON.stringify(patch) }),
   deleteView: (id: string) => request<{ ok: true }>(`/views/${id}`, { method: 'DELETE' }),
+  tools: () => request<SystemTools>('/system/tools'),
   settings: () => request<Settings>('/settings'),
   saveSettings: (s: Partial<Settings>) =>
     request<Settings>('/settings', { method: 'PUT', body: JSON.stringify(s) }),

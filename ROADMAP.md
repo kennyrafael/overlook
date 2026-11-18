@@ -73,11 +73,11 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [ ] Acceptance: fresh Windows VM without Node installs the `.exe`, finds projects, edits a plan file, shows live updates
 
 ## Phase 1b: Desktop polish
-- [ ] Single-instance lock; tray icon or "keep running in background" setting; clean shutdown of watchers
-- [ ] Native folder picker for root folders (IPC from Settings) instead of typing paths
-- [ ] First-run onboarding: pick roots, detect git / Claude Code / VS Code, explain local-only
-- [ ] Quick-action fallbacks: `cmd.exe`/PowerShell when Windows Terminal is missing; hide "Open in VS Code" when it is not installed
-- [ ] Claude Code inside WSL: read logs from `\\wsl$\<distro>\home\<user>\.claude` and map Linux paths to Windows paths
+- [x] Single-instance lock; tray icon with optional "Keep running in the tray" (Settings → Desktop app); server closes watchers and the database on quit
+- [x] Native folder picker for root folders ("Add folders…" in Settings and setup; IPC checked against the app origin)
+- [x] First-run setup dialog: explains local-only, shows detected tools (`GET /api/system/tools`), picks roots; skippable
+- [x] Quick-action fallbacks: Command Prompt when Windows Terminal is missing; actions whose tool is missing (VS Code, Claude Code) are hidden
+- [x] Claude Code inside WSL: reads `\\wsl.localhost\<distro>\home\<user>\.claude` of running distros (never starts one), maps Linux paths (`/mnt/c` → `C:`), polls for changes; unit-tested with a fake distro, not yet on real WSL
 - [ ] Acceptance: onboarding works on a VM with no VS Code, no Windows Terminal and Claude Code only in WSL
 
 ## Phase 2: Robustness for other people's machines

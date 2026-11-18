@@ -9,6 +9,7 @@ import { Toast } from 'primereact/toast';
 import { ConfirmDialog } from 'primereact/confirmdialog';
 import { appToast } from '../toast';
 import CommandPalette from '../components/CommandPalette';
+import Onboarding from '../components/Onboarding';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { useViews } from '../store/views';
 import type { MenuItem } from 'primereact/menuitem';
@@ -94,6 +95,7 @@ export default function Layout() {
           <Toast ref={appToast} position="bottom-right" />
           <ConfirmDialog />
           <CommandPalette />
+          <Onboarding />
         </main>
       </div>
     </div>

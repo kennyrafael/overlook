@@ -11,6 +11,9 @@ import { InputText } from 'primereact/inputtext';
 import { DEFAULT_MODEL_PRICES, type ModelPrice, type Settings } from '@overlook/shared';
 import { api } from '../api';
 import { useProjects } from '../store/projects';
+import { useTools } from '../store/tools';
+import { desktop, type DesktopPrefs } from '../desktop';
+import { ToolList } from '../components/ToolList';
 
 type PriceRow = ModelPrice & { key: string };
 
@@ -18,8 +21,12 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [saving, setSaving] = useState(false);
   const toast = useRef<Toast>(null);
+  const tools = useTools((s) => s.tools);
+  const [prefs, setPrefs] = useState<DesktopPrefs | null>(null);
 
   useEffect(() => { api.settings().then(setSettings); }, []);
+  useEffect(() => { void useTools.getState().load(true); }, []);
+  useEffect(() => { void desktop?.getPrefs().then(setPrefs); }, []);
 
   if (!settings) return null;
   const set = <K extends keyof Settings>(k: K, v: Settings[K]) => setSettings({ ...settings, [k]: v });
@@ -58,7 +65,16 @@ export default function SettingsPage() {
     }
   };
 
-  const toggle = (k: 'useClaudeHistory' | 'includeScratch' | 'includeMissing', label: string, hint: string) => (
+  const addFolders = async () => {
+    const picked = await desktop?.pickFolders();
+    if (picked?.length) set('roots', [...new Set([...settings.roots, ...picked])]);
+  };
+  const setCloseToTray = async (closeToTray: boolean) => {
+    const next = await desktop?.setPrefs({ closeToTray });
+    if (next) setPrefs(next);
+  };
+
+  const toggle = (k: 'useClaudeHistory' | 'useWsl' | 'includeScratch' | 'includeMissing', label: string, hint: string) => (
     <div className="flex align-items-center justify-content-between gap-3">
       <div>
         <div>{label}</div>
@@ -75,8 +91,11 @@ export default function SettingsPage() {
         <Card title="Folders">
           <div className="flex flex-column gap-4">
             <label className="flex flex-column gap-2">
-              <span>Root folders <small className="text-500">(paste a path and press Enter)</small></span>
+              <span>Root folders <small className="text-500">(paste a path and press Enter{desktop ? ', or choose folders' : ''})</small></span>
               <Chips value={settings.roots} onChange={(e) => set('roots', e.value ?? [])} separator="," />
+              {desktop && (
+                <div><Button label="Add folders…" icon="pi pi-folder-open" size="small" outlined onClick={addFolders} /></div>
+              )}
               <small className="text-500">Each folder inside a root that has .git, CLAUDE.md, .claude or a plan file becomes a project. Nested repos are folded into it.</small>
             </label>
             <label className="flex flex-column gap-2">
@@ -104,9 +123,24 @@ export default function SettingsPage() {
         <Card title="Claude history">
           <div className="flex flex-column gap-4">
             {toggle('useClaudeHistory', 'Include Claude Code projects', 'Folders you used Claude Code in (~/.claude/projects)')}
+            {tools?.platform === 'win32' && toggle('useWsl', 'Include Claude Code in WSL', 'History inside running WSL distros (\\wsl.localhost); never starts a distro')}
             {toggle('includeScratch', 'Include scratch workspaces', 'Temporary per-session folders from the desktop app')}
             {toggle('includeMissing', 'Include missing folders', 'Projects in history whose folder was deleted')}
           </div>
+        </Card>
+        {desktop && prefs && (
+          <Card title="Desktop app" className="mt-3">
+            <div className="flex align-items-center justify-content-between gap-3">
+              <div>
+                <div>Keep running in the tray</div>
+                <small className="text-500">Closing the window keeps Overlook running, so live updates continue. Quit from the tray icon.</small>
+              </div>
+              <InputSwitch checked={prefs.closeToTray} onChange={(e) => void setCloseToTray(!!e.value)} aria-label="Keep running in the tray" />
+            </div>
+          </Card>
+        )}
+        <Card title="Tools on this computer" className="mt-3">
+          <ToolList tools={tools} />
         </Card>
       </div>
       <div className="col-12">

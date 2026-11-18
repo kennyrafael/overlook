@@ -50,10 +50,6 @@ test.beforeAll(async () => {
     { timeout: 30_000 }).toBe(1);
   page = browser.contexts()[0].pages().find((p) => p.url().startsWith('http://127.0.0.1:'))!;
   origin = new URL(page.url()).origin;
-
-  // Point the app at the fixture projects.
-  expect(await api('/settings', { method: 'PUT', body: { roots: [fx.root], useClaudeHistory: true } })).toBe(200);
-  expect(await api('/projects/rescan', { method: 'POST' })).toBeLessThan(300);
 });
 
 test.afterAll(async () => {
@@ -64,6 +60,23 @@ test.afterAll(async () => {
     await new Promise((r) => setTimeout(r, 1500));
     rmSync(fx.base, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
   }
+});
+
+test('first launch shows the setup dialog', async () => {
+  const setup = page.getByRole('dialog', { name: 'Set up Overlook' });
+  await expect(setup).toBeVisible();
+  await setup.getByRole('button', { name: 'Next' }).click();
+  await expect(setup.getByRole('list', { name: 'Detected tools' })).toBeVisible();
+  await setup.getByRole('button', { name: 'Next' }).click();
+  // The native folder picker is offered in the desktop app.
+  await expect(setup.getByRole('button', { name: 'Choose folders…' })).toBeVisible();
+  // Enter the fixture folder as a typed path (the native dialog cannot be driven from the test).
+  const input = setup.locator('.p-chips input');
+  await input.fill(fx.root);
+  await input.press('Enter');
+  await setup.getByRole('button', { name: 'Finish' }).click();
+  await expect(setup).toBeHidden();
+  await expect(page.getByText(/projects found/)).toBeVisible();
 });
 
 test('window shows the Overlook UI on a random local port', async () => {
@@ -100,6 +113,17 @@ test('an edit made outside the app shows up live', async () => {
   writeFileSync(fx.plan, before);
 });
 
+test('a second launch does not start another copy', async () => {
+  const second = spawn(EXE, [], { env: { ...process.env, CPD_DATA_DIR: fx.dataDir, CLAUDE_CONFIG_DIR: fx.claudeDir }, stdio: 'ignore' });
+  const code = await new Promise<number | null>((resolve) => {
+    const t = setTimeout(() => { second.kill(); resolve(-1); }, 15_000);
+    second.once('exit', (c) => { clearTimeout(t); resolve(c); });
+  });
+  expect(code).toBe(0);
+  // The first copy is still serving.
+  expect(await api('/health')).toBe(200);
+});
+
 test('links to other sites do not open inside the app', async () => {
   const before = page.url();
   // will-navigate blocks this; the app window must stay on its own origin.
@@ -107,4 +131,15 @@ test('links to other sites do not open inside the app', async () => {
   await page.waitForTimeout(500);
   expect(page.url().startsWith(origin)).toBe(true);
   expect(page.url()).toBe(before);
+});
+
+test('quitting stops the app and its server', async () => {
+  const exited = new Promise<number | null>((resolve) => app.once('exit', resolve));
+  await page.close(); // last window closed and "keep running in the tray" is off → quit
+  const code = await Promise.race([exited, new Promise<string>((r) => setTimeout(() => r('timeout'), 15_000))]);
+  expect(code).not.toBe('timeout');
+  // The server process is gone too: nothing answers on the old port.
+  await expect.poll(async () => {
+    try { await fetch(`${origin}/api/health`); return 'up'; } catch { return 'down'; }
+  }, { timeout: 10_000 }).toBe('down');
 });

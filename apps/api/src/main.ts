@@ -4,6 +4,12 @@ import { API_PORT } from '@overlook/shared';
 import { AppModule } from './app.module';
 import { configure } from './configure';
 
+/** Electron utilityProcess message port (only present when started by the desktop app). */
+interface ParentPort {
+  postMessage(message: unknown): void;
+  on(event: 'message', listener: (e: { data?: { type?: string } }) => void): void;
+}
+
 async function bootstrap() {
   const port = Number(process.env.CPD_PORT) || API_PORT;
   const app = configure(await NestFactory.create(AppModule));
@@ -17,7 +23,12 @@ async function bootstrap() {
     throw e;
   }
   console.log(`\n  Overlook → http://127.0.0.1:${port}\n`);
-  // When started by the desktop app (Electron utilityProcess), tell it the server is ready.
-  (process as NodeJS.Process & { parentPort?: { postMessage(m: unknown): void } }).parentPort?.postMessage({ type: 'ready', port });
+  // When started by the desktop app (Electron utilityProcess), tell it the server is ready and
+  // shut down cleanly (watchers, database) when it asks.
+  const parentPort = (process as NodeJS.Process & { parentPort?: ParentPort }).parentPort;
+  parentPort?.on('message', (e) => {
+    if (e?.data?.type === 'shutdown') app.close().finally(() => process.exit(0));
+  });
+  parentPort?.postMessage({ type: 'ready', port });
 }
 bootstrap();

@@ -2,8 +2,10 @@ import { BadRequestException, Injectable, Logger, NotFoundException, ServiceUnav
 import { execFile, spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { dirname, join } from 'path';
-import type { ProjectAction } from '@overlook/shared';
+import type { ProjectAction, SystemTools } from '@overlook/shared';
 import { PROJECT_ACTIONS } from '@overlook/shared';
+import { SettingsService } from '../config/settings.service';
+import { claudeRoots } from '../discovery/claude-roots';
 import { ProjectsService } from '../projects/projects.service';
 
 const IS_WIN = process.platform === 'win32';
@@ -35,7 +37,41 @@ export class ActionsService {
   private readonly log = new Logger(ActionsService.name);
   private resolved = new Map<string, string | null>();
 
-  constructor(private projects: ProjectsService) {}
+  constructor(private projects: ProjectsService, private settings: SettingsService) {}
+
+  /** Which local tools are available, for onboarding and to hide actions that cannot work. */
+  async tools(): Promise<SystemTools> {
+    this.resolved.clear(); // re-detect: the user may have installed something since
+    const [git, claude, vscode, wt, roots] = await Promise.all([
+      this.resolve('git'),
+      this.resolve('claude'),
+      this.vsCodePath(),
+      IS_WIN ? this.resolve('wt.exe') : Promise.resolve(null),
+      this.settings.get().then((s) => claudeRoots(s.useWsl)),
+    ]);
+    const terminal: SystemTools['terminal'] = IS_WIN ? (wt ? 'Windows Terminal' : 'Command Prompt')
+      : IS_MAC ? 'Terminal'
+      : (await this.resolve('x-terminal-emulator')) ?? (await this.resolve('gnome-terminal')) ? 'terminal emulator' : null;
+    const present = roots.filter((r) => existsSync(r.dir));
+    return {
+      platform: process.platform,
+      git: !!git,
+      claude: !!claude,
+      vscode: !!vscode,
+      terminal,
+      wslClaude: [...new Set(present.filter((r) => r.label.startsWith('WSL: ')).map((r) => r.label.slice(5)))],
+      claudeHistory: present.map((r) => ({ label: r.label, dir: r.dir })),
+    };
+  }
+
+  /** VS Code's executable, or null. On Windows `code` is a .cmd wrapper, so use Code.exe next to it. */
+  private async vsCodePath(): Promise<string | null> {
+    const cmd = await this.resolve('code');
+    if (!cmd) return null;
+    if (!IS_WIN) return cmd;
+    const exe = join(dirname(dirname(cmd)), 'Code.exe');
+    return existsSync(exe) ? exe : null;
+  }
 
   async run(projectId: string, action: string): Promise<{ ok: true; action: ProjectAction }> {
     if (!PROJECT_ACTIONS.includes(action as ProjectAction)) throw new BadRequestException(`Unknown action ${action}`);
@@ -76,14 +112,9 @@ export class ActionsService {
   }
 
   private async openVsCode(path: string) {
-    if (IS_WIN) {
-      // `code` is a .cmd wrapper (needs a shell); start Code.exe next to it instead.
-      const cmd = await this.require('code', 'VS Code (code)');
-      const exe = join(dirname(dirname(cmd)), 'Code.exe');
-      if (!existsSync(exe)) throw new ServiceUnavailableException(`VS Code executable not found next to ${cmd}`);
-      return launch(exe, [path], path);
-    }
-    return launch(await this.require('code', 'VS Code (code)'), [path], path);
+    const exe = await this.vsCodePath();
+    if (!exe) throw new ServiceUnavailableException('VS Code was not found. Install it and enable "Add to PATH".');
+    return launch(exe, [path], path);
   }
 
   /** Opens a terminal in `path`, optionally running `program` (an absolute executable path) in it. */
