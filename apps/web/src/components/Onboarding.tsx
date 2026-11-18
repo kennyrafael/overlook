@@ -66,8 +66,8 @@ export default function Onboarding() {
   const nothingToFind = settings.roots.length === 0 && !settings.useClaudeHistory;
 
   const footer = (
-    <div className="flex justify-content-between align-items-center gap-2 flex-wrap">
-      <Button label="Skip setup" text size="small" onClick={() => void finish(true)} disabled={saving} />
+    <div className="flex justify-content-between align-items-center gap-2 flex-wrap pt-3">
+      <Button label="Skip setup" text size="small" className="pl-0" onClick={() => void finish(true)} disabled={saving} />
       <div className="flex gap-2">
         {step > 0 && <Button label="Back" outlined size="small" onClick={() => setStep(step - 1)} disabled={saving} />}
         {last
@@ -88,8 +88,9 @@ export default function Onboarding() {
       modal
       closable={!saving}
       aria-label="Set up Overlook"
+      contentClassName="pt-4"
     >
-      <ol className="list-none p-0 m-0 mb-4 flex gap-3 text-sm" aria-label="Setup steps">
+      <ol className="list-none p-0 m-0 mb-4 flex flex-wrap gap-3 text-sm" aria-label="Setup steps">
         {STEPS.map((s, i) => (
           <li key={s} className={i === step ? 'font-bold text-primary' : 'text-500'} aria-current={i === step ? 'step' : undefined}>
             {i + 1}. {s}
