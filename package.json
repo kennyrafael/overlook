@@ -11,6 +11,7 @@
     "dev": "npm run build -w @overlook/shared && concurrently -n api,web -c blue,magenta \"npm run dev -w @overlook/api\" \"npm run dev -w @overlook/web\"",
     "build": "npm run build -w @overlook/shared && npm run build -w @overlook/api && npm run build -w @overlook/web",
     "start": "node scripts/start.mjs",
+    "notices": "node scripts/notices.mjs",
     "typecheck": "npm run build -w @overlook/shared && npm run typecheck --workspaces --if-present",
     "test:smoke": "npm run build && playwright test",
     "start:open": "node scripts/start.mjs --open",

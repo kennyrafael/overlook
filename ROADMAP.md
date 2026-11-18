@@ -50,7 +50,8 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [x] Rename UI title, README, package names to Overlook (`@overlook/*`); keep "for Claude Code" as a descriptor only
 - [ ] Review Anthropic's brand guidelines and terms for descriptive use of "Claude Code"
 - [x] Add `LICENSE` (MIT, Copyright (c) 2026 AgentHub)
-- [ ] Check dependency licenses (no GPL/AGPL); generate a third-party notices file and show it in About
+- [x] Check dependency licenses (no GPL/AGPL); generate a third-party notices file (`npm run notices`)
+- [ ] Show `THIRD_PARTY_NOTICES.md` in an About dialog (and ship it inside the installer)
 - [ ] Acceptance: repo pushed with LICENSE and notices; name cleared on trademark search, subdomain and GitHub
 
 ## Phase 1a: Electron shell (Windows, unsigned)
