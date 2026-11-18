@@ -45,7 +45,7 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 ## Phase 0: Name, license and repository
 - [x] `git init`, first commit, GitHub repository (`github.com/kennyrafael/overlook`)
 - [x] Pick the product name: Overlook (web search for existing products done 2026-11-18)
-- [ ] Check EUIPO/WIPO trademark search for "Overlook" and "AgentHub" in software classes (9, 42)
+- [x] Check EUIPO/WIPO trademark search for "Overlook" and "AgentHub" in software classes (9, 42)
 - [ ] Set up `overlook.agenthub.eu`; check GitHub org/repo and npm names are free
 - [x] Rename UI title, README, package names to Overlook (`@overlook/*`); keep "for Claude Code" as a descriptor only
 - [ ] Review Anthropic's brand guidelines and terms for descriptive use of "Claude Code"
