@@ -1,7 +1,7 @@
 # Roadmap: free desktop app first, paid later if there is demand
 
 Goal: ship this dashboard as a **free, MIT-licensed** installable desktop app for **Windows and
-macOS**, published by **AgentHub** (agenthub.eu). If people use it and ask for more, add signing,
+macOS**, published by **AgentHub** (agenthub.pt). If people use it and ask for more, add signing,
 paid features and licensing later (see "Later: if there is demand").
 (iOS is out of scope: the app needs to read `~/.claude`, run git, watch folders and launch
 VS Code/terminals, none of which iOS allows. Linux is out of scope for 1.0; revisit if users ask.)
@@ -31,7 +31,7 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 
 | Topic | Decision | Why |
 |---|---|---|
-| Publisher | **AgentHub** (existing company); site on a subdomain of `agenthub.eu` | Reuses the company and domain already owned |
+| Publisher | **AgentHub** (existing company); site on a subdomain of `agenthub.pt` | Reuses the company and domain already owned |
 | License | **MIT**, `Copyright (c) 2026 AgentHub` | Builds trust for a tool that reads local files; later versions or paid add-ons can use another license |
 | Price | **Free** for now | Prove demand before spending on signing and payments |
 | Contributions | Own code only at first; add a CLA before accepting outside PRs | Keeps the option to relicense later versions |
@@ -40,7 +40,7 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 | Signing | **Unsigned** for the free release; download page explains SmartScreen / Gatekeeper steps | Saves Apple $99/yr and Windows signing costs until there is demand |
 | Updates | Windows: electron-updater (works unsigned). macOS: in-app "new version available" notice + manual download | macOS auto-update requires a signed app |
 | Privacy promise | "No project data ever leaves your machine." Network calls are listed in-app | Update checks are the only outbound call |
-| Product name | **Overlook by AgentHub**, "a project dashboard for Claude Code"; site `overlook.agenthub.eu` | Only small unrelated projects use the name (a Filament PHP plugin, a homelab dashboard); "Claude" is Anthropic's trademark, so it stays a description only |
+| Product name | **Overlook by AgentHub**, "a project dashboard for Claude Code"; site `overlook.agenthub.pt` | Only small unrelated projects use the name (a Filament PHP plugin, a homelab dashboard); "Claude" is Anthropic's trademark, so it stays a description only |
 
 ## Phase 0: Name, license and repository
 - [x] `git init`, first commit, GitHub repository (`github.com/kennyrafael/overlook`)
@@ -103,7 +103,7 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 ## Phase 4: Free public release
 - [ ] GitHub Actions: build Windows + macOS on tags; run unit, e2e and packaged smoke tests; publish to GitHub Releases
 - [ ] Windows auto-update via electron-updater from GitHub Releases; macOS shows "new version available" with a download link
-- [ ] Set up `overlook.agenthub.eu` (DNS + hosting) for the landing page
+- [x] Set up `overlook.agenthub.pt` DNS (Vercel nameservers; resolves with HTTPS, 2026-11-18). Attach it to the landing page project when deploying
 - [ ] Landing page on the AgentHub subdomain: screenshots, download buttons, install steps for SmartScreen and Gatekeeper warnings, FAQ (iOS and Linux: not supported and why)
 - [ ] Docs from README sections (plan file format, safety, troubleshooting)
 - [ ] Optional waitlist / "tell me about Pro" email signup to measure paid interest

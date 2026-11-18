@@ -1,5 +1,5 @@
 # Overlook — a project dashboard for Claude Code
-nBy [AgentHub](https://overlook.agenthub.eu).
+nBy [AgentHub](https://overlook.agenthub.pt).
 
 A local-only dashboard for the projects you work on with Claude Code: status, milestones done
 and missing, progress, a Kanban board that edits your plan files, git activity and Claude usage.
