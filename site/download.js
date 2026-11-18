@@ -1,7 +1,7 @@
-// Points the download buttons at the latest installers, read from the update feeds on Cloudflare R2
-// (the same latest.yml / latest-arm64.yml the app uses). The bucket needs a CORS rule allowing GET
-// from https://overlook.agenthub.pt. If a feed cannot be read, the buttons keep their fallback link.
-const DOWNLOADS = 'https://dl.agenthub.pt/overlook';
+// Points the download buttons at the latest installers, read from the update feeds (the same
+// latest.yml / latest-arm64.yml the app uses), served from R2 by the overlook-downloads Worker
+// (workers/downloads/, which allows this site via CORS). If a feed cannot be read, the buttons keep their fallback link.
+const DOWNLOADS = 'https://overlook-downloads.kennyrafael-cg.workers.dev/overlook';
 
 /** Reads `version`, `path` and the first file's `size` from an electron-builder feed. */
 function parseFeed(text) {

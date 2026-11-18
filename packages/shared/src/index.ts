@@ -297,7 +297,7 @@ export interface NetworkCall {
 export const NETWORK_CALLS: NetworkCall[] = [
   {
     what: 'Update check',
-    destination: 'dl.agenthub.pt (Overlook release feed and installer download)',
+    destination: 'overlook-downloads.kennyrafael-cg.workers.dev (Overlook release feed and installer download)',
     when: 'At start-up and once a day, Windows desktop app only; off with Settings → Desktop app → Check for updates automatically',
     sends: 'Nothing beyond a normal download request (IP address, user agent with the app version)',
     active: true,

@@ -6,7 +6,7 @@
 #   2. A GitHub Release with the same files.
 # Repository secrets: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET.
 # Repository variable (optional): OVERLOOK_DOWNLOAD_URL, the public URL of the R2 folder
-# (default https://dl.agenthub.pt/overlook); it is baked into the app as the update feed.
+# (default https://overlook-downloads.kennyrafael-cg.workers.dev/overlook); it is baked into the app as the update feed.
 name: Release
 on:
   push:

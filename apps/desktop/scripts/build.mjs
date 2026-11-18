@@ -11,7 +11,7 @@ const require = createRequire(import.meta.url);
 const { Arch, build, Platform } = require('electron-builder');
 const desktop = join(dirname(fileURLToPath(import.meta.url)), '..');
 const electronVersion = require('../package.json').devDependencies.electron;
-const downloadUrl = (process.env.OVERLOOK_DOWNLOAD_URL || 'https://dl.agenthub.pt/overlook').replace(/\/+$/, '');
+const downloadUrl = (process.env.OVERLOOK_DOWNLOAD_URL || 'https://overlook-downloads.kennyrafael-cg.workers.dev/overlook').replace(/\/+$/, '');
 
 /** @type {import('electron-builder').Configuration} */
 const config = {

@@ -103,9 +103,9 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 ## Phase 4: Free public release
 - [x] GitHub Actions, Windows: `ci.yml` (typecheck, unit, e2e, browser smoke on push to main); `release.yml` (tag `vX.Y.Z` → tests, `npm run dist`, packaged smoke, upload to Cloudflare R2, then a GitHub Release with the same files)
 - [ ] GitHub Actions, macOS build job (after Phase 3)
-- [ ] Cloudflare R2: bucket, public custom domain `dl.agenthub.pt` (needs the `agenthub.pt` zone on Cloudflare), CORS GET from `https://overlook.agenthub.pt`; repo secrets `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`
+- [x] Cloudflare R2 bucket `overlook`, served by the `overlook-downloads` Worker (`workers/downloads/`, deployed from GitHub by Workers Builds) at `https://overlook-downloads.kennyrafael-cg.workers.dev/overlook/` (Range requests, CORS for the landing page); repo secrets `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`
 - [ ] First tagged release (`v0.1.0`) published by the workflow; check the assets and feeds
-- [x] Windows auto-update via electron-updater, generic feed on R2 (`https://dl.agenthub.pt/overlook/latest.yml`, `latest-arm64.yml`; `OVERLOOK_DOWNLOAD_URL` overrides at build time). `updater.ts`: start-up + daily check, background download, "Restart now / Later"; tray → Check for updates; Settings → Desktop app toggle; listed in Network activity
+- [x] Windows auto-update via electron-updater, generic feed on R2 (`https://overlook-downloads.kennyrafael-cg.workers.dev/overlook/latest.yml`, `latest-arm64.yml`; `OVERLOOK_DOWNLOAD_URL` overrides at build time). `updater.ts`: start-up + daily check, background download, "Restart now / Later"; tray → Check for updates; Settings → Desktop app toggle; listed in Network activity
 - [ ] macOS shows "new version available" with a download link (after Phase 3)
 - [x] Set up `overlook.agenthub.pt` DNS (Vercel nameservers; resolves with HTTPS, 2026-11-18). Attach it to the landing page project when deploying
 - [x] Landing page in `site/` (static, for a Vercel project with root directory `site`): download buttons read the R2 feeds, SmartScreen install steps, FAQ (Linux, iOS, macOS), not-affiliated footer
