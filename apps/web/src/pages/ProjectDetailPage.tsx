@@ -278,7 +278,7 @@ export default function ProjectDetailPage() {
             : <p className="text-500 m-0">No milestones yet, so there is nothing to put on the board.</p>}
         </TabPanel>
         <TabPanel header="Git" leftIcon="pi pi-github mr-2"><GitInsights projectIds={[p.id]} single /></TabPanel>
-        <TabPanel header="Claude" leftIcon="pi pi-sparkles mr-2"><ClaudeInsights projectIds={[p.id]} single /></TabPanel>
+        <TabPanel header="Claude" leftIcon="pi pi-microchip-ai mr-2"><ClaudeInsights projectIds={[p.id]} single /></TabPanel>
         <TabPanel header="Files" leftIcon="pi pi-file mr-2">
           <div className="flex flex-column gap-2">
             <div><span className="text-500">Plan files with milestones: </span>{p.planFiles.length ? p.planFiles.join(', ') : '—'}</div>

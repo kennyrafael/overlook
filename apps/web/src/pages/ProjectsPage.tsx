@@ -133,7 +133,7 @@ export default function ProjectsPage() {
         <Column field="lastActivityAt" header="Last activity" sortable style={{ width: '9rem' }}
           body={(p: Project) => <span title={p.lastActivityAt ?? ''}>{relativeTime(p.lastActivityAt)}</span>} />
         <Column field="claudeSessions" header="Sessions" sortable style={{ width: '7rem' }}
-          body={(p: Project) => <span><i className="pi pi-sparkles text-primary mr-1" />{p.claudeSessions}</span>} />
+          body={(p: Project) => <span><i className="pi pi-microchip-ai text-primary mr-1" />{p.claudeSessions}</span>} />
         <Column style={{ width: '4rem' }} body={(p: Project) => <ProjectActionsMenu project={p} />} />
         <Column style={{ width: '4rem' }} body={(p: Project) => (
           <Button icon="pi pi-pencil" rounded text aria-label="Edit" onClick={() => setEditing(p)} />

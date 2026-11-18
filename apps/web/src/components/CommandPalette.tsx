@@ -24,7 +24,7 @@ const PAGES = [
   { label: 'Overview', to: '/', icon: 'pi pi-chart-bar' },
   { label: 'Projects', to: '/projects', icon: 'pi pi-folder' },
   { label: 'Board', to: '/board', icon: 'pi pi-th-large' },
-  { label: 'Claude usage', to: '/claude', icon: 'pi pi-sparkles' },
+  { label: 'Claude usage', to: '/claude', icon: 'pi pi-microchip-ai' },
   { label: 'Git activity', to: '/git', icon: 'pi pi-github' },
   { label: 'Settings', to: '/settings', icon: 'pi pi-cog' },
 ];

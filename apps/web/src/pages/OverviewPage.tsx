@@ -265,7 +265,7 @@ export default function OverviewPage() {
         <div className="col-6 md:col-4 xl:col-2"><Kpi label="Avg progress" value={`${kpi.avg}%`} icon="pi pi-percentage" sub="projects with a plan" /></div>
         <div className="col-6 md:col-4 xl:col-2"><Kpi label="Milestones left" value={kpi.milestonesLeft} icon="pi pi-flag" sub={`of ${kpi.milestonesTotal}`} /></div>
         <div className="col-6 md:col-4 xl:col-2"><Kpi label="Open tasks" value={kpi.tasksLeft} icon="pi pi-list-check" sub={`of ${kpi.tasksTotal}`} /></div>
-        <div className="col-6 md:col-4 xl:col-2"><Kpi label="Claude sessions" value={kpi.sessions} icon="pi pi-sparkles" sub="all time" /></div>
+        <div className="col-6 md:col-4 xl:col-2"><Kpi label="Claude sessions" value={kpi.sessions} icon="pi pi-microchip-ai" sub="all time" /></div>
 
         <div className="col-12 md:col-6 xl:col-4">
           <ChartCard title="Status" subTitle="Click a slice to filter" height={260} empty={!charts.statusTotal && 'No projects match.'}>

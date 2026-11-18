@@ -1,3 +1,4 @@
+import { OverlookMark } from '../components/OverlookMark';
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Menu } from 'primereact/menu';
@@ -19,7 +20,7 @@ const NAV = [
   { label: 'Overview', icon: 'pi pi-chart-bar', to: '/' },
   { label: 'Projects', icon: 'pi pi-folder', to: '/projects' },
   { label: 'Board', icon: 'pi pi-th-large', to: '/board' },
-  { label: 'Claude', icon: 'pi pi-sparkles', to: '/claude' },
+  { label: 'Claude', icon: 'pi pi-microchip-ai', to: '/claude' },
   { label: 'Git', icon: 'pi pi-github', to: '/git' },
   { label: 'Settings', icon: 'pi pi-cog', to: '/settings' },
 ];
@@ -54,11 +55,11 @@ export default function Layout() {
   return (
     <div className="layout">
       <aside className="layout-sidebar">
-        <div className="brand"><i className="pi pi-sparkles mr-2" />Overlook</div>
+        <div className="brand"><OverlookMark className="text-primary" />Overlook</div>
         <Menu model={items} />
       </aside>
       <Sidebar visible={menuOpen} onHide={() => setMenuOpen(false)} className="layout-mobile-menu"
-        header={<span className="font-bold"><i className="pi pi-sparkles mr-2" />Overlook</span>}>
+        header={<span className="brand-inline font-bold"><OverlookMark className="text-primary" />Overlook</span>}>
         <Menu model={items} className="w-full border-none" />
       </Sidebar>
       <div className="layout-main">

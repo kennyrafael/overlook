@@ -11,7 +11,7 @@ export const ACTION_META: Record<ProjectAction, { label: string; icon: string; d
   vscode: { label: 'Open in VS Code', icon: 'pi pi-code', done: 'Opening VS Code' },
   terminal: { label: 'Open terminal', icon: 'pi pi-desktop', done: 'Opening a terminal' },
   explorer: { label: 'Show in Explorer', icon: 'pi pi-folder-open', done: 'Opening the folder' },
-  claude: { label: 'Start Claude Code', icon: 'pi pi-sparkles', done: 'Starting Claude Code' },
+  claude: { label: 'Start Claude Code', icon: 'pi pi-microchip-ai', done: 'Starting Claude Code' },
 };
 
 const ORDER: ProjectAction[] = ['vscode', 'claude', 'terminal', 'explorer'];

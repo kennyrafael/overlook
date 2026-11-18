@@ -50,7 +50,7 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [x] Rename UI title, README, package names to Overlook (`@overlook/*`); keep "for Claude Code" as a descriptor only
 - [x] Review Anthropic's trademark guidelines (2026-11-18): no logos or brand elements without approval; no implied affiliation
 - [x] Add a "not affiliated with Anthropic" notice to the README
-- [ ] Replace the sparkle icon in the UI and app icon with an original Overlook mark (avoid looking like Claude's logo or colours)
+- [x] Replace the sparkle icon in the UI with an original Overlook mark (`OverlookMark`, `favicon.svg`); reuse it for the desktop app icon (avoid looking like Claude's logo or colours)
 - [ ] Use "Claude Code" only in plain text as a description (tagline, docs); never in the app name, icon, domain or ads headline
 - [ ] Show the "not affiliated" notice in the About dialog and on the landing page footer
 - [x] Add `LICENSE` (MIT, Copyright (c) 2026 AgentHub)
