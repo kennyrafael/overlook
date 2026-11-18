@@ -46,7 +46,8 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [x] `git init`, first commit, GitHub repository (`github.com/kennyrafael/overlook`)
 - [x] Pick the product name: Overlook (web search for existing products done 2026-11-18)
 - [x] Check EUIPO/WIPO trademark search for "Overlook" and "AgentHub" in software classes (9, 42)
-- [ ] Set up `overlook.agenthub.eu`; check GitHub org/repo and npm names are free
+- [x] GitHub repo name secured (`github.com/kennyrafael/overlook`)
+- [ ] Check the npm name/scope (`overlook`, `@overlook`) is free
 - [x] Rename UI title, README, package names to Overlook (`@overlook/*`); keep "for Claude Code" as a descriptor only
 - [x] Review Anthropic's trademark guidelines (2026-11-18): no logos or brand elements without approval; no implied affiliation
 - [x] Add a "not affiliated with Anthropic" notice to the README
@@ -57,7 +58,7 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [x] Add `LICENSE` (MIT, Copyright (c) 2026 AgentHub)
 - [x] Check dependency licenses (no GPL/AGPL); generate a third-party notices file (`npm run notices`)
 - [x] Show `THIRD_PARTY_NOTICES.md` and the license in an About dialog (`GET /api/system/about`)
-- [ ] Acceptance: repo pushed with LICENSE and notices; name cleared on trademark search, subdomain and GitHub
+- [ ] Acceptance: repo pushed with LICENSE and notices; name cleared on trademark search, GitHub and npm
 
 ## Phase 1a: Electron shell (Windows, unsigned)
 - [x] Add `apps/desktop` workspace with Electron main + preload (TypeScript)
@@ -102,6 +103,7 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 ## Phase 4: Free public release
 - [ ] GitHub Actions: build Windows + macOS on tags; run unit, e2e and packaged smoke tests; publish to GitHub Releases
 - [ ] Windows auto-update via electron-updater from GitHub Releases; macOS shows "new version available" with a download link
+- [ ] Set up `overlook.agenthub.eu` (DNS + hosting) for the landing page
 - [ ] Landing page on the AgentHub subdomain: screenshots, download buttons, install steps for SmartScreen and Gatekeeper warnings, FAQ (iOS and Linux: not supported and why)
 - [ ] Docs from README sections (plan file format, safety, troubleshooting)
 - [ ] Optional waitlist / "tell me about Pro" email signup to measure paid interest
