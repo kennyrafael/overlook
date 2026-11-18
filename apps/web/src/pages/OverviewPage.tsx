@@ -13,6 +13,7 @@ import { useProjects } from '../store/projects';
 import { baseOptions, chartTokens, selectColor } from '../chartTheme';
 import { sourceLabel } from '../format';
 import { useTheme } from '../theme/ThemeContext';
+import { MOD } from '../platform';
 
 const SOURCES: ProjectSource[] = ['root', 'claude', 'both'];
 type ClickEvent = { native?: MouseEvent | null };
@@ -255,7 +256,7 @@ export default function OverviewPage() {
     return <Message severity="info" text="No projects yet. Add a root folder in Settings, then save to scan." />;
   }
 
-  const hint = 'Click to filter · Ctrl+click to open';
+  const hint = `Click to filter · ${MOD}+click to open`;
   return (
     <div className="flex flex-column gap-3">
       <FilterBar />

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Overlook by AgentHub</title>
-<meta name="description" content="A free, local-only project dashboard for Claude Code users: plan progress, a Kanban board that edits your plan files, git activity and usage. Windows, macOS coming.">
+<meta name="description" content="A free, local-only project dashboard for Claude Code users: plan progress, a Kanban board that edits your plan files, git activity and usage. Windows and macOS.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <style>
 :root {
@@ -64,9 +64,10 @@ footer p { margin: 6px 0; }
       <div class="btns">
         <a class="btn primary" id="dl-x64" href="#install">Download for Windows<small id="dl-x64-sub">64-bit (x64)</small></a>
         <a class="btn" id="dl-arm64" href="#install">Windows on Arm<small id="dl-arm64-sub">arm64</small></a>
-        <a class="btn" aria-disabled="true" href="#faq">macOS<small>coming soon</small></a>
+        <a class="btn" id="dl-mac-arm64" aria-disabled="true" href="#install-mac">Mac with Apple silicon<small id="dl-mac-arm64-sub">M1 and later</small></a>
+        <a class="btn" id="dl-mac-x64" aria-disabled="true" href="#install-mac">Mac with Intel<small id="dl-mac-x64-sub">x64</small></a>
       </div>
-      <p class="note">Free and open source (MIT). Windows 10 and 11. <span id="dl-version"></span></p>
+      <p class="note">Free and open source (MIT). Windows 10 and 11, macOS 12 and later. <span id="dl-version"></span></p>
     </div>
 
     <section id="features">
@@ -92,12 +93,25 @@ footer p { margin: 6px 0; }
       <p>Updates install themselves: Overlook checks for a new release at start-up and once a day and asks before restarting.</p>
     </section>
 
+    <section id="install-mac">
+      <h2>Install on macOS</h2>
+      <p>Overlook is not notarized by Apple yet, so macOS blocks the first launch until you allow it:</p>
+      <ol class="steps">
+        <li>Download the <code>.dmg</code> for your Mac (Apple menu → About This Mac shows “Apple M…” or “Intel”).</li>
+        <li>Open it and drag <strong>Overlook</strong> to <strong>Applications</strong>.</li>
+        <li>Open Overlook from Applications. When macOS says it cannot verify the app, click <strong>Done</strong>.</li>
+        <li>Open <strong>System Settings → Privacy &amp; Security</strong>, scroll down to the message about Overlook and click <strong>Open Anyway</strong>, then confirm with your password.</li>
+        <li>The first time you use <strong>Start Claude Code</strong>, macOS asks whether Overlook may control Terminal (or iTerm). Click <strong>Allow</strong>.</li>
+      </ol>
+      <p>Overlook tells you when a new version is out; download it and drag it to Applications again to replace the old one. Your settings are kept.</p>
+    </section>
+
     <section id="faq">
       <h2>FAQ</h2>
       <details><summary>Does it send my code or plans anywhere?</summary><p>No. Everything is read and stored on your computer. The only outbound request is the update check to overlook-downloads.kennyrafael-cg.workers.dev, listed in Settings → Network activity, and you can switch it off.</p></details>
       <details><summary>Do I need Claude Code?</summary><p>No, but it is built for it. Without Claude Code you still get projects, plans, the board and git activity; the usage pages stay empty. Claude Code installed inside WSL is detected too.</p></details>
       <details><summary>What does a plan file look like?</summary><p>Any Markdown file named like <code>PLAN.md</code> or <code>ROADMAP.md</code>: <code>## Milestone</code> headings with <code>- [ ]</code> / <code>- [x]</code> checkboxes, and <code>[~]</code> for in progress. You can change the file names in Settings.</p></details>
-      <details><summary>When is macOS coming?</summary><p>It is next on the roadmap. Leave a star or watch the GitHub repository to hear when it ships.</p></details>
+      <details><summary>Why does macOS or Windows warn about the app?</summary><p>Signing certificates cost money every year, and Overlook is free. The installers are built and tested by an automated release process; the warning goes away once the app is signed, which is planned if there is enough interest.</p></details>
       <details><summary>Linux or iOS?</summary><p>Not planned for now. Linux users can run it from source (<code>npm install &amp;&amp; npm start</code>, then open it in a browser). iOS cannot read your local files, so a phone app would not be useful.</p></details>
       <details><summary>Is it really free?</summary><p>Yes, MIT licensed. If there is demand, paid extras may come later; the current features stay free.</p></details>
     </section>

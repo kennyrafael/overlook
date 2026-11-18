@@ -47,7 +47,7 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [x] Pick the product name: Overlook (web search for existing products done 2026-11-18)
 - [x] Check EUIPO/WIPO trademark search for "Overlook" and "AgentHub" in software classes (9, 42)
 - [x] GitHub repo name secured (`github.com/kennyrafael/overlook`)
-- [ ] Check the npm name/scope (`overlook`, `@overlook`) is free
+- [x] Check the npm name/scope (`overlook`, `@overlook`) is free
 - [x] Rename UI title, README, package names to Overlook (`@overlook/*`); keep "for Claude Code" as a descriptor only
 - [x] Review Anthropic's trademark guidelines (2026-11-18): no logos or brand elements without approval; no implied affiliation
 - [x] Add a "not affiliated with Anthropic" notice to the README
@@ -93,24 +93,25 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [x] Acceptance: upgrading from a v0 database keeps all overrides (`migrations.spec.ts`); 5 GB of logs parse without freezing the UI and restart loads in under 3 s (`bench:logs`); an unknown log format shows a warning, not an error (`log-fixtures.spec.ts`)
 
 ## Phase 3: macOS (unsigned)
-- [ ] Get Mac hardware or a macOS CI runner for builds and tests
-- [ ] Paths: `~/.claude`, `/Applications/Visual Studio Code.app` or `code` on PATH, Terminal/iTerm
-- [ ] Start Claude Code on macOS (open Terminal at the folder running `claude`, via AppleScript `osascript` with fixed script and the path passed as an argument)
-- [ ] Show in Finder; app menu (About, Preferences, Quit); keyboard shortcuts use ⌘
-- [ ] Universal (`x64` + `arm64`) `.dmg` build, ad-hoc signed
-- [ ] Acceptance: on a fresh Mac, following the download page's "Open Anyway" steps, the app opens and passes the smoke suite
+- [x] macOS CI runner (`macos-latest` in `ci.yml` and `release.yml`): typecheck, unit, e2e, browser and packaged smoke tests
+- [x] Paths: `~/.claude`; VS Code from `/Applications` or `~/Applications` (`open -a`) or `code` on PATH; iTerm used when installed, else Terminal; login-shell PATH (+ Homebrew, `~/.local/bin`, `~/.claude/local`) so apps opened from Finder find `git`, `claude`, `code`
+- [x] Start Claude Code on macOS: `osascript` with a fixed script; folder and program passed as `argv` and shell-quoted with `quoted form of` (unit-tested); `NSAppleEventsUsageDescription` for the automation prompt
+- [x] Show in Finder; app menu (About, Check for Updates, Settings ⌘,, Hide, Quit ⌘Q, Edit, View, Window); shortcut hints show ⌘ on macOS; Dock click reopens the window
+- [x] `.dmg` per arch (`x64`, `arm64`; not universal, which would need the two better-sqlite3 binaries merged with lipo), ad-hoc signed, macOS 12+
+- [ ] Acceptance: on a fresh Mac, following the download page's "Open Anyway" steps, the app opens and passes the smoke suite (CI runs the smoke suite on macOS; a manual fresh-Mac install is still to do)
 
 ## Phase 4: Free public release
 - [x] GitHub Actions, Windows: `ci.yml` (typecheck, unit, e2e, browser smoke on push to main); `release.yml` (tag `vX.Y.Z` → tests, `npm run dist`, packaged smoke, upload to Cloudflare R2, then a GitHub Release with the same files)
-- [ ] GitHub Actions, macOS build job (after Phase 3)
+- [x] GitHub Actions, macOS build job: `release.yml` builds Windows and macOS in parallel; one publish job (R2, then GitHub Release) runs only if both pass
 - [x] Cloudflare R2 bucket `overlook`, served by the `overlook-downloads` Worker (`workers/downloads/`, deployed from GitHub by Workers Builds) at `https://overlook-downloads.kennyrafael-cg.workers.dev/overlook/` (Range requests, CORS for the landing page); repo secrets `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`
-- [ ] First tagged release (`v0.1.0`) published by the workflow; check the assets and feeds
+- [x] First tagged release (`v0.1.0`, Windows) published to R2 and verified (feeds, Range requests, SHA-512)
 - [x] Windows auto-update via electron-updater, generic feed on R2 (`https://overlook-downloads.kennyrafael-cg.workers.dev/overlook/latest.yml`, `latest-arm64.yml`; `OVERLOOK_DOWNLOAD_URL` overrides at build time). `updater.ts`: start-up + daily check, background download, "Restart now / Later"; tray → Check for updates; Settings → Desktop app toggle; listed in Network activity
-- [ ] macOS shows "new version available" with a download link (after Phase 3)
+- [x] macOS shows "new version available" with a Download button (compares `latest.yml` on the feed with the running version; start-up, daily, and menu → Check for Updates)
 - [x] Set up `overlook.agenthub.pt` DNS (Vercel nameservers; resolves with HTTPS, 2026-11-18). Attach it to the landing page project when deploying
 - [x] Landing page in `site/` (static, for a Vercel project with root directory `site`): download buttons read the R2 feeds, SmartScreen install steps, FAQ (Linux, iOS, macOS), not-affiliated footer
-- [ ] Deploy `site/` on Vercel and attach `overlook.agenthub.pt`
-- [ ] Landing page: add screenshots; Gatekeeper steps once macOS ships
+- [x] Deploy `site/` on Vercel and attach `overlook.agenthub.pt`
+- [x] Landing page: macOS buttons (enabled once the release has the `.dmg`), Gatekeeper "Open Anyway" steps
+- [ ] Landing page: add screenshots
 - [ ] Docs from README sections (plan file format, safety, troubleshooting)
 - [ ] Optional waitlist / "tell me about Pro" email signup to measure paid interest
 - [ ] Beta with 5–10 Claude Code users on both platforms; fix top issues

@@ -252,7 +252,7 @@ export interface SystemTools {
   claude: boolean;
   vscode: boolean;
   /** What "Open terminal" will use. */
-  terminal: 'Windows Terminal' | 'Command Prompt' | 'Terminal' | 'terminal emulator' | null;
+  terminal: 'Windows Terminal' | 'Command Prompt' | 'Terminal' | 'iTerm' | 'terminal emulator' | null;
   /** Running WSL distros where Claude Code history was found. */
   wslClaude: string[];
   /** Where Claude Code history is read from (local folder plus any WSL folders). */

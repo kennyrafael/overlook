@@ -27,4 +27,30 @@ function parseFeed(text) {
     } catch { /* keep the fallback link */ }
   }
   if (version) document.getElementById('dl-version').textContent = `Latest: v${version}.`;
+
+  // macOS: the release ships Overlook-<version>-<arch>.dmg next to the Windows feeds. A button is
+  // enabled only once its file exists (older releases had no macOS build).
+  if (version && /^[\w.-]+$/.test(version)) {
+    for (const arch of ['arm64', 'x64']) {
+      const url = `${DOWNLOADS}/Overlook-${version}-${arch}.dmg`;
+      try {
+        const res = await fetch(url, { method: 'HEAD', cache: 'no-cache' });
+        if (!res.ok) continue;
+        const btn = document.getElementById(`dl-mac-${arch}`);
+        btn.href = url;
+        btn.removeAttribute('aria-disabled');
+        const size = Number(res.headers.get('content-length'));
+        if (size) {
+          const sub = document.getElementById(`dl-mac-${arch}-sub`);
+          sub.textContent = `${sub.textContent} · ${Math.round(size / 1048576)} MB`;
+        }
+      } catch { /* leave it disabled */ }
+    }
+  }
 })();
+
+// Visitors on a Mac see the Apple silicon button as the main one.
+if (/mac/i.test(navigator.userAgentData?.platform ?? navigator.platform ?? '')) {
+  document.getElementById('dl-x64').classList.remove('primary');
+  document.getElementById('dl-mac-arm64').classList.add('primary');
+}

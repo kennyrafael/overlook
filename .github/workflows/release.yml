@@ -1,23 +1,39 @@
-# Tag vX.Y.Z (matching package.json "version") → test, build the Windows installers, smoke-test the
-# packaged app, then publish:
-#   1. Cloudflare R2 (the download site and the auto-update feed the app reads):
+# Tag vX.Y.Z (matching package.json "version") → on Windows and macOS: test, build the installers
+# (Windows NSIS .exe x64/arm64, macOS .dmg x64/arm64, ad-hoc signed) and smoke-test the packaged app.
+# Then one publish job, only if both builds passed:
+#   1. Cloudflare R2 (download site + update feed, served by the overlook-downloads Worker):
 #      installers + blockmaps first, then latest.yml (x64) and latest-arm64.yml (arm64), so the feed
-#      never points at a file that is not uploaded yet.
+#      never points at a file that is not uploaded yet. latest.yml's version also drives the macOS
+#      "new version available" prompt and the landing page's macOS buttons.
 #   2. A GitHub Release with the same files.
 # Repository secrets: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET.
-# Repository variable (optional): OVERLOOK_DOWNLOAD_URL, the public URL of the R2 folder
-# (default https://overlook-downloads.kennyrafael-cg.workers.dev/overlook); it is baked into the app as the update feed.
+# Repository variable (optional): OVERLOOK_DOWNLOAD_URL, the public URL of the R2 folder; it is baked
+# into the app as the update feed (default in apps/desktop/scripts/build.mjs).
 name: Release
 on:
   push:
     tags: ['v*.*.*']
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  windows:
-    runs-on: windows-latest
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: windows-latest
+            files: |
+              apps/desktop/release/Overlook-Setup-*.exe
+              apps/desktop/release/Overlook-Setup-*.exe.blockmap
+              apps/desktop/release/latest.yml
+              apps/desktop/release/latest-arm64.yml
+          - os: macos-latest
+            files: |
+              apps/desktop/release/Overlook-*.dmg
+              apps/desktop/release/Overlook-*.dmg.blockmap
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -36,10 +52,28 @@ jobs:
       - run: npm run dist
         env:
           OVERLOOK_DOWNLOAD_URL: ${{ vars.OVERLOOK_DOWNLOAD_URL }}
-      - name: Smoke-test the packaged x64 app (win-unpacked)
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Smoke-test the packaged app (this runner's arch)
         run: npm run test:desktop
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.os }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installers-*
+          path: release
+          merge-multiple: true
       - name: Upload to Cloudflare R2
-        shell: bash
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
@@ -48,17 +82,18 @@ jobs:
           BUCKET: ${{ secrets.R2_BUCKET }}
           PREFIX: overlook
         run: |
-          cd apps/desktop/release
+          cd release
+          ls -la
           put() { aws s3 cp "$1" "s3://$BUCKET/$PREFIX/$1" --endpoint-url "$ENDPOINT" --only-show-errors --cache-control "$2"; }
-          for f in Overlook-Setup-*.exe Overlook-Setup-*.exe.blockmap; do put "$f" "public, max-age=31536000, immutable"; done
+          for f in Overlook-*.exe Overlook-*.dmg *.blockmap; do put "$f" "public, max-age=31536000, immutable"; done
           for f in latest.yml latest-arm64.yml; do put "$f" "no-cache"; done
       - name: Publish GitHub release
-        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          cd apps/desktop/release
-          files="Overlook-Setup-*.exe Overlook-Setup-*.exe.blockmap latest.yml latest-arm64.yml"
+          cd release
+          files=$(ls Overlook-* latest.yml latest-arm64.yml)
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" $files --clobber
           else

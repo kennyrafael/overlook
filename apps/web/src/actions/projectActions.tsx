@@ -7,11 +7,12 @@ import type { Project, ProjectAction } from '@overlook/shared';
 import { api } from '../api';
 import { appToast } from '../toast';
 import { actionAvailable, useTools } from '../store/tools';
+import { isMac } from '../platform';
 
 export const ACTION_META: Record<ProjectAction, { label: string; icon: string; done: string }> = {
   vscode: { label: 'Open in VS Code', icon: 'pi pi-code', done: 'Opening VS Code' },
   terminal: { label: 'Open terminal', icon: 'pi pi-desktop', done: 'Opening a terminal' },
-  explorer: { label: 'Show in Explorer', icon: 'pi pi-folder-open', done: 'Opening the folder' },
+  explorer: { label: isMac ? 'Show in Finder' : 'Show in Explorer', icon: 'pi pi-folder-open', done: 'Opening the folder' },
   claude: { label: 'Start Claude Code', icon: 'pi pi-microchip-ai', done: 'Starting Claude Code' },
 };
 

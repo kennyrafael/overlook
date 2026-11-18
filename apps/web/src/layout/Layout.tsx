@@ -17,6 +17,8 @@ import type { MenuItem } from 'primereact/menuitem';
 import { useTheme } from '../theme/ThemeContext';
 import { useProjects } from '../store/projects';
 import { connectLive, useLive } from '../store/live';
+import { MOD } from '../platform';
+import { desktop } from '../desktop';
 
 const NAV = [
   { label: 'Overview', icon: 'pi pi-chart-bar', to: '/' },
@@ -44,6 +46,14 @@ export default function Layout() {
   }, [loadProjects]);
 
   useEffect(() => { if (connected) setEverConnected(true); }, [connected]);
+
+  // macOS app menu: About Overlook and Settings… (⌘,).
+  useEffect(() => {
+    desktop?.onCommand?.((cmd) => {
+      if (cmd === 'about') window.dispatchEvent(new Event(OPEN_ABOUT));
+      else navigate('/settings');
+    });
+  }, [navigate]);
 
   const isActive = (to: string) => (to === '/' ? pathname === '/' : pathname === to || pathname.startsWith(to + '/'));
   const items: MenuItem[] = NAV.map((n) => ({
@@ -77,7 +87,7 @@ export default function Layout() {
           </div>
           <div className="flex align-items-center gap-2">
             <Button className="palette-trigger" text size="small" icon="pi pi-search" label="Search"
-              badge="Ctrl K" badgeClassName="p-badge-secondary" aria-label="Open command palette (Ctrl+K)"
+              badge={`${MOD} K`} badgeClassName="p-badge-secondary" aria-label={`Open command palette (${MOD}+K)`}
               onClick={() => window.dispatchEvent(new Event('cpd:open-palette'))} />
             {(connected || everConnected) && (
               <Tag className="live-tag" severity={connected ? 'success' : 'warning'}

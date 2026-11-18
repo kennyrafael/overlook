@@ -13,4 +13,10 @@ contextBridge.exposeInMainWorld('overlook', Object.freeze({
   getPrefs: (): Promise<{ closeToTray: boolean; autoUpdate: boolean } | null> => ipcRenderer.invoke('overlook:get-prefs'),
   setPrefs: (patch: { closeToTray?: boolean; autoUpdate?: boolean }): Promise<{ closeToTray: boolean; autoUpdate: boolean } | null> =>
     ipcRenderer.invoke('overlook:set-prefs', patch),
+  /** Commands from the macOS app menu (About, Settings). Only known commands are passed on. */
+  onCommand: (cb: (cmd: 'about' | 'settings') => void): void => {
+    ipcRenderer.on('overlook:command', (_event, cmd: unknown) => {
+      if (cmd === 'about' || cmd === 'settings') cb(cmd);
+    });
+  },
 }));

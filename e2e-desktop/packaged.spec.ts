@@ -1,5 +1,5 @@
 /**
- * Smoke tests for the packaged Windows app (apps/desktop/release/win-unpacked/Overlook.exe).
+ * Smoke tests for the packaged app (Windows: release/win-unpacked/Overlook.exe; macOS: release/mac or mac-arm64/Overlook.app).
  * Run `npm run dist -w @overlook/desktop` first, then `npm run test:desktop`.
  *
  * The app runs against a throwaway fixture (CPD_DATA_DIR / CLAUDE_CONFIG_DIR in a temp folder), never
@@ -12,7 +12,11 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { createFixture, type Fixture } from '../apps/api/test/fixture';
 
-const EXE = join(__dirname, '..', 'apps', 'desktop', 'release', 'win-unpacked', 'Overlook.exe');
+const RELEASE = join(__dirname, '..', 'apps', 'desktop', 'release');
+// The app built for this machine's arch: Windows x64 → win-unpacked; macOS → mac (x64) or mac-arm64.
+const EXE = process.platform === 'darwin'
+  ? join(RELEASE, process.arch === 'arm64' ? 'mac-arm64' : 'mac', 'Overlook.app', 'Contents', 'MacOS', 'Overlook')
+  : join(RELEASE, 'win-unpacked', 'Overlook.exe');
 const CDP_PORT = 9339;
 
 let fx: Fixture;

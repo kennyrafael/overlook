@@ -10,6 +10,7 @@ import { useViews } from '../store/views';
 import { actionAvailable, useTools } from '../store/tools';
 import { useTheme } from '../theme/ThemeContext';
 import { appToast } from '../toast';
+import { MOD } from '../platform';
 
 interface Command {
   id: string;
@@ -171,7 +172,7 @@ export default function CommandPalette() {
       <div className="flex gap-3 px-3 py-2 border-top-1 surface-border text-500 text-sm">
         <span><kbd className="palette-kbd">↑</kbd><kbd className="palette-kbd">↓</kbd> move</span>
         <span><kbd className="palette-kbd">Enter</kbd> run</span>
-        <span className="ml-auto"><kbd className="palette-kbd">Ctrl</kbd><kbd className="palette-kbd">K</kbd> toggle</span>
+        <span className="ml-auto"><kbd className="palette-kbd">{MOD}</kbd><kbd className="palette-kbd">K</kbd> toggle</span>
       </div>
     </Dialog>
   );

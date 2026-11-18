@@ -7,6 +7,7 @@ import { Button } from 'primereact/button';
 import { confirmDialog } from 'primereact/confirmdialog';
 import type { ProjectDetail, Task, TaskStatus } from '@overlook/shared';
 import { TASK_STATUS_LABEL } from './useTaskActions';
+import { MOD } from '../platform';
 
 const STATUS_OPTIONS = (['todo', 'in_progress', 'done'] as TaskStatus[]).map((s) => ({ label: TASK_STATUS_LABEL[s], value: s }));
 
@@ -114,7 +115,7 @@ export default function TaskDialog({ state, projects, onHide, onSave, onDelete }
           <span>Task</span>
           <InputTextarea ref={textRef} value={text} onChange={(e) => setText(e.target.value)} autoResize rows={3}
             onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) save(); }} />
-          <small className="text-500">Saved as a single line in the plan file. Ctrl+Enter to save.</small>
+          <small className="text-500">Saved as a single line in the plan file. {MOD}+Enter to save.</small>
         </label>
         <SelectButton value={status} options={STATUS_OPTIONS} onChange={(e) => e.value && setStatus(e.value)} />
       </div>

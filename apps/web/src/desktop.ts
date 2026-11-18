@@ -5,6 +5,8 @@ export interface DesktopBridge {
   pickFolders(): Promise<string[]>;
   getPrefs(): Promise<DesktopPrefs | null>;
   setPrefs(patch: Partial<DesktopPrefs>): Promise<DesktopPrefs | null>;
+  /** macOS app menu commands. Older builds do not have it. */
+  onCommand?(cb: (cmd: 'about' | 'settings') => void): void;
 }
 
 export interface DesktopPrefs {

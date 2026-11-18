@@ -9,14 +9,17 @@ import {
   app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, session, shell, Tray, utilityProcess,
   type IpcMainInvokeEvent, type UtilityProcess,
 } from 'electron';
+import { execFile } from 'child_process';
 import { randomBytes } from 'crypto';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { createServer } from 'net';
-import { join } from 'path';
+import { homedir } from 'os';
+import { delimiter, join } from 'path';
 import { checkNow, initUpdater, setAutoCheck } from './updater';
 
 const TOKEN_COOKIE = 'cpd_token';
 const READY_TIMEOUT_MS = 30_000;
+const IS_MAC = process.platform === 'darwin';
 const SHUTDOWN_TIMEOUT_MS = 4_000;
 
 // Layout inside the packaged app (and the staging folder): desktop/, api/dist/, web/dist/.
@@ -73,11 +76,32 @@ function freePort(): Promise<number> {
   });
 }
 
+/**
+ * Apps opened from Finder or the Dock get a minimal PATH (/usr/bin:/bin:/usr/sbin:/sbin), so git, claude
+ * and code would not be found. Ask the user's login shell for its PATH (fixed command, 4 s limit) and add
+ * the usual install folders as a fallback.
+ */
+function macPath(): Promise<string> {
+  const extras = ['/opt/homebrew/bin', '/usr/local/bin', join(homedir(), '.local', 'bin'), join(homedir(), '.claude', 'local'),
+    join(homedir(), '.npm-global', 'bin'), join(homedir(), '.volta', 'bin'), '/usr/bin', '/bin', '/usr/sbin', '/sbin'];
+  const merge = (...lists: string[][]) => [...new Set(lists.flat().filter(Boolean))].join(delimiter);
+  const current = (process.env.PATH ?? '').split(delimiter);
+  const shellPath = process.env.SHELL && /^\/[\w/.-]+$/.test(process.env.SHELL) ? process.env.SHELL : '/bin/zsh';
+  return new Promise((resolve) => {
+    execFile(shellPath, ['-ilc', 'printf "__OVERLOOK_PATH__%s__OVERLOOK_PATH__" "$PATH"'], { timeout: 4000 }, (err, out) => {
+      const found = /__OVERLOOK_PATH__(.*?)__OVERLOOK_PATH__/s.exec(out ?? '')?.[1];
+      resolve(merge(found && !err ? found.split(delimiter) : [], current, extras));
+    });
+  });
+}
+
 /** Starts the server and resolves once it reports that it is listening. */
-function startServer(port: number, token: string): Promise<void> {
+async function startServer(port: number, token: string): Promise<void> {
+  const path = IS_MAC ? await macPath() : process.env.PATH ?? '';
   return new Promise((resolve, reject) => {
     const env: Record<string, string> = {
       ...(process.env as Record<string, string>),
+      PATH: path,
       CPD_PORT: String(port),
       CPD_TOKEN: token,
       CPD_WEB_DIST: webDist,
@@ -254,12 +278,47 @@ function createTray() {
   tray.on('click', showWindow);
 }
 
+/** Sends a menu command to the page (the preload only accepts the commands it knows). */
+function sendCommand(cmd: 'about' | 'settings') {
+  showWindow();
+  mainWindow?.webContents.send('overlook:command', cmd);
+}
+
+/**
+ * macOS needs an application menu: it holds About, Settings (⌘,), Quit (⌘Q) and the Edit roles that make
+ * ⌘C / ⌘V / ⌘A work in text fields. Windows keeps no menu bar.
+ */
+function setMenu() {
+  if (!IS_MAC) { Menu.setApplicationMenu(null); return; }
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    {
+      label: 'Overlook',
+      submenu: [
+        { label: 'About Overlook', click: () => sendCommand('about') },
+        { label: 'Check for Updates…', click: checkNow },
+        { type: 'separator' },
+        { label: 'Settings…', accelerator: 'Cmd+,', click: () => sendCommand('settings') },
+        { type: 'separator' },
+        { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' },
+        { type: 'separator' },
+        { label: 'Quit Overlook', accelerator: 'Cmd+Q', click: () => { quitting = true; app.quit(); } },
+      ],
+    },
+    { role: 'editMenu' },
+    {
+      label: 'View',
+      submenu: [{ role: 'reload' }, { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }],
+    },
+    { role: 'windowMenu' },
+  ]));
+}
+
 // ---------------------------------------------------------------------------------------------
 // Lifecycle
 // ---------------------------------------------------------------------------------------------
 
 async function boot() {
-  Menu.setApplicationMenu(null);
+  setMenu();
   prefs = readPrefs();
   const port = await freePort();
   const token = randomBytes(32).toString('hex');
@@ -281,10 +340,19 @@ async function boot() {
 }
 
 // One running copy only: a second launch focuses the existing window instead.
+// A run with its own data folder (smoke tests) also gets its own Electron profile, and so its own
+// single-instance lock: it neither touches nor is blocked by an installed copy that is running.
+if (process.env.CPD_DATA_DIR) app.setPath('userData', join(process.env.CPD_DATA_DIR, 'electron'));
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on('second-instance', showWindow);
+  // macOS: clicking the Dock icon shows the window again (or reopens it if it was closed while in the tray).
+  app.on('activate', () => {
+    if (mainWindow) showWindow();
+    else if (origin && server) void createWindow();
+  });
 
   app.setAppUserModelId('eu.agenthub.overlook');
   app.enableSandbox();

@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { execFile, spawn } from 'child_process';
 import { existsSync } from 'fs';
+import { homedir } from 'os';
 import { dirname, join } from 'path';
 import type { ProjectAction, SystemTools } from '@overlook/shared';
 import { PROJECT_ACTIONS } from '@overlook/shared';
@@ -28,6 +29,44 @@ function launch(file: string, args: string[], cwd: string): Promise<void> {
   });
 }
 
+/** macOS app bundles, checked in /Applications and ~/Applications. */
+function macApp(name: string): string | null {
+  for (const dir of ['/Applications', join(homedir(), 'Applications')]) {
+    const p = join(dir, name);
+    if (existsSync(p)) return p;
+  }
+  return null;
+}
+
+/**
+ * AppleScript that opens a terminal window at a folder and runs a program there. The script text is
+ * fixed; the folder and the program come in as arguments (`on run argv`) and are shell-quoted with
+ * `quoted form of`, so nothing from the project path is ever interpreted as script or shell code.
+ */
+const MAC_TERMINAL_SCRIPT = [
+  'on run argv',
+  '  set cmd to "cd " & quoted form of (item 1 of argv) & " && " & quoted form of (item 2 of argv)',
+  '  tell application "Terminal"',
+  '    activate',
+  '    do script cmd',
+  '  end tell',
+  'end run',
+];
+const MAC_ITERM_SCRIPT = [
+  'on run argv',
+  '  set cmd to "cd " & quoted form of (item 1 of argv) & " && " & quoted form of (item 2 of argv)',
+  '  tell application "iTerm"',
+  '    activate',
+  '    set w to (create window with default profile)',
+  '    tell current session of w to write text cmd',
+  '  end tell',
+  'end run',
+];
+/** `osascript` arguments that open Terminal (or iTerm) at `path` and run `program` there. */
+export function macClaudeArgs(path: string, program: string, iterm: boolean): string[] {
+  return [...(iterm ? MAC_ITERM_SCRIPT : MAC_TERMINAL_SCRIPT).flatMap((l) => ['-e', l]), path, program];
+}
+
 /**
  * Opens a discovered project in local tools. Only the four whitelisted actions
  * exist, and only for folders the dashboard discovered itself.
@@ -50,7 +89,7 @@ export class ActionsService {
       this.settings.get().then((s) => claudeRoots(s.useWsl)),
     ]);
     const terminal: SystemTools['terminal'] = IS_WIN ? (wt ? 'Windows Terminal' : 'Command Prompt')
-      : IS_MAC ? 'Terminal'
+      : IS_MAC ? (macApp('iTerm.app') ? 'iTerm' : 'Terminal')
       : (await this.resolve('x-terminal-emulator')) ?? (await this.resolve('gnome-terminal')) ? 'terminal emulator' : null;
     const present = roots.filter((r) => existsSync(r.dir));
     return {
@@ -64,8 +103,15 @@ export class ActionsService {
     };
   }
 
-  /** VS Code's executable, or null. On Windows `code` is a .cmd wrapper, so use Code.exe next to it. */
+  /**
+   * VS Code's executable, or null. On Windows `code` is a .cmd wrapper, so use Code.exe next to it.
+   * On macOS the app bundle is enough (opened with `open -a`), even when `code` is not on PATH.
+   */
   private async vsCodePath(): Promise<string | null> {
+    if (IS_MAC) {
+      const bundle = macApp('Visual Studio Code.app');
+      if (bundle) return bundle;
+    }
     const cmd = await this.resolve('code');
     if (!cmd) return null;
     if (!IS_WIN) return cmd;
@@ -114,6 +160,7 @@ export class ActionsService {
   private async openVsCode(path: string) {
     const exe = await this.vsCodePath();
     if (!exe) throw new ServiceUnavailableException('VS Code was not found. Install it and enable "Add to PATH".');
+    if (IS_MAC && exe.endsWith('.app')) return launch('open', ['-a', exe, path], path);
     return launch(exe, [path], path);
   }
 
@@ -126,8 +173,9 @@ export class ActionsService {
       return launch('cmd.exe', program ? ['/c', 'start', '', program] : ['/c', 'start', '', 'cmd.exe'], path);
     }
     if (IS_MAC) {
-      if (program) throw new ServiceUnavailableException('Starting Claude in a terminal is only supported on Windows for now');
-      return launch('open', ['-a', 'Terminal', path], path);
+      const iterm = macApp('iTerm.app');
+      if (!program) return launch('open', ['-a', iterm ?? 'Terminal', path], path);
+      return launch('osascript', macClaudeArgs(path, program, !!iterm), path);
     }
     const term = (await this.resolve('x-terminal-emulator')) ?? (await this.resolve('gnome-terminal'));
     if (!term) throw new ServiceUnavailableException('No terminal emulator found');
