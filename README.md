@@ -149,6 +149,22 @@ app; the offered fix is a breaking downgrade.
 
 See [PLAN.md](PLAN.md) for the original plan.
 
+## Desktop app (Windows)
+
+`apps/desktop` wraps the server and UI in an Electron window. The server runs in a separate process on a
+random local port and only accepts requests carrying a per-launch token that only the app window has.
+Data lives in `%APPDATA%\Overlook`.
+
+```bash
+npm run dist            # builds everything and the installers in apps/desktop/release/
+npm run test:desktop    # smoke tests against release/win-unpacked/Overlook.exe (fixture data only)
+```
+
+- Installers: `Overlook-Setup-<version>-x64.exe` and `-arm64.exe`. They are unsigned, so Windows SmartScreen
+  shows "Windows protected your PC": choose **More info → Run anyway**.
+- Moving from the browser version: close the app, then run `node scripts/copy-old-data.mjs`.
+- The icon is rendered from `brand/mark.svg` with `npm run icon -w @overlook/desktop`.
+
 ## License and trademarks
 
 Overlook is released under the [MIT License](LICENSE) by AgentHub. Third-party licenses are listed

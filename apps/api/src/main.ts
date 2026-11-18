@@ -17,5 +17,7 @@ async function bootstrap() {
     throw e;
   }
   console.log(`\n  Overlook → http://127.0.0.1:${port}\n`);
+  // When started by the desktop app (Electron utilityProcess), tell it the server is ready.
+  (process as NodeJS.Process & { parentPort?: { postMessage(m: unknown): void } }).parentPort?.postMessage({ type: 'ready', port });
 }
 bootstrap();

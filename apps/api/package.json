@@ -12,13 +12,13 @@
     "test:e2e": "tsc -p tsconfig.json && node --import tsx --test --test-force-exit --test-concurrency=1 test/e2e.spec.ts"
   },
   "dependencies": {
-    "@overlook/shared": "0.1.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
     "@nestjs/serve-static": "^5.0.0",
     "@nestjs/typeorm": "^11.0.0",
-    "better-sqlite3": "^11.8.0",
+    "@overlook/shared": "0.1.0",
+    "better-sqlite3": "^12.11.1",
     "chokidar": "^4.0.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",

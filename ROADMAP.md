@@ -55,21 +55,21 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [ ] Show the "not affiliated" notice in the About dialog and on the landing page footer
 - [x] Add `LICENSE` (MIT, Copyright (c) 2026 AgentHub)
 - [x] Check dependency licenses (no GPL/AGPL); generate a third-party notices file (`npm run notices`)
-- [ ] Show `THIRD_PARTY_NOTICES.md` in an About dialog (and ship it inside the installer)
+- [ ] Show `THIRD_PARTY_NOTICES.md` in an About dialog (the file already ships inside the installer)
 - [ ] Acceptance: repo pushed with LICENSE and notices; name cleared on trademark search, subdomain and GitHub
 
 ## Phase 1a: Electron shell (Windows, unsigned)
-- [ ] Add `apps/desktop` workspace with Electron main + preload (TypeScript)
-- [ ] Run the Nest server in an Electron `utilityProcess` (or `fork`) from the main process
-- [ ] Pick a free port at launch (pass via `CPD_PORT`); load the UI from it in a `BrowserWindow`
-- [ ] Per-launch random token: main passes it to the server and the window; middleware requires it (in addition to the existing checks)
-- [ ] Data dir = `app.getPath('userData')` (set `CPD_DATA_DIR`); one-off script to copy the old `~/.claude-projects-dashboard` for the author's own data
-- [ ] Rebuild `better-sqlite3` for Electron's ABI (`@electron/rebuild` / electron-builder `npmRebuild`)
-- [ ] Security hardening: `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false`, strict CSP, minimal typed preload API, validate every IPC message
-- [ ] Electron fuses: disable `RunAsNode` and `NODE_OPTIONS`, enable asar integrity and only-load-from-asar
-- [ ] Open external links in the default browser; block navigation and `window.open` away from the app origin
-- [ ] electron-builder config: NSIS installer (x64 + arm64), app icon, start-menu shortcut, uninstaller
-- [ ] Smoke tests run against the packaged app (Playwright `_electron`)
+- [x] Add `apps/desktop` workspace with Electron main + preload (TypeScript)
+- [x] Run the Nest server in an Electron `utilityProcess` from the main process (it posts `ready` when listening)
+- [x] Pick a free port at launch (pass via `CPD_PORT`); load the UI from it in a `BrowserWindow`
+- [x] Per-launch random token: passed to the server as `CPD_TOKEN`, to the window as an httpOnly cookie; middleware rejects requests without it
+- [x] Data dir = `app.getPath('userData')` (set `CPD_DATA_DIR`); one-off `node scripts/copy-old-data.mjs` copies the old `~/.claude-projects-dashboard`
+- [x] `better-sqlite3` for Electron's ABI: prebuilt binary fetched per arch (Electron 42 / ABI 146; 12.x has no prebuilds for newer Electron, and source builds need Python + Visual Studio)
+- [x] Security hardening: `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false`, strict CSP, permissions denied, minimal preload (no IPC yet; validate every message when added)
+- [x] Electron fuses: disable `RunAsNode` and `NODE_OPTIONS`, enable asar integrity and only-load-from-asar
+- [x] Open external links in the default browser; block navigation and `window.open` away from the app origin
+- [x] electron-builder config: NSIS installer (x64 + arm64), app icon from `brand/mark.svg`, start-menu and desktop shortcuts, uninstaller (`npm run dist`)
+- [x] Smoke tests run against the packaged app (`npm run test:desktop`; Playwright over CDP, since fuses disable the Node inspector `_electron` needs)
 - [ ] Acceptance: fresh Windows VM without Node installs the `.exe`, finds projects, edits a plan file, shows live updates
 
 ## Phase 1b: Desktop polish

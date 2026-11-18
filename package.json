@@ -14,6 +14,8 @@
     "notices": "node scripts/notices.mjs",
     "typecheck": "npm run build -w @overlook/shared && npm run typecheck --workspaces --if-present",
     "test:smoke": "npm run build && playwright test",
+    "test:desktop": "playwright test -c playwright.desktop.config.ts",
+    "dist": "npm run build && npm run dist -w @overlook/desktop",
     "start:open": "node scripts/start.mjs --open",
     "test": "npm run build -w @overlook/shared && npm test -w @overlook/api && npm run test:e2e -w @overlook/api"
   },
