@@ -12,6 +12,7 @@
     "build": "npm run build -w @overlook/shared && npm run build -w @overlook/api && npm run build -w @overlook/web",
     "start": "node scripts/start.mjs",
     "notices": "node scripts/notices.mjs",
+    "bench:logs": "node scripts/bench-logs.mjs",
     "typecheck": "npm run build -w @overlook/shared && npm run typecheck --workspaces --if-present",
     "test:smoke": "npm run build && playwright test",
     "test:desktop": "playwright test -c playwright.desktop.config.ts",

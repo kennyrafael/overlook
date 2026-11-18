@@ -227,3 +227,13 @@ describe('local-only protection', () => {
     assert.ok(existsSync(fx.plan));
   });
 });
+
+describe('about', () => {
+  test('returns version, MIT license and third-party notices', async () => {
+    const { status, body } = await api('/system/about');
+    assert.equal(status, 200);
+    assert.match(body.version, /^\d+\.\d+\.\d+/);
+    assert.match(body.license, /MIT License/);
+    assert.match(body.notices, /\S/);
+  });
+});

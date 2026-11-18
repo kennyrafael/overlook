@@ -97,6 +97,7 @@ export default function CommandPalette() {
       } },
       { id: 'cmd:theme', group: 'Commands', label: `Switch to ${mode === 'dark' ? 'light' : 'dark'} theme`, icon: mode === 'dark' ? 'pi pi-sun' : 'pi pi-moon', keywords: 'theme dark light mode', run: toggleTheme },
       { id: 'cmd:clear', group: 'Commands', label: 'Clear all filters', icon: 'pi pi-filter-slash', keywords: 'reset filters', run: () => useFilters.getState().clear() },
+      { id: 'cmd:about', group: 'Commands', label: 'About Overlook', icon: 'pi pi-info-circle', keywords: 'about version license notices', run: () => window.dispatchEvent(new Event('cpd:open-about')) },
     );
     return list;
   }, [projects, views, tools, navigate, mode, toggleTheme]);

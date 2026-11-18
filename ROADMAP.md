@@ -51,11 +51,12 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [x] Review Anthropic's trademark guidelines (2026-11-18): no logos or brand elements without approval; no implied affiliation
 - [x] Add a "not affiliated with Anthropic" notice to the README
 - [x] Replace the sparkle icon in the UI with an original Overlook mark (`OverlookMark`, `favicon.svg`); reuse it for the desktop app icon (avoid looking like Claude's logo or colours)
-- [ ] Use "Claude Code" only in plain text as a description (tagline, docs); never in the app name, icon, domain or ads headline
-- [ ] Show the "not affiliated" notice in the About dialog and on the landing page footer
+- [x] Use "Claude Code" only in plain text as a description (tagline, docs); never in the app name, icon, domain or ads headline (UI and installer audited 2026-11-18)
+- [x] Show the "not affiliated" notice in the About dialog (sidebar → About, or Ctrl+K → "About Overlook")
+- [ ] Show the "not affiliated" notice on the landing page footer (with the landing page, Phase 4)
 - [x] Add `LICENSE` (MIT, Copyright (c) 2026 AgentHub)
 - [x] Check dependency licenses (no GPL/AGPL); generate a third-party notices file (`npm run notices`)
-- [ ] Show `THIRD_PARTY_NOTICES.md` in an About dialog (the file already ships inside the installer)
+- [x] Show `THIRD_PARTY_NOTICES.md` and the license in an About dialog (`GET /api/system/about`)
 - [ ] Acceptance: repo pushed with LICENSE and notices; name cleared on trademark search, subdomain and GitHub
 
 ## Phase 1a: Electron shell (Windows, unsigned)
@@ -84,11 +85,11 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [x] Replace `synchronize: true` with TypeORM migrations; generate the baseline migration; test upgrade from an old database
 - [x] Claude log parser: tolerate unknown/changed fields, report "unrecognized log format" instead of failing; add fixtures from several Claude Code versions
 - [x] Handle missing git gracefully (Git page explains how to install; discovery still works)
-- [ ] Large-history performance: test with 5 GB of logs; parse in a worker thread; persist the parse cache in SQLite so restarts are instant
+- [x] Large-history performance: parse in a worker thread; parse cache persisted in SQLite; `npm run bench:logs` (5 GB, 2026-11-18: worst API latency during parse 25 ms, cold parse 18 s, restart to full insights 2.2 s)
 - [x] Settings import/export (JSON) and "reset app data"
 - [x] Logs to a file in userData with rotation; "Open log folder" in Settings
 - [x] "Network activity" section in Settings listing every call the app can make (update check only)
-- [ ] Acceptance: upgrading from a v0 database keeps all overrides; 5 GB of logs parse without freezing the UI and restart loads in under 3 s; an unknown log format shows a warning, not an error
+- [x] Acceptance: upgrading from a v0 database keeps all overrides (`migrations.spec.ts`); 5 GB of logs parse without freezing the UI and restart loads in under 3 s (`bench:logs`); an unknown log format shows a warning, not an error (`log-fixtures.spec.ts`)
 
 ## Phase 3: macOS (unsigned)
 - [ ] Get Mac hardware or a macOS CI runner for builds and tests

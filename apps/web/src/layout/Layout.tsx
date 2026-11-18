@@ -10,6 +10,7 @@ import { ConfirmDialog } from 'primereact/confirmdialog';
 import { appToast } from '../toast';
 import CommandPalette from '../components/CommandPalette';
 import Onboarding from '../components/Onboarding';
+import AboutDialog, { OPEN_ABOUT } from '../components/AboutDialog';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { useViews } from '../store/views';
 import type { MenuItem } from 'primereact/menuitem';
@@ -52,16 +53,20 @@ export default function Layout() {
     command: () => { setMenuOpen(false); navigate(n.to); },
   }));
   const current = NAV.find((n) => isActive(n.to))?.label ?? '';
+  const menu: MenuItem[] = [...items, { separator: true }, {
+    label: 'About', icon: 'pi pi-info-circle',
+    command: () => { setMenuOpen(false); window.dispatchEvent(new Event(OPEN_ABOUT)); },
+  }];
 
   return (
     <div className="layout">
       <aside className="layout-sidebar">
         <div className="brand"><OverlookMark />Overlook</div>
-        <Menu model={items} />
+        <Menu model={menu} />
       </aside>
       <Sidebar visible={menuOpen} onHide={() => setMenuOpen(false)} className="layout-mobile-menu"
         header={<span className="brand-inline font-bold"><OverlookMark />Overlook</span>}>
-        <Menu model={items} className="w-full border-none" />
+        <Menu model={menu} className="w-full border-none" />
       </Sidebar>
       <div className="layout-main">
         <header className="layout-topbar">
@@ -96,6 +101,7 @@ export default function Layout() {
           <ConfirmDialog />
           <CommandPalette />
           <Onboarding />
+          <AboutDialog />
         </main>
       </div>
     </div>

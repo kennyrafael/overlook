@@ -1,4 +1,4 @@
-import type { ClaudeOverview, GitOverview, Project, ProjectAction, ProjectDetail, ProjectPatch, SavedView, Settings, TaskStatus, ViewFilters, SystemTools, SystemInfo, AppDataExport } from '@overlook/shared';
+import type { ClaudeOverview, GitOverview, Project, ProjectAction, ProjectDetail, ProjectPatch, SavedView, Settings, TaskStatus, ViewFilters, SystemTools, SystemInfo, AppDataExport, AboutInfo } from '@overlook/shared';
 
 export class ApiError extends Error {
   constructor(message: string, public status: number) { super(message); }
@@ -53,6 +53,7 @@ export const api = {
   deleteView: (id: string) => request<{ ok: true }>(`/views/${id}`, { method: 'DELETE' }),
   tools: () => request<SystemTools>('/system/tools'),
   systemInfo: () => request<SystemInfo>('/system/info'),
+  about: () => request<AboutInfo>('/system/about'),
   openLogs: () => request<{ ok: true }>('/system/open-logs', { method: 'POST' }),
   exportData: () => request<AppDataExport>('/system/export'),
   importData: (data: unknown) =>

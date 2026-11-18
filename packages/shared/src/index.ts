@@ -310,6 +310,13 @@ export interface SystemInfo {
   network: NetworkCall[];
 }
 
+/** About dialog: version, license and the bundled third-party notices. */
+export interface AboutInfo {
+  version: string;
+  license: string;
+  notices: string;
+}
+
 /** Settings → Export: everything the user configured, as JSON. */
 export interface AppDataExport {
   app: 'overlook';
