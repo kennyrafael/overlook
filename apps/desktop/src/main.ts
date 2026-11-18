@@ -3,7 +3,7 @@
  *
  * Starts the local Nest server in an Electron utilityProcess on a free port, protects it with a
  * per-launch token (sent as an httpOnly cookie only this window has), and shows the UI in a
- * locked-down BrowserWindow. Nothing here talks to the internet.
+ * locked-down BrowserWindow. The only internet access is the update check (updater.ts).
  */
 import {
   app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, session, shell, Tray, utilityProcess,
@@ -13,6 +13,7 @@ import { randomBytes } from 'crypto';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { createServer } from 'net';
 import { join } from 'path';
+import { checkNow, initUpdater, setAutoCheck } from './updater';
 
 const TOKEN_COOKIE = 'cpd_token';
 const READY_TIMEOUT_MS = 30_000;
@@ -39,14 +40,16 @@ let quitting = false;
 interface DesktopPrefs {
   /** Closing the window keeps Overlook running in the tray (live updates continue). */
   closeToTray: boolean;
+  /** Check GitHub Releases for a new version at start-up and once a day (Windows). */
+  autoUpdate: boolean;
 }
-const DEFAULT_PREFS: DesktopPrefs = { closeToTray: false };
+const DEFAULT_PREFS: DesktopPrefs = { closeToTray: false, autoUpdate: true };
 const prefsFile = () => join(app.getPath('userData'), 'desktop.json');
 
 function readPrefs(): DesktopPrefs {
   try {
     const raw = JSON.parse(readFileSync(prefsFile(), 'utf8'));
-    return { closeToTray: raw?.closeToTray === true };
+    return { closeToTray: raw?.closeToTray === true, autoUpdate: raw?.autoUpdate !== false };
   } catch {
     return { ...DEFAULT_PREFS };
   }
@@ -186,6 +189,10 @@ function registerIpc() {
     if (!fromApp(event) || typeof patch !== 'object' || patch === null) return null;
     const p = patch as Record<string, unknown>;
     if (typeof p.closeToTray === 'boolean') prefs = { ...prefs, closeToTray: p.closeToTray };
+    if (typeof p.autoUpdate === 'boolean' && p.autoUpdate !== prefs.autoUpdate) {
+      prefs = { ...prefs, autoUpdate: p.autoUpdate };
+      setAutoCheck(prefs.autoUpdate);
+    }
     try { writeFileSync(prefsFile(), JSON.stringify(prefs, null, 2)); } catch { /* keep in memory */ }
     return { ...prefs };
   });
@@ -240,6 +247,7 @@ function createTray() {
   tray.setToolTip('Overlook');
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Open Overlook', click: showWindow },
+    { label: 'Check for updates', click: checkNow },
     { type: 'separator' },
     { label: 'Quit', click: () => { quitting = true; app.quit(); } },
   ]));
@@ -268,6 +276,8 @@ async function boot() {
   await startServer(port, token);
   await createWindow();
   createTray();
+  initUpdater(() => mainWindow, (msg) => console.log(`[updater] ${msg}`));
+  setAutoCheck(prefs.autoUpdate);
 }
 
 // One running copy only: a second launch focuses the existing window instead.

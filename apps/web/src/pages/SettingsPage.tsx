@@ -70,8 +70,8 @@ export default function SettingsPage() {
     const picked = await desktop?.pickFolders();
     if (picked?.length) set('roots', [...new Set([...settings.roots, ...picked])]);
   };
-  const setCloseToTray = async (closeToTray: boolean) => {
-    const next = await desktop?.setPrefs({ closeToTray });
+  const setPref = async (patch: Partial<DesktopPrefs>) => {
+    const next = await desktop?.setPrefs(patch);
     if (next) setPrefs(next);
   };
 
@@ -136,7 +136,14 @@ export default function SettingsPage() {
                 <div>Keep running in the tray</div>
                 <small className="text-500">Closing the window keeps Overlook running, so live updates continue. Quit from the tray icon.</small>
               </div>
-              <InputSwitch checked={prefs.closeToTray} onChange={(e) => void setCloseToTray(!!e.value)} aria-label="Keep running in the tray" />
+              <InputSwitch checked={prefs.closeToTray} onChange={(e) => void setPref({ closeToTray: !!e.value })} aria-label="Keep running in the tray" />
+            </div>
+            <div className="flex align-items-center justify-content-between gap-3 mt-3">
+              <div>
+                <div>Check for updates automatically</div>
+                <small className="text-500">At start-up and once a day, Overlook asks GitHub for a newer release and downloads it in the background. Nothing else is sent.</small>
+              </div>
+              <InputSwitch checked={prefs.autoUpdate} onChange={(e) => void setPref({ autoUpdate: !!e.value })} aria-label="Check for updates automatically" />
             </div>
           </Card>
         )}

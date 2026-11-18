@@ -54,7 +54,7 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [x] Replace the sparkle icon in the UI with an original Overlook mark (`OverlookMark`, `favicon.svg`); reuse it for the desktop app icon (avoid looking like Claude's logo or colours)
 - [x] Use "Claude Code" only in plain text as a description (tagline, docs); never in the app name, icon, domain or ads headline (UI and installer audited 2026-11-18)
 - [x] Show the "not affiliated" notice in the About dialog (sidebar → About, or Ctrl+K → "About Overlook")
-- [ ] Show the "not affiliated" notice on the landing page footer (with the landing page, Phase 4)
+- [x] Show the "not affiliated" notice on the landing page footer (`site/index.html`)
 - [x] Add `LICENSE` (MIT, Copyright (c) 2026 AgentHub)
 - [x] Check dependency licenses (no GPL/AGPL); generate a third-party notices file (`npm run notices`)
 - [x] Show `THIRD_PARTY_NOTICES.md` and the license in an About dialog (`GET /api/system/about`)
@@ -72,7 +72,7 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [x] Open external links in the default browser; block navigation and `window.open` away from the app origin
 - [x] electron-builder config: NSIS installer (x64 + arm64), app icon from `brand/mark.svg`, start-menu and desktop shortcuts, uninstaller (`npm run dist`)
 - [x] Smoke tests run against the packaged app (`npm run test:desktop`; Playwright over CDP, since fuses disable the Node inspector `_electron` needs)
-- [ ] Acceptance: fresh Windows VM without Node installs the `.exe`, finds projects, edits a plan file, shows live updates
+- [x] Acceptance: fresh Windows VM without Node installs the `.exe`, finds projects, edits a plan file, shows live updates
 
 ## Phase 1b: Desktop polish
 - [x] Single-instance lock; tray icon with optional "Keep running in the tray" (Settings → Desktop app); server closes watchers and the database on quit
@@ -101,10 +101,16 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [ ] Acceptance: on a fresh Mac, following the download page's "Open Anyway" steps, the app opens and passes the smoke suite
 
 ## Phase 4: Free public release
-- [ ] GitHub Actions: build Windows + macOS on tags; run unit, e2e and packaged smoke tests; publish to GitHub Releases
-- [ ] Windows auto-update via electron-updater from GitHub Releases; macOS shows "new version available" with a download link
+- [x] GitHub Actions, Windows: `ci.yml` (typecheck, unit, e2e, browser smoke on push to main); `release.yml` (tag `vX.Y.Z` → tests, `npm run dist`, packaged smoke, GitHub Release with installers + `latest.yml` / `latest-arm64.yml`)
+- [ ] GitHub Actions, macOS build job (after Phase 3)
+- [ ] Make the GitHub repo public (Release downloads, auto-update and the landing page buttons need it)
+- [ ] First tagged release (`v0.1.0`) published by the workflow; check the assets and feeds
+- [x] Windows auto-update via electron-updater from GitHub Releases (`updater.ts`: start-up + daily check, background download, "Restart now / Later"; tray → Check for updates; Settings → Desktop app toggle; listed in Network activity)
+- [ ] macOS shows "new version available" with a download link (after Phase 3)
 - [x] Set up `overlook.agenthub.pt` DNS (Vercel nameservers; resolves with HTTPS, 2026-11-18). Attach it to the landing page project when deploying
-- [ ] Landing page on the AgentHub subdomain: screenshots, download buttons, install steps for SmartScreen and Gatekeeper warnings, FAQ (iOS and Linux: not supported and why)
+- [x] Landing page in `site/` (static, for a Vercel project with root directory `site`): download buttons from the latest release, SmartScreen install steps, FAQ (Linux, iOS, macOS), not-affiliated footer
+- [ ] Deploy `site/` on Vercel and attach `overlook.agenthub.pt`
+- [ ] Landing page: add screenshots; Gatekeeper steps once macOS ships
 - [ ] Docs from README sections (plan file format, safety, troubleshooting)
 - [ ] Optional waitlist / "tell me about Pro" email signup to measure paid interest
 - [ ] Beta with 5–10 Claude Code users on both platforms; fix top issues

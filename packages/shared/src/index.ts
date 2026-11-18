@@ -297,10 +297,10 @@ export interface NetworkCall {
 export const NETWORK_CALLS: NetworkCall[] = [
   {
     what: 'Update check',
-    destination: 'api.github.com (Overlook releases)',
-    when: 'At start-up and once a day (desktop app only)',
-    sends: 'App version and operating system, as in any download request',
-    active: false,
+    destination: 'github.com (Overlook releases feed and installer download)',
+    when: 'At start-up and once a day, Windows desktop app only; off with Settings → Desktop app → Check for updates automatically',
+    sends: 'Nothing beyond a normal download request (IP address, user agent with the app version)',
+    active: true,
   },
 ];
 

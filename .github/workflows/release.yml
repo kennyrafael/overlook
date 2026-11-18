@@ -1,0 +1,41 @@
+# Tag vX.Y.Z (matching package.json "version") → test, build the Windows installers, smoke-test the
+# packaged app and publish a GitHub Release with the installers and the auto-update feeds
+# (latest.yml for x64, latest-arm64.yml for arm64) that electron-updater reads.
+name: Release
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Tag matches package version
+        shell: bash
+        run: |
+          v=$(node -p "require('./package.json').version")
+          [ "v$v" = "$GITHUB_REF_NAME" ] || { echo "Tag $GITHUB_REF_NAME does not match package.json version $v"; exit 1; }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:smoke
+      - run: npm run dist
+      - name: Smoke-test the packaged x64 app (win-unpacked)
+        run: npm run test:desktop
+      - name: Publish release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd apps/desktop/release
+          ls -la
+          gh release create "$GITHUB_REF_NAME" --title "Overlook $GITHUB_REF_NAME" --generate-notes \
+            Overlook-Setup-*.exe Overlook-Setup-*.exe.blockmap latest.yml latest-arm64.yml

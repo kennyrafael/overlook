@@ -32,8 +32,9 @@ mkdirSync(out, { recursive: true });
 
 const rootPkg = read(join(root, 'package.json'));
 const apiPkg = read(join(root, 'apps', 'api', 'package.json'));
+const desktopPkg = read(join(desktop, 'package.json'));
 // The workspace package @overlook/shared is installed from a local copy (copied, not symlinked).
-const deps = { ...apiPkg.dependencies, '@overlook/shared': 'file:local/shared' };
+const deps = { ...apiPkg.dependencies, ...desktopPkg.dependencies, '@overlook/shared': 'file:local/shared' };
 const noMaps = (src) => !src.endsWith('.map');
 const sharedSrc = join(out, 'local', 'shared');
 mkdirSync(sharedSrc, { recursive: true });

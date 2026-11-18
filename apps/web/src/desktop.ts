@@ -10,6 +10,8 @@ export interface DesktopBridge {
 export interface DesktopPrefs {
   /** Closing the window keeps Overlook running in the tray. */
   closeToTray: boolean;
+  /** Check for updates at start-up and once a day (Windows). */
+  autoUpdate: boolean;
 }
 
 /** The desktop bridge, or null when running in a normal browser tab. */

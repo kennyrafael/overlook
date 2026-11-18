@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overlook by AgentHub</title>
+<meta name="description" content="A free, local-only project dashboard for Claude Code users: plan progress, a Kanban board that edits your plan files, git activity and usage. Windows, macOS coming.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+:root {
+  --bg: #f8fafc; --card: #ffffff; --text: #0f172a; --muted: #475569; --border: #e2e8f0;
+  --accent: #4f46e5; --accent-ink: #ffffff; --soft: #eef2ff;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0b1020; --card: #121a2e; --text: #e2e8f0; --muted: #94a3b8; --border: #1e293b; --accent: #818cf8; --accent-ink: #0b1020; --soft: #1a2240; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: var(--accent); }
+.wrap { max-width: 64rem; margin: 0 auto; padding: 0 16px; }
+header.top { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.15rem; color: var(--text); text-decoration: none; }
+.brand img { width: 32px; height: 32px; }
+nav a { color: var(--muted); text-decoration: none; margin-left: 18px; }
+nav a:hover { color: var(--text); }
+.hero { padding: 56px 0 40px; text-align: center; }
+.hero h1 { font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.15; margin: 0 0 16px; letter-spacing: -0.02em; }
+.hero p { color: var(--muted); font-size: 1.15rem; max-width: 40rem; margin: 0 auto 28px; }
+.btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.btn { display: inline-flex; flex-direction: column; align-items: center; padding: 12px 22px; border-radius: 10px; text-decoration: none; font-weight: 600; border: 1px solid var(--border); background: var(--card); color: var(--text); }
+.btn small { font-weight: 400; color: var(--muted); font-size: 0.8rem; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary small { color: inherit; opacity: 0.8; }
+.btn[aria-disabled="true"] { opacity: 0.6; pointer-events: none; }
+.note { color: var(--muted); font-size: 0.9rem; margin-top: 14px; }
+section { padding: 40px 0; }
+h2 { font-size: 1.6rem; margin: 0 0 20px; letter-spacing: -0.01em; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 16px; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+.card h3 { margin: 0 0 6px; font-size: 1.05rem; }
+.card p { margin: 0; color: var(--muted); }
+ol.steps { padding-left: 1.2rem; }
+ol.steps li { margin-bottom: 6px; }
+details { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin-bottom: 10px; }
+summary { cursor: pointer; font-weight: 600; }
+details p { color: var(--muted); margin: 8px 0 0; }
+code { background: var(--soft); padding: 1px 6px; border-radius: 4px; font-size: 0.9em; }
+footer { border-top: 1px solid var(--border); padding: 28px 0 40px; color: var(--muted); font-size: 0.9rem; }
+footer p { margin: 6px 0; }
+@media (max-width: 560px) { nav { display: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="/"><img src="/favicon.svg" alt="">Overlook</a>
+    <nav><a href="#features">Features</a><a href="#install">Install</a><a href="#faq">FAQ</a><a href="https://github.com/kennyrafael/overlook">GitHub</a></nav>
+  </header>
+
+  <main>
+    <div class="hero">
+      <h1>Every project you build with Claude Code, at a glance</h1>
+      <p>Overlook is a free desktop dashboard that reads your plan files, git repos and Claude Code history on your own computer. See what is done, what is next and where your time goes. No account, nothing uploaded.</p>
+      <div class="btns">
+        <a class="btn primary" id="dl-x64" href="https://github.com/kennyrafael/overlook/releases/latest">Download for Windows<small id="dl-x64-sub">64-bit (x64)</small></a>
+        <a class="btn" id="dl-arm64" href="https://github.com/kennyrafael/overlook/releases/latest">Windows on Arm<small id="dl-arm64-sub">arm64</small></a>
+        <a class="btn" aria-disabled="true" href="#faq">macOS<small>coming soon</small></a>
+      </div>
+      <p class="note">Free and open source (MIT). Windows 10 and 11. <span id="dl-version"></span></p>
+    </div>
+
+    <section id="features">
+      <h2>What you get</h2>
+      <div class="grid">
+        <div class="card"><h3>Projects found for you</h3><p>Point it at the folders that hold your work. Every repo, <code>CLAUDE.md</code> or plan file becomes a project, plus anything in your Claude Code history.</p></div>
+        <div class="card"><h3>Plans as progress</h3><p>Milestones and checkboxes from your Markdown plans become progress bars, burnup charts and a status for each project.</p></div>
+        <div class="card"><h3>A board that edits your plans</h3><p>Drag a card to Done and the checkbox in the plan file is ticked. The file stays the source of truth.</p></div>
+        <div class="card"><h3>Claude Code usage</h3><p>Sessions, prompts, tokens and estimated cost per day, model and project, read from local session logs.</p></div>
+        <div class="card"><h3>Git at a glance</h3><p>Uncommitted files, unpushed commits and a 90-day commit heatmap across all your repos.</p></div>
+        <div class="card"><h3>Live and local</h3><p>Updates as files change. Runs entirely on your computer; the only network call is the update check, which you can turn off.</p></div>
+      </div>
+    </section>
+
+    <section id="install">
+      <h2>Install on Windows</h2>
+      <p>Overlook is not code-signed yet, so Windows SmartScreen warns about it the first time:</p>
+      <ol class="steps">
+        <li>Download and run <code>Overlook-Setup-…-x64.exe</code> (or <code>-arm64.exe</code> on Arm devices).</li>
+        <li>If you see “Windows protected your PC”, click <strong>More info</strong>, then <strong>Run anyway</strong>.</li>
+        <li>Pick where to install. Overlook opens and asks for the folders that hold your projects.</li>
+      </ol>
+      <p>Updates install themselves: Overlook checks for a new release at start-up and once a day and asks before restarting.</p>
+    </section>
+
+    <section id="faq">
+      <h2>FAQ</h2>
+      <details><summary>Does it send my code or plans anywhere?</summary><p>No. Everything is read and stored on your computer. The only outbound request is the update check to github.com, listed in Settings → Network activity, and you can switch it off.</p></details>
+      <details><summary>Do I need Claude Code?</summary><p>No, but it is built for it. Without Claude Code you still get projects, plans, the board and git activity; the usage pages stay empty. Claude Code installed inside WSL is detected too.</p></details>
+      <details><summary>What does a plan file look like?</summary><p>Any Markdown file named like <code>PLAN.md</code> or <code>ROADMAP.md</code>: <code>## Milestone</code> headings with <code>- [ ]</code> / <code>- [x]</code> checkboxes, and <code>[~]</code> for in progress. You can change the file names in Settings.</p></details>
+      <details><summary>When is macOS coming?</summary><p>It is next on the roadmap. Leave a star or watch the GitHub repository to hear when it ships.</p></details>
+      <details><summary>Linux or iOS?</summary><p>Not planned for now. Linux users can run it from source (<code>npm install &amp;&amp; npm start</code>, then open it in a browser). iOS cannot read your local files, so a phone app would not be useful.</p></details>
+      <details><summary>Is it really free?</summary><p>Yes, MIT licensed. If there is demand, paid extras may come later; the current features stay free.</p></details>
+    </section>
+  </main>
+
+  <footer>
+    <p>Overlook by <a href="https://agenthub.pt">AgentHub</a> · MIT License · <a href="https://github.com/kennyrafael/overlook">Source on GitHub</a></p>
+    <p>Overlook is an independent project. It is not affiliated with, endorsed by or sponsored by Anthropic, PBC. “Claude” and “Claude Code” are trademarks of Anthropic, used here only to describe the tool this app works with.</p>
+  </footer>
+</div>
+<script src="/download.js" defer></script>
+</body>
+</html>

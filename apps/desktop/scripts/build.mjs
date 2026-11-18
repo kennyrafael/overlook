@@ -49,6 +49,8 @@ const config = {
     loadBrowserProcessSpecificV8Snapshot: false,
     grantFileProtocolExtraPrivileges: false,
   },
+  // Release feed for electron-updater: x64 → latest.yml, arm64 → latest-arm64.yml (set per arch below).
+  publish: { provider: 'github', owner: 'kennyrafael', repo: 'overlook', releaseType: 'release' },
   win: {
     icon: join(desktop, 'resources', 'icon.png'),
     target: ['nsis'],
@@ -82,6 +84,9 @@ for (const arch of ['x64', 'arm64']) {
   fetchSqlite(arch);
   const targets = Platform.WINDOWS.createTarget('nsis', Arch[arch]);
   // electron-builder mutates the config it is given, so each build gets a fresh copy.
-  built.push(...await build({ projectDir: appDir, targets, config: structuredClone(config), publish: 'never' }));
+  const archConfig = structuredClone(config);
+  archConfig.publish = { ...config.publish, channel: arch === 'arm64' ? 'latest-arm64' : 'latest' };
+  // Uploading happens in CI (gh release upload), never from a local build.
+  built.push(...await build({ projectDir: appDir, targets, config: archConfig, publish: 'never' }));
 }
 console.log('\nBuilt:\n' + built.filter((f) => f.endsWith('.exe')).map((f) => '  ' + f).join('\n'));
