@@ -43,13 +43,13 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 | Product name | **Overlook by AgentHub**, "a project dashboard for Claude Code"; site `overlook.agenthub.eu` | Only small unrelated projects use the name (a Filament PHP plugin, a homelab dashboard); "Claude" is Anthropic's trademark, so it stays a description only |
 
 ## Phase 0: Name, license and repository
-- [ ] `git init`, first commit, GitHub repository under an AgentHub organization
+- [x] `git init`, first commit, GitHub repository (`github.com/kennyrafael/overlook`)
 - [x] Pick the product name: Overlook (web search for existing products done 2026-11-18)
 - [ ] Check EUIPO/WIPO trademark search for "Overlook" and "AgentHub" in software classes (9, 42)
 - [ ] Set up `overlook.agenthub.eu`; check GitHub org/repo and npm names are free
 - [x] Rename UI title, README, package names to Overlook (`@overlook/*`); keep "for Claude Code" as a descriptor only
 - [ ] Review Anthropic's brand guidelines and terms for descriptive use of "Claude Code"
-- [ ] Add `LICENSE` (MIT, Copyright (c) 2026 AgentHub)
+- [x] Add `LICENSE` (MIT, Copyright (c) 2026 AgentHub)
 - [ ] Check dependency licenses (no GPL/AGPL); generate a third-party notices file and show it in About
 - [ ] Acceptance: repo pushed with LICENSE and notices; name cleared on trademark search, subdomain and GitHub
 
