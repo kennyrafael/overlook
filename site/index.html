@@ -62,8 +62,8 @@ footer p { margin: 6px 0; }
       <h1>Every project you build with Claude Code, at a glance</h1>
       <p>Overlook is a free desktop dashboard that reads your plan files, git repos and Claude Code history on your own computer. See what is done, what is next and where your time goes. No account, nothing uploaded.</p>
       <div class="btns">
-        <a class="btn primary" id="dl-x64" href="https://github.com/kennyrafael/overlook/releases/latest">Download for Windows<small id="dl-x64-sub">64-bit (x64)</small></a>
-        <a class="btn" id="dl-arm64" href="https://github.com/kennyrafael/overlook/releases/latest">Windows on Arm<small id="dl-arm64-sub">arm64</small></a>
+        <a class="btn primary" id="dl-x64" href="#install">Download for Windows<small id="dl-x64-sub">64-bit (x64)</small></a>
+        <a class="btn" id="dl-arm64" href="#install">Windows on Arm<small id="dl-arm64-sub">arm64</small></a>
         <a class="btn" aria-disabled="true" href="#faq">macOS<small>coming soon</small></a>
       </div>
       <p class="note">Free and open source (MIT). Windows 10 and 11. <span id="dl-version"></span></p>
@@ -94,7 +94,7 @@ footer p { margin: 6px 0; }
 
     <section id="faq">
       <h2>FAQ</h2>
-      <details><summary>Does it send my code or plans anywhere?</summary><p>No. Everything is read and stored on your computer. The only outbound request is the update check to github.com, listed in Settings → Network activity, and you can switch it off.</p></details>
+      <details><summary>Does it send my code or plans anywhere?</summary><p>No. Everything is read and stored on your computer. The only outbound request is the update check to dl.agenthub.pt, listed in Settings → Network activity, and you can switch it off.</p></details>
       <details><summary>Do I need Claude Code?</summary><p>No, but it is built for it. Without Claude Code you still get projects, plans, the board and git activity; the usage pages stay empty. Claude Code installed inside WSL is detected too.</p></details>
       <details><summary>What does a plan file look like?</summary><p>Any Markdown file named like <code>PLAN.md</code> or <code>ROADMAP.md</code>: <code>## Milestone</code> headings with <code>- [ ]</code> / <code>- [x]</code> checkboxes, and <code>[~]</code> for in progress. You can change the file names in Settings.</p></details>
       <details><summary>When is macOS coming?</summary><p>It is next on the roadmap. Leave a star or watch the GitHub repository to hear when it ships.</p></details>

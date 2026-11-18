@@ -141,7 +141,7 @@ export default function SettingsPage() {
             <div className="flex align-items-center justify-content-between gap-3 mt-3">
               <div>
                 <div>Check for updates automatically</div>
-                <small className="text-500">At start-up and once a day, Overlook asks GitHub for a newer release and downloads it in the background. Nothing else is sent.</small>
+                <small className="text-500">At start-up and once a day, Overlook checks dl.agenthub.pt for a newer release and downloads it in the background. Nothing else is sent.</small>
               </div>
               <InputSwitch checked={prefs.autoUpdate} onChange={(e) => void setPref({ autoUpdate: !!e.value })} aria-label="Check for updates automatically" />
             </div>

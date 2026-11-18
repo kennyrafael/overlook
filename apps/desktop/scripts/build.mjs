@@ -11,6 +11,7 @@ const require = createRequire(import.meta.url);
 const { Arch, build, Platform } = require('electron-builder');
 const desktop = join(dirname(fileURLToPath(import.meta.url)), '..');
 const electronVersion = require('../package.json').devDependencies.electron;
+const downloadUrl = (process.env.OVERLOOK_DOWNLOAD_URL || 'https://dl.agenthub.pt/overlook').replace(/\/+$/, '');
 
 /** @type {import('electron-builder').Configuration} */
 const config = {
@@ -49,8 +50,9 @@ const config = {
     loadBrowserProcessSpecificV8Snapshot: false,
     grantFileProtocolExtraPrivileges: false,
   },
-  // Release feed for electron-updater: x64 → latest.yml, arm64 → latest-arm64.yml (set per arch below).
-  publish: { provider: 'github', owner: 'kennyrafael', repo: 'overlook', releaseType: 'release' },
+  // Release feed for electron-updater, served from Cloudflare R2: x64 → latest.yml, arm64 → latest-arm64.yml
+  // (channel set per arch below). The base URL is baked into the app; OVERLOOK_DOWNLOAD_URL overrides it.
+  publish: { provider: 'generic', url: downloadUrl },
   win: {
     icon: join(desktop, 'resources', 'icon.png'),
     target: ['nsis'],

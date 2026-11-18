@@ -1,7 +1,8 @@
 /**
- * Windows auto-update from GitHub Releases (electron-updater).
+ * Windows auto-update (electron-updater, generic provider) from the release feed on Cloudflare R2
+ * (URL set at build time in scripts/build.mjs, stored in resources/app-update.yml).
  *
- * The only outbound call Overlook makes: it reads the release feed on github.com at start-up and once
+ * The only outbound call Overlook makes: it reads the release feed at start-up and once
  * a day, downloads a newer installer in the background and offers to restart. Turned off with the
  * "Check for updates automatically" setting; "Check for updates" in the tray always works.
  * Builds are unsigned, so there is no publisher check; the feed's SHA-512 is verified.
