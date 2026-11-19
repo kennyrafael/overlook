@@ -23,6 +23,24 @@
 .site-header .brand { color: #fff; }
 .site-header nav a { color: rgb(255 255 255 / 0.8); }
 .site-header nav a:hover { color: #fff; }
+.site-header nav { display: flex; align-items: center; }
+
+/* Light/dark toggle: shows the sun in dark mode (click for light) and the moon in light mode. */
+.theme-toggle {
+  position: relative; display: inline-grid; place-items: center; width: 36px; height: 36px; margin-left: 18px; padding: 0;
+  border: 1px solid rgb(255 255 255 / 0.28); border-radius: 50%; background: rgb(255 255 255 / 0.08); color: #fff; cursor: pointer;
+  transition: background var(--dur-fast), border-color var(--dur-fast);
+}
+.theme-toggle:hover { background: rgb(255 255 255 / 0.18); border-color: rgb(255 255 255 / 0.5); }
+.theme-toggle svg {
+  grid-area: 1 / 1; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  transition: transform var(--dur-base) var(--ease-out), opacity var(--dur-base) var(--ease-out);
+}
+.theme-toggle .ti-moon { fill: currentColor; stroke: none; }
+.theme-toggle .ti-sun, .theme-toggle[data-showing='light'] .ti-moon { opacity: 1; transform: none; }
+.theme-toggle .ti-moon, .theme-toggle[data-showing='light'] .ti-sun { opacity: 0; transform: rotate(-90deg) scale(0.5); }
+/* Phones: the section links don't fit beside the brand; keep GitHub and the toggle. */
+@media (max-width: 560px) { .site-header nav a:not(:last-of-type) { display: none; } }
 
 .skip {
   position: absolute;

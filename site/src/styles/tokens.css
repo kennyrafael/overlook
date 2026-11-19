@@ -127,6 +127,10 @@
   --land-near: #e6e9ff;
 }
 
+/* A theme picked with the toggle also sets the browser's own colours (scrollbars, form controls). */
+:root[data-theme='light'] { color-scheme: light; }
+:root[data-theme='dark'] { color-scheme: dark; }
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     --dur-fast: 0ms;

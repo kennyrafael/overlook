@@ -2,6 +2,7 @@
 // actions (which here only explain what they do in the app). Combobox + listbox, keyboard first.
 import { announce, h } from './dom.ts';
 import { rank } from './palette-model.ts';
+import { toggleTheme } from '../theme.ts';
 
 interface Item { group: string; label: string; run: () => void }
 
@@ -34,6 +35,7 @@ const ITEMS: Item[] = [
   { group: 'Feedback', label: 'Would you pay for Overlook?', run: focusForm('fb-pro') },
   { group: 'Feedback', label: 'Suggest a feature', run: focusForm('fb-idea') },
   { group: 'Action', label: 'Download Overlook', run: () => document.getElementById('dl-main')?.click() },
+  { group: 'Action', label: 'Switch light / dark theme', run: toggleTheme },
   { group: 'trailmap', label: 'Start Claude Code', run: explain('In the app, this opens a terminal in ~/code/trailmap and starts Claude Code there.') },
   { group: 'trailmap', label: 'Open in VS Code', run: explain('In the app, this opens ~/code/trailmap in VS Code.') },
   { group: 'View', label: 'Paused projects', run: explain('In the app, this filters the project list to paused projects.') },

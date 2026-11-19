@@ -14,6 +14,10 @@ import { initFeedback } from './feedback.ts';
 import { initHero } from './hero/hero.ts';
 import { initInstallTabs } from './install.ts';
 import { initMotion, reveal, whenIdle } from './motion/motion.ts';
+import { initTheme } from './theme.ts';
+
+// Before anything else, so the screenshots load in the chosen theme and the toggle shows the right icon.
+initTheme();
 
 // Start-up waits for the first paint: the hero's tall scroll layout comes from CSS, so setting it up
 // afterwards changes nothing on screen, and the headline is never held back by script work.
