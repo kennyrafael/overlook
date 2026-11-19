@@ -1,0 +1,116 @@
+/*
+ * Overlook design tokens, taken from brand/ (README.md, mark.svg). Every colour, size and motion value
+ * on the landing page comes from here. Brand rules: indigo only, no Claude orange, no sparkles.
+ */
+:root {
+  /* Brand palette */
+  --ol-indigo-300: #a5b4fc;
+  --ol-indigo-400: #818cf8;
+  --ol-indigo-500: #6366f1; /* mark gradient start */
+  --ol-indigo-600: #4f46e5;
+  --ol-indigo-700: #4338ca; /* mark gradient end */
+  --ol-indigo-950: #1e1b4b; /* brand text */
+  --ol-band-far: #8b93f5;   /* back horizon band */
+  --ol-band-mid: #c7d2fe;   /* middle band */
+  --ol-band-near: #ffffff;  /* front band and lens ring */
+  --ol-gradient-mark: linear-gradient(135deg, var(--ol-indigo-500), var(--ol-indigo-700));
+  /* Dusk sky behind the hero landscape */
+  --ol-sky-top: #1b1846;
+  --ol-sky-mid: #3b3596;
+  --ol-sky-low: #6f73e8;
+
+  /* Surfaces and text, light */
+  --bg: #f8fafc;
+  --bg-raised: #ffffff;
+  --text: #0f172a;
+  --text-muted: #475569;
+  --border: #e2e8f0;
+  --accent: var(--ol-indigo-600);
+  --accent-ink: #ffffff;
+  --accent-soft: #eef2ff;
+  --focus: var(--ol-indigo-500);
+
+  /* Texture strength (kept under 6% per the roadmap) */
+  --grain-opacity: 0.05;
+  --contour-opacity: 0.05;
+
+  /* Type: Inter Variable, self-hosted */
+  --font-sans: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
+  --step--1: clamp(0.83rem, 0.8rem + 0.15vw, 0.9rem);
+  --step-0: clamp(1rem, 0.96rem + 0.2vw, 1.1rem);
+  --step-1: clamp(1.2rem, 1.1rem + 0.5vw, 1.45rem);
+  --step-2: clamp(1.45rem, 1.25rem + 1vw, 2rem);
+  --step-3: clamp(1.75rem, 1.4rem + 1.8vw, 2.8rem);
+  --step-4: clamp(2.1rem, 1.5rem + 3vw, 4.2rem);
+  --leading-tight: 1.12;
+  --leading-body: 1.6;
+  --tracking-display: -0.025em;
+
+  /* Shape and spacing */
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --radius-l: 16px; /* same as the mark's corner */
+  --radius-xl: 28px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 72px;
+  --space-9: 112px;
+  --gutter: 16px;
+  --content: 72rem;
+  --shadow-1: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 3px rgb(15 23 42 / 0.08);
+  --shadow-2: 0 8px 30px rgb(30 27 75 / 0.14);
+  --shadow-glow: 0 0 40px rgb(129 140 248 / 0.35);
+
+  /* Motion: calm, no bounces (matches the app) */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 150ms;
+  --dur-base: 280ms;
+  --dur-slow: 600ms;
+  --dur-reveal: 900ms;
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0b1020;
+    --bg-raised: #121a2e;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --border: #1e293b;
+    --accent: var(--ol-indigo-400);
+    --accent-ink: #0b1020;
+    --accent-soft: #1a2240;
+    --focus: var(--ol-indigo-300);
+    --shadow-2: 0 8px 30px rgb(0 0 0 / 0.4);
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #0b1020;
+  --bg-raised: #121a2e;
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --border: #1e293b;
+  --accent: var(--ol-indigo-400);
+  --accent-ink: #0b1020;
+  --accent-soft: #1a2240;
+  --focus: var(--ol-indigo-300);
+  --shadow-2: 0 8px 30px rgb(0 0 0 / 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+    --dur-reveal: 0ms;
+  }
+}

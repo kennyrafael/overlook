@@ -149,13 +149,13 @@ projects at once.**
   third-party hosts.
 
 ## Phase 4b-1: Groundwork
-- [ ] Move `site/` to Vite + TypeScript (`site/src`, build to `site/dist`); update `vercel.json` (build command, output dir) and keep the CSP and headers
-- [ ] Port `download.js` to a typed module with its tests (feed parsing, Mac detection, disabled `.dmg` buttons), so download buttons behave exactly as today
-- [ ] Design tokens from `brand/` (colors, radii, type scale, motion durations and easing) in one CSS file, light and dark
-- [ ] Self-host Inter (variable, subset to Latin) and add its license to `THIRD_PARTY_NOTICES.md`
-- [ ] Motion helper: scroll progress per section, pointer parallax, reduced-motion switch, pause when the tab is hidden
-- [ ] Demo data: one set of made-up projects (names, plans, commits, usage) shared by the screenshots and the demos
-- [ ] Screenshot script: Playwright opens the app on the e2e fixture with the demo data and saves light and dark captures as AVIF/WebP at 1x and 2x (`npm run site:shots`)
+- [x] Move `site/` to Vite + TypeScript (`site/src`, build to `site/dist`; its own package and lockfile, not a workspace, so Vercel installs only what the site needs); `vercel.json` sets install/build/output and keeps the CSP (plus `font-src`); `vite preview` sends the same headers; CI job `site` runs tests and the build
+- [x] Port `download.js` to a typed module with its tests (feed parsing, Mac detection, disabled `.dmg` buttons), so download buttons behave exactly as today (`site/src/download.ts`)
+- [x] Design tokens from `brand/` (colors, radii, type scale, motion durations and easing) in one CSS file, light and dark
+- [x] Self-host Inter (variable, Latin subset, 48 KB); `npm run notices` now also writes `site/public/third-party-notices.txt` (linked in the footer)
+- [x] Motion helper (`site/src/motion/`): scroll progress per section, pointer parallax, reveals, reduced-motion switch, pause when the tab is hidden
+- [x] Demo data (`site/src/demo/data.ts`): five made-up projects with plans, commits and Claude sessions, shared by the screenshots and the demos
+- [x] Screenshot script (`cd site && npm run shots`, after `npm run build`): builds the demo repos with real git history (so the burnup backfills), runs the app on them and saves 6 pages in light and dark as AVIF/WebP at 1x and 2x to `site/src/assets/shots/`; paths are shown as `~/code/…` and the run fails if the user name is visible
 
 ## Phase 4b-2: Hero, the view from the overlook
 - [ ] Horizon landscape in SVG: three band layers plus a far ridge, with gently moving curves; parallax on scroll and pointer (tilt on phones only when allowed, off by default)
