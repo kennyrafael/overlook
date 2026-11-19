@@ -2,8 +2,10 @@
 // Supports Range requests (electron-updater downloads only the changed blocks of an update) and
 // conditional requests. CORS allows the landing page to read the feeds.
 // Downloads and update checks are counted (no personal data) in the Analytics Engine dataset bound as
-// `overlook`; see src/count.js for what counts, and scripts/stats.mjs to read the numbers.
+// `overlook`; see src/count.js for what counts. Read the numbers at /stats (src/stats-page.js,
+// password-protected) or with scripts/stats.mjs.
 import { classify, dataPoint } from './count.js';
+import { statsEnabled, statsPage } from './stats-page.js';
 
 const ALLOWED_ORIGIN = 'https://overlook.agenthub.pt';
 
@@ -30,8 +32,13 @@ export default {
     }
     if (req.method !== 'GET' && req.method !== 'HEAD') return new Response('Method not allowed', { status: 405 });
 
+    const path = new URL(req.url).pathname;
+    if (path === '/stats' || path === '/stats/') {
+      return statsEnabled(env) ? statsPage(req, env) : new Response('Not found', { status: 404 });
+    }
+
     let key;
-    try { key = decodeURIComponent(new URL(req.url).pathname.slice(1)); } catch { key = ''; }
+    try { key = decodeURIComponent(path.slice(1)); } catch { key = ''; }
     if (!/^overlook\/[\w.-]+$/.test(key)) return new Response('Not found', { status: 404, headers: cors });
 
     const obj = await env.BUCKET.get(key, { range: req.headers, onlyIf: req.headers });

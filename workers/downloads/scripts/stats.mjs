@@ -1,5 +1,6 @@
 // Download and update-check counts from the Analytics Engine dataset `overlook` (written by the
-// download Worker, see src/count.js), via Cloudflare's SQL API.
+// download Worker, see src/count.js), via Cloudflare's SQL API (src/report.js). The same reports are on
+// the Worker's password-protected /stats page.
 //
 //   CLOUDFLARE_ACCOUNT_ID=…  CLOUDFLARE_API_TOKEN=…  npm run stats [-- --days 30]
 //
@@ -7,19 +8,9 @@
 // in this repository. Counts are sampled by Analytics Engine at high volume; SUM(_sample_interval)
 // turns samples back into estimated totals.
 
-const DATASET = 'overlook';
+import { fetchReports, queries } from '../src/report.js';
 
-/** The SQL for each report, for the last `days` days. Columns: blob1 kind, blob2 platform, blob3 arch, blob4 version, blob6 country, blob7 source. */
-export function queries(days) {
-  const since = `timestamp > NOW() - INTERVAL '${days}' DAY`;
-  return {
-    'Downloads by version and platform': `SELECT blob4 AS version, blob2 AS platform, blob3 AS arch, SUM(_sample_interval) AS downloads FROM ${DATASET} WHERE blob1 = 'download' AND ${since} GROUP BY version, platform, arch ORDER BY downloads DESC`,
-    'Downloads per day': `SELECT toStartOfInterval(timestamp, INTERVAL '1' DAY) AS day, SUM(_sample_interval) AS downloads FROM ${DATASET} WHERE blob1 = 'download' AND ${since} GROUP BY day ORDER BY day`,
-    'Downloads by country (top 15)': `SELECT blob6 AS country, SUM(_sample_interval) AS downloads FROM ${DATASET} WHERE blob1 = 'download' AND ${since} GROUP BY country ORDER BY downloads DESC LIMIT 15`,
-    'Update checks per day (about one per running copy)': `SELECT toStartOfInterval(timestamp, INTERVAL '1' DAY) AS day, blob2 AS platform, SUM(_sample_interval) AS checks FROM ${DATASET} WHERE blob1 = 'update-check' AND ${since} GROUP BY day, platform ORDER BY day, platform`,
-    'Totals': `SELECT blob1 AS kind, SUM(_sample_interval) AS count FROM ${DATASET} WHERE ${since} GROUP BY kind ORDER BY count DESC`,
-  };
-}
+export { queries };
 
 /** Plain-text table for an array of row objects. */
 export function table(rows) {
@@ -32,15 +23,7 @@ export function table(rows) {
 }
 
 export async function run({ accountId, token, days, fetchFn = fetch, log = console.log }) {
-  for (const [title, sql] of Object.entries(queries(days))) {
-    const res = await fetchFn(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/analytics_engine/sql`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'text/plain' },
-      body: sql,
-    });
-    const text = await res.text();
-    if (!res.ok) throw new Error(`${title}: Cloudflare answered ${res.status}: ${text.slice(0, 300)}`);
-    const rows = (JSON.parse(text).data ?? []).map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, /^\d+(\.\d+)?$/.test(String(v)) && k !== 'version' ? Number(v) : v])));
+  for (const { title, rows } of await fetchReports({ accountId, token, days, fetchFn })) {
     log(`\n${title} (last ${days} days)\n${table(rows)}`);
   }
 }
