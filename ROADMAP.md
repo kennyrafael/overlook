@@ -1,10 +1,10 @@
 # Roadmap: free desktop app first, paid later if there is demand
 
-Goal: ship this dashboard as a **free, MIT-licensed** installable desktop app for **Windows and
-macOS**, published by **AgentHub** (agenthub.pt). If people use it and ask for more, add signing,
+Goal: ship this dashboard as a **free, MIT-licensed** installable desktop app for **Windows,
+macOS and Linux**, published by **AgentHub** (agenthub.pt). If people use it and ask for more, add signing,
 paid features and licensing later (see "Later: if there is demand").
 (iOS is out of scope: the app needs to read `~/.claude`, run git, watch folders and launch
-VS Code/terminals, none of which iOS allows. Linux is out of scope for 1.0; revisit if users ask.)
+VS Code/terminals, none of which iOS allows. Linux was out of scope for 1.0; added in Phase 3b, 2026-11-19.)
 
 This file is written in the dashboard's own plan format, so the dashboard tracks its progress.
 
@@ -36,9 +36,9 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 | Price | **Free** for now | Prove demand before spending on signing and payments |
 | Contributions | Own code only at first; add a CLA before accepting outside PRs | Keeps the option to relicense later versions |
 | Desktop shell | **Electron** + **electron-builder** | Server is already Node; Tauri would need a bundled Node sidecar |
-| Platforms | Windows x64 + arm64 (NSIS `.exe`), macOS (universal `.dmg`) | iOS cannot do what the app does; Linux deferred |
+| Platforms | Windows x64 + arm64 (NSIS `.exe`), macOS x64 + arm64 (`.dmg` per arch), Linux x64 + arm64 (AppImage + `.deb`) | iOS cannot do what the app does. Linux was deferred, then added (2026-11-19) on request: the same Electron code, one more CI runner |
 | Signing | **Unsigned** for the free release; download page explains SmartScreen / Gatekeeper steps | Saves Apple $99/yr and Windows signing costs until there is demand |
-| Updates | Windows: electron-updater (works unsigned). macOS: in-app "new version available" notice + manual download | macOS auto-update requires a signed app |
+| Updates | Windows and Linux AppImage: electron-updater (works unsigned). macOS and Linux `.deb`: in-app "new version available" notice + manual download | macOS auto-update requires a signed app; a `.deb` is installed by apt as root |
 | Privacy promise | "No project data ever leaves your machine." Network calls are listed in-app | Update checks are the only outbound call |
 | Product name | **Overlook by AgentHub**, "a project dashboard for Claude Code"; site `overlook.agenthub.pt` | Only small unrelated projects use the name (a Filament PHP plugin, a homelab dashboard); "Claude" is Anthropic's trademark, so it stays a description only |
 
@@ -100,6 +100,17 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [x] `.dmg` per arch (`x64`, `arm64`; not universal, which would need the two better-sqlite3 binaries merged with lipo), ad-hoc signed, macOS 12+
 - [ ] Acceptance: on a fresh Mac, following the download page's "Open Anyway" steps, the app opens and passes the smoke suite (CI runs the smoke suite on macOS; a manual fresh-Mac install is still to do)
 
+## Phase 3b: Linux (AppImage and .deb)
+Decision (2026-11-19): Linux, out of scope for 1.0, is now supported. AppImage for any recent distribution (updates itself), `.deb` for Ubuntu and Debian (installs through apt; "new version available" notice), both x64 and arm64.
+- [x] electron-builder Linux targets in `apps/desktop/scripts/build.mjs`: AppImage (toolset 1.0.3: static runtime, no libfuse2; its AppRun adds `--no-sandbox` only where Ubuntu 24.04's AppArmor blocks user namespaces) and `.deb` (Electron's runtime libraries as dependencies; electron-builder's AppArmor profile), per arch with the prebuilt better-sqlite3 for Electron's ABI (`linux-x64`, `linux-arm64`; arm64 cross-packaged on x64). Icon from `icon.png`, category Development, `desktopName` so the window matches its launcher entry. Feeds `latest-linux.yml` and `latest-linux-arm64.yml` (they list the AppImage and the `.deb`)
+- [x] Quick actions on Linux (`apps/api/src/actions/linux-terminal.ts`, unit-tested in `linux-terminal.spec.ts`): the desktop's terminal first (GNOME Terminal / Ptyxis, Konsole, Xfce Terminal), then `x-terminal-emulator` (resolved to the terminal behind it), kitty, Alacritty, xterm; folder and program are separate argv entries, never a shell string. VS Code via `code` on PATH. "Show in folder" via `xdg-open`, hidden when it is missing (as are the terminal actions without a terminal). PATH lookup without `which` (absent on minimal installs)
+- [x] Login-shell PATH for apps started from a launcher (adds `~/.local/bin`, Linuxbrew, `/snap/bin`); `~/.claude` and `CLAUDE_CONFIG_DIR` as on macOS; single instance; tray icon sized for Linux panels (AppIndicator panels only open the menu, which has "Open Overlook"); no menu bar, as on Windows
+- [x] Updates: the AppImage via electron-updater (`APPIMAGE` is set); the `.deb` compares `latest-linux.yml` with the running version and offers the download page
+- [x] CI: `ubuntu-latest` in the `ci.yml` matrix (typecheck, unit, e2e, browser smoke), plus an x64 package, the AppImage smoke-tested and the `.deb` installed with apt and smoke-tested, under Xvfb. `release.yml` builds Linux in parallel; publish (R2, then GitHub Release) runs only if all three pass
+- [x] Landing page: Linux buttons (AppImage, `.deb`; arm64 links) enabled only for files listed in `latest-linux.yml`; Linux visitors get the AppImage as the main button and the Linux install tab; FAQ and copy updated
+- [ ] First tagged release with the Linux builds; check the feeds, and that an AppImage updates itself to the next release
+- [ ] Acceptance: on a real Ubuntu 24.04 desktop (and one KDE distribution), the AppImage and the `.deb` start from the launcher, projects are found, quick actions work or are hidden, and the arm64 build runs on an Arm machine (CI covers x64 under Xvfb only)
+
 ## Phase 4: Free public release
 - [x] GitHub Actions, Windows: `ci.yml` (typecheck, unit, e2e, browser smoke on push to main); `release.yml` (tag `vX.Y.Z` → tests, `npm run dist`, packaged smoke, upload to Cloudflare R2, then a GitHub Release with the same files)
 - [x] GitHub Actions, macOS build job: `release.yml` builds Windows and macOS in parallel; one publish job (R2, then GitHub Release) runs only if both pass
@@ -114,7 +125,7 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [x] Landing page: rebuild it as an interactive, animated page with real screenshots (Phases 4b-1 to 4b-6 below; live 2026-11-19, follow-ups in 4b-6)
 - [ ] Docs from README sections (plan file format, safety, troubleshooting)
 - [ ] Optional waitlist / "tell me about Pro" email signup to measure paid interest
-- [ ] Beta with 5–10 Claude Code users on both platforms; fix top issues
+- [ ] Beta with 5–10 Claude Code users on all three platforms; fix top issues
 - [ ] Launch (GitHub, Claude Code communities)
 - [ ] Acceptance: a stranger installs from the landing page on Windows and macOS without help; a Windows install updates itself to the next release
 

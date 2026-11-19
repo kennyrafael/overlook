@@ -106,7 +106,10 @@ history the first day the dashboard sees them.
 ## Quick actions and shortcuts
 
 - Project header and the ↗ menu on each row: **Open in VS Code**, **Start Claude Code**
-  (Windows Terminal running `claude` in the folder), **Open terminal**, **Show in Explorer**.
+  (`claude` in a terminal at the folder: Windows Terminal; Terminal or iTerm on macOS; on Linux the
+  desktop's terminal, e.g. GNOME Terminal or Konsole, else `x-terminal-emulator`, kitty, Alacritty or
+  xterm), **Open terminal**, **Show in Explorer / Finder / folder** (`xdg-open` on Linux). Actions whose
+  tool is not installed are hidden.
 - **Ctrl+K**: jump to pages and projects, run quick actions ("alpha: Start Claude Code"), apply
   saved views, rescan, switch theme, clear filters.
 
@@ -149,19 +152,27 @@ app; the offered fix is a breaking downgrade.
 
 See [PLAN.md](PLAN.md) for the original plan.
 
-## Desktop app (Windows)
+## Desktop app (Windows, macOS, Linux)
 
 `apps/desktop` wraps the server and UI in an Electron window. The server runs in a separate process on a
 random local port and only accepts requests carrying a per-launch token that only the app window has.
-Data lives in `%APPDATA%\Overlook`.
+Data lives in `%APPDATA%\Overlook` (Windows), `~/Library/Application Support/Overlook` (macOS) or
+`~/.config/Overlook` (Linux).
 
 ```bash
-npm run dist            # builds everything and the installers in apps/desktop/release/
-npm run test:desktop    # smoke tests against release/win-unpacked/Overlook.exe (fixture data only)
+npm run dist            # builds everything and this OS's installers in apps/desktop/release/
+npm run test:desktop    # smoke tests against the unpacked app in release/ (fixture data only)
 ```
 
-- Installers: `Overlook-Setup-<version>-x64.exe` and `-arm64.exe`. They are unsigned, so Windows SmartScreen
-  shows "Windows protected your PC": choose **More info → Run anyway**.
+- Windows: `Overlook-Setup-<version>-x64.exe` and `-arm64.exe`. They are unsigned, so Windows SmartScreen
+  shows "Windows protected your PC": choose **More info → Run anyway**. Updates install themselves.
+- macOS: `Overlook-<version>-arm64.dmg` and `-x64.dmg`, ad-hoc signed: approve the first launch in
+  System Settings → Privacy & Security → **Open Anyway**. The app tells you when a new version is out.
+- Linux (built on Linux): `Overlook-<version>-x86_64.AppImage` / `-arm64.AppImage` (`chmod +x`, then run;
+  updates itself) and `Overlook-<version>-amd64.deb` / `-arm64.deb` (`sudo apt install ./Overlook-….deb`;
+  the app tells you when a new version is out). `OVERLOOK_ARCHS=x64 npm run dist` builds one arch. Without a
+  display, run the smoke tests with `xvfb-run -a npm run test:desktop`; `OVERLOOK_EXE` points them at an
+  AppImage or the installed `/opt/Overlook/overlook`.
 - Moving from the browser version: close the app, then run `node scripts/copy-old-data.mjs`.
 - First launch opens a short setup: what stays local, which tools were found, and which folders to scan.
 - Only one copy runs; launching again brings the window back. With **Keep running in the tray** on

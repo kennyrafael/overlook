@@ -43,6 +43,8 @@ async function api(path: string, init?: { method?: string; body?: unknown }) {
 }
 
 test.beforeAll(async () => {
+  // Locally a missing build skips the suite; in CI (and with OVERLOOK_EXE) it fails, so a green run means it ran.
+  if (!existsSync(EXE) && (process.env.CI || process.env.OVERLOOK_EXE)) throw new Error(`Packaged app not found at ${EXE}`);
   test.skip(!existsSync(EXE), `Packaged app not found at ${EXE}; run npm run dist -w @overlook/desktop`);
   fx = createFixture();
   app = spawn(EXE, [`--remote-debugging-port=${CDP_PORT}`], {
