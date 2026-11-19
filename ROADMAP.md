@@ -158,11 +158,11 @@ projects at once.**
 - [x] Screenshot script (`cd site && npm run shots`, after `npm run build`): builds the demo repos with real git history (so the burnup backfills), runs the app on them and saves 6 pages in light and dark as AVIF/WebP at 1x and 2x to `site/src/assets/shots/`; paths are shown as `~/code/…` and the run fails if the user name is visible
 
 ## Phase 4b-2: Hero, the view from the overlook
-- [ ] Horizon landscape in SVG: three band layers plus a far ridge, with gently moving curves; parallax on scroll and pointer (tilt on phones only when allowed, off by default)
-- [ ] Lens: white ring with glass effect showing the dashboard screenshot through a circular mask; follows the pointer slightly; grows to full screen on scroll and hands off to the next section
-- [ ] Grain overlay and contour-line background, tuned for light and dark
-- [ ] Headline, one-line pitch and the main download button (picked for the visitor's OS) visible without scrolling; version and size underneath
-- [ ] Static fallback: a single rendered image of the hero for reduced motion and slow devices
+- [x] Horizon landscape in SVG: three band layers plus a far ridge; each moves at its own speed with scroll and pointer (pointer only with a mouse or trackpad; no device tilt, no idle loops)
+- [x] Lens: white ring with glass effect showing the Overview screenshot through a circular mask, aimed at the KPI cards; follows the pointer slightly; grows to full screen over a sticky scroll and hands off to the next section (`site/src/hero/`, maths unit-tested so the screenshot always covers the lens)
+- [x] Grain overlay and contour-line background (generated, drawn in once), tuned for light and dark
+- [x] Headline, one-line pitch and the main download button (picked for the visitor's OS) visible without scrolling; version and size underneath; all four builds in a Download section further down
+- [x] Static fallback: reduced motion, data saver, very slow devices and no JavaScript get the still scene (same markup, one screen tall, lens at rest) instead of a separate image
 
 ## Phase 4b-3: Feature demos
 - [ ] Discovery: scattered folders and repos fly into a tidy project grid as the section scrolls in, each with status and progress

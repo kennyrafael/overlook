@@ -1,4 +1,4 @@
-/* Current page layout (Phase 4b-1 keeps the existing page; later phases replace it section by section). */
+/* Sections below the hero (the original page; Phases 4b-3 and 4b-4 replace them one by one). */
 * { box-sizing: border-box; }
 body {
   margin: 0;
@@ -10,14 +10,10 @@ body {
 a { color: var(--accent); }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-s); }
 .wrap { max-width: 64rem; margin: 0 auto; padding: 0 var(--gutter); }
-header.top { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.15rem; color: var(--text); text-decoration: none; }
 .brand img { width: 32px; height: 32px; }
 nav a { color: var(--text-muted); text-decoration: none; margin-left: 18px; }
 nav a:hover { color: var(--text); }
-.hero { padding: 56px 0 40px; text-align: center; }
-.hero h1 { font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.15; margin: 0 0 16px; letter-spacing: -0.02em; }
-.hero p { color: var(--text-muted); font-size: 1.15rem; max-width: 40rem; margin: 0 auto 28px; }
 .btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 .btn {
   display: inline-flex; flex-direction: column; align-items: center; padding: 12px 22px; border-radius: var(--radius-m);
@@ -30,7 +26,7 @@ nav a:hover { color: var(--text); }
 .btn.primary small { color: inherit; opacity: 0.8; }
 .btn[aria-disabled='true'] { opacity: 0.6; pointer-events: none; }
 .note { color: var(--text-muted); font-size: 0.9rem; margin-top: 14px; }
-section { padding: 40px 0; }
+main section { padding: 48px 0; scroll-margin-top: 16px; }
 h2 { font-size: 1.6rem; margin: 0 0 20px; letter-spacing: -0.01em; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 16px; }
 .card { background: var(--bg-raised); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }

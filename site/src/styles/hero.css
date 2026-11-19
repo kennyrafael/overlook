@@ -1,0 +1,298 @@
+/*
+ * Hero: the view from the overlook.
+ *
+ * Still scene (default; no JS, reduced motion, slow devices): sky, contour lines, the mark's horizon
+ * bands, and the lens resting over the horizon with the Overview page inside it.
+ *
+ * Animated (.hero.is-animated, set by src/hero/hero.ts): the section is tall and the stage sticks, so
+ * scrolling grows the lens until the app fills the screen. hero.ts writes, on .hero-stage:
+ *   --p        scroll progress 0..1          --px, --py  smoothed pointer -1..1
+ *   --cx, --cy, --r   lens centre and radius (px)   --zoom  image scale inside the lens
+ *   --copy, --ring, --caption   0..1 fades for the text, the lens ring and the caption
+ */
+.site-header {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px max(var(--gutter), calc((100% - var(--content)) / 2));
+}
+.site-header .brand { color: #fff; }
+.site-header nav a { color: rgb(255 255 255 / 0.8); }
+.site-header nav a:hover { color: #fff; }
+
+.skip {
+  position: absolute;
+  left: var(--gutter);
+  top: -100px;
+  z-index: 50;
+  padding: 8px 14px;
+  border-radius: var(--radius-m);
+  background: var(--bg-raised);
+  color: var(--text);
+}
+.skip:focus { top: 12px; }
+
+.hero {
+  position: relative;
+  color: #fff;
+}
+.hero-stage {
+  /* Lens at rest: centre and radius. Static values; hero.ts measures .lens-anchor to get them in px. */
+  --cx0: 71%;
+  --cy0: 56%;
+  --r0: min(18vw, 29svh);
+  --cx: var(--cx0);
+  --cy: var(--cy0);
+  --r: var(--r0);
+  --p: 0;
+  --px: 0;
+  --py: 0;
+  --zoom: 1.3;
+  --copy: 0;
+  --ring: 0;
+  --caption: 0;
+  position: relative;
+  height: 100svh;
+  min-height: 600px;
+  overflow: hidden;
+  isolation: isolate;
+}
+.hero.is-animated { height: 270svh; }
+.hero.is-animated .hero-stage { position: sticky; top: 0; }
+
+/* Sky */
+.sky {
+  position: absolute;
+  inset: -5% -5% 0;
+  background:
+    radial-gradient(ellipse 60% 45% at 72% 60%, var(--sky-glow), transparent 70%),
+    linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 55%, var(--sky-low) 100%);
+  transform: translate3d(calc(var(--px) * -6px), calc(var(--py) * -4px), 0);
+}
+.hero .contours {
+  position: absolute;
+  inset: -4%;
+  width: 108%;
+  height: 108%;
+  transform: translate3d(calc(var(--px) * -10px), calc(var(--p) * -8svh + var(--py) * -6px), 0);
+}
+
+/* Land: a far ridge plus the mark's three bands, each its own parallax layer. Nearer layers move more
+   with the pointer and sink faster as you scroll. */
+.land {
+  position: absolute;
+  left: -5%;
+  bottom: -2px;
+  width: 110%;
+  height: 40%;
+  will-change: transform;
+}
+.land-ridge { fill: var(--land-ridge); height: 56%; transform: translate3d(calc(var(--px) * -8px), calc(var(--p) * 6svh), 0); }
+.land-far { fill: var(--land-far); transform: translate3d(calc(var(--px) * -14px), calc(var(--p) * 14svh + var(--py) * -3px), 0); }
+.land-mid { fill: var(--land-mid); transform: translate3d(calc(var(--px) * -22px), calc(var(--p) * 24svh + var(--py) * -5px), 0); }
+.land-near { fill: var(--land-near); transform: translate3d(calc(var(--px) * -32px), calc(var(--p) * 36svh + var(--py) * -7px), 0); }
+/* The near band edge glows softly, like the light on the mark's white band. */
+.land-near path { filter: drop-shadow(0 -6px 18px rgb(224 231 255 / 0.45)); }
+/* Dark theme: fade the bottom into the page background. */
+.hero-stage::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 14%;
+  background: linear-gradient(to bottom, transparent, var(--bg));
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Lens */
+.lens {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  --lx: calc(var(--px) * 16px);
+  --ly: calc(var(--py) * 10px);
+}
+.lens-anchor {
+  position: absolute;
+  left: calc(var(--cx0) - var(--r0));
+  top: calc(var(--cy0) - var(--r0));
+  width: calc(var(--r0) * 2);
+  height: calc(var(--r0) * 2);
+  visibility: hidden;
+}
+.lens-mask {
+  position: absolute;
+  inset: 0;
+  clip-path: circle(var(--r) at calc(var(--cx) + var(--lx)) calc(var(--cy) + var(--ly)));
+  background: var(--bg);
+  container-type: size;
+}
+/* The image box covers the stage from its top-left corner (like object-fit: cover with
+   object-position 0 0, but the box itself is the full image, which frame.ts relies on). */
+.lens-shot img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: max(100cqw, 160cqh); /* 1440 / 900 = 1.6 */
+  height: auto;
+  aspect-ratio: 1440 / 900;
+  max-width: none;
+  transform-origin: var(--cx) var(--cy);
+  transform: translate3d(var(--tx, 0px), var(--ty, 0px), 0) scale(var(--zoom));
+}
+@supports not (width: 1cqw) {
+  .lens-shot img { width: 100%; height: 100%; object-fit: cover; object-position: 0 0; }
+}
+/* Glass: a soft highlight top-left and a darker rim, fading as the lens opens up. */
+.lens-glass {
+  position: absolute;
+  inset: 0;
+  opacity: calc(1 - var(--ring));
+  background:
+    radial-gradient(circle var(--r) at calc(var(--cx) + var(--lx) - var(--r) * 0.32) calc(var(--cy) + var(--ly) - var(--r) * 0.42),
+      rgb(255 255 255 / 0.2), rgb(255 255 255 / 0.04) 55%, transparent 80%),
+    radial-gradient(circle calc(var(--r) * 1.02) at calc(var(--cx) + var(--lx)) calc(var(--cy) + var(--ly)),
+      transparent 72%, rgb(30 27 75 / 0.38) 100%);
+}
+.lens-ring {
+  position: absolute;
+  left: calc(var(--cx) + var(--lx) - var(--r) - 9px);
+  top: calc(var(--cy) + var(--ly) - var(--r) - 9px);
+  width: calc(var(--r) * 2 + 18px);
+  height: calc(var(--r) * 2 + 18px);
+  overflow: visible;
+  opacity: calc(1 - var(--ring));
+  filter: drop-shadow(0 0 22px rgb(199 210 254 / 0.55)) drop-shadow(0 10px 30px rgb(30 27 75 / 0.35));
+}
+.lens-ring circle {
+  fill: none;
+  stroke: #fff;
+  stroke-width: clamp(8px, 1.1vw, 14px);
+}
+
+/* Copy */
+.hero-copy {
+  position: absolute;
+  z-index: 3;
+  left: max(var(--gutter), calc((100% - var(--content)) / 2));
+  top: clamp(92px, 17svh, 180px);
+  width: min(40rem, 50%);
+  opacity: calc(1 - var(--copy));
+  transform: translate3d(0, calc(var(--copy) * -60px), 0);
+  visibility: visible;
+}
+.hero-copy .eyebrow {
+  margin: 0 0 var(--space-4);
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(224 231 255 / 0.9);
+}
+.hero-copy h1 {
+  margin: 0 0 var(--space-5);
+  font-size: var(--step-4);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+  font-weight: 750;
+  text-wrap: balance;
+  text-shadow: 0 2px 24px rgb(30 27 75 / 0.35);
+}
+.hero-copy .lede {
+  margin: 0 0 var(--space-6);
+  font-size: var(--step-1);
+  line-height: 1.5;
+  color: rgb(238 242 255 / 0.9);
+  text-wrap: pretty;
+  max-width: 33rem;
+}
+.cta { display: flex; align-items: center; gap: var(--space-5); flex-wrap: wrap; }
+.btn-main {
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 14px 26px;
+  font-size: 1.05rem;
+  border-radius: var(--radius-l);
+  background: #fff;
+  border-color: #fff;
+  color: var(--ol-indigo-950);
+  box-shadow: 0 10px 30px rgb(30 27 75 / 0.35), var(--shadow-glow);
+}
+.btn-main small { color: var(--ol-indigo-700); opacity: 1; }
+.hero .btn.primary.btn-main { background: #fff; color: var(--ol-indigo-950); border-color: #fff; }
+.hero .btn.primary.btn-main small { color: var(--ol-indigo-700); opacity: 1; }
+.btn-main:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgb(30 27 75 / 0.4), var(--shadow-glow); }
+.cta-link { color: #fff; font-weight: 600; text-underline-offset: 4px; }
+.hero :focus-visible { outline-color: #fff; }
+
+.lens-caption {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: 28px;
+  margin: 0;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: var(--step--1);
+  color: #fff;
+  background: rgb(30 27 75 / 0.72);
+  backdrop-filter: blur(10px);
+  opacity: var(--caption);
+  transform: translate3d(-50%, calc((1 - var(--caption)) * 12px), 0);
+  white-space: nowrap;
+}
+.hero:not(.is-animated) .lens-caption { display: none; }
+
+.scroll-hint {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--step--1);
+  font-weight: 600;
+  color: var(--ol-indigo-950);
+  text-decoration: none;
+  opacity: calc(1 - var(--copy) * 3);
+  transform: translateX(-50%);
+}
+.scroll-hint span {
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+
+/* Phones and narrow windows: copy on top, the lens below it. */
+@media (max-width: 760px) {
+  .hero-stage {
+    --cx0: 50%;
+    --cy0: 79%;
+    --r0: min(25vw, 13svh);
+    min-height: 640px;
+  }
+  .hero-copy {
+    top: 92px;
+    left: var(--gutter);
+    right: var(--gutter);
+    width: auto;
+  }
+  .hero-copy h1 { margin-bottom: var(--space-4); }
+  .hero-copy .lede { font-size: var(--step-0); margin-bottom: var(--space-5); }
+  .land { height: 34%; }
+  .scroll-hint { display: none; }
+  .lens-caption { white-space: normal; width: calc(100% - 2 * var(--gutter)); text-align: center; }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .scroll-hint { color: var(--text); }
+}
+:root[data-theme='dark'] .scroll-hint { color: var(--text); }

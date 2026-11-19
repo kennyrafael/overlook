@@ -44,7 +44,10 @@ class El {
 
 function fakeDoc() {
   const els: Record<string, El> = {};
-  for (const id of ['dl-x64', 'dl-arm64', 'dl-mac-arm64', 'dl-mac-x64', 'dl-version']) els[id] = new El();
+  for (const id of ['dl-x64', 'dl-arm64', 'dl-mac-arm64', 'dl-mac-x64', 'dl-version', 'dl-main']) els[id] = new El();
+  els['dl-main'].href = '#download';
+  els['dl-main-label'] = new El('Download for Windows');
+  els['dl-main-sub'] = new El('Free · open source (MIT)');
   els['dl-x64-sub'] = new El('64-bit (x64)');
   els['dl-arm64-sub'] = new El('arm64');
   els['dl-mac-arm64-sub'] = new El('M1 and later');
@@ -97,4 +100,40 @@ test('on a Mac the Apple silicon button becomes the main one', async () => {
   await initDownloads(doc, () => respond(false), { userAgentData: { platform: 'macOS' } });
   assert.ok(!els['dl-x64'].classes.has('primary'));
   assert.ok(els['dl-mac-arm64'].classes.has('primary'));
+});
+
+const releaseFetch = (withDmg: boolean): Fetch => (url) => {
+  if (url.endsWith('/latest.yml')) return respond(true, FEED);
+  if (url.endsWith('/latest-arm64.yml')) return respond(true, FEED.replace(/x64/g, 'arm64'));
+  if (withDmg && url.endsWith('-arm64.dmg')) return respond(true, '', { 'content-length': String(150 * 1048576) });
+  return respond(false);
+};
+
+test('main button: Windows visitors get the x64 installer with version and size', async () => {
+  const { els, doc } = fakeDoc();
+  await initDownloads(doc, releaseFetch(true), { platform: 'Win32' });
+  assert.equal(els['dl-main'].href, `${DOWNLOADS}/Overlook-Setup-0.2.1-x64.exe`);
+  assert.equal(els['dl-main-label'].textContent, 'Download for Windows');
+  assert.equal(els['dl-main-sub'].textContent, 'Free · v0.2.1 · 100 MB');
+});
+
+test('main button: Mac visitors get the Apple silicon dmg, or the list when there is none', async () => {
+  const withDmg = fakeDoc();
+  await initDownloads(withDmg.doc, releaseFetch(true), { userAgentData: { platform: 'macOS' } });
+  assert.equal(withDmg.els['dl-main'].href, `${DOWNLOADS}/Overlook-0.2.1-arm64.dmg`);
+  assert.equal(withDmg.els['dl-main-label'].textContent, 'Download for Mac');
+  assert.equal(withDmg.els['dl-main-sub'].textContent, 'Apple silicon · v0.2.1 · 150 MB');
+
+  const noDmg = fakeDoc();
+  await initDownloads(noDmg.doc, releaseFetch(false), { platform: 'MacIntel' });
+  assert.equal(noDmg.els['dl-main'].href, '#download');
+  assert.equal(noDmg.els['dl-main-label'].textContent, 'Download for Mac');
+  assert.equal(noDmg.els['dl-main-sub'].textContent, 'Apple silicon and Intel');
+});
+
+test('main button keeps its fallback when the feed is down', async () => {
+  const { els, doc } = fakeDoc();
+  await initDownloads(doc, () => Promise.reject(new Error('offline')), { platform: 'Win32' });
+  assert.equal(els['dl-main'].href, '#download');
+  assert.equal(els['dl-main-sub'].textContent, 'Free · open source (MIT)');
 });

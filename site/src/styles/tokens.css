@@ -14,10 +14,15 @@
   --ol-band-mid: #c7d2fe;   /* middle band */
   --ol-band-near: #ffffff;  /* front band and lens ring */
   --ol-gradient-mark: linear-gradient(135deg, var(--ol-indigo-500), var(--ol-indigo-700));
-  /* Dusk sky behind the hero landscape */
-  --ol-sky-top: #1b1846;
-  --ol-sky-mid: #3b3596;
-  --ol-sky-low: #6f73e8;
+  /* Hero scene, light: a bright indigo sky over the mark's bands */
+  --sky-top: #312e81;
+  --sky-mid: #4f46e5;
+  --sky-low: #a5b4fc;
+  --sky-glow: rgb(224 231 255 / 0.65);
+  --land-ridge: rgb(55 48 163 / 0.55);
+  --land-far: var(--ol-band-far);
+  --land-mid: var(--ol-band-mid);
+  --land-near: #f8fafc; /* = page background, so the hero runs into the page */
 
   /* Surfaces and text, light */
   --bg: #f8fafc;
@@ -90,6 +95,14 @@
     --accent-soft: #1a2240;
     --focus: var(--ol-indigo-300);
     --shadow-2: 0 8px 30px rgb(0 0 0 / 0.4);
+    --sky-top: #0d0b26;
+    --sky-mid: #272274;
+    --sky-low: #5457c9;
+    --sky-glow: rgb(165 180 252 / 0.4);
+    --land-ridge: rgb(13 11 38 / 0.6);
+    --land-far: #6d72e0;
+    --land-mid: #a9b3f5;
+    --land-near: #e6e9ff;
   }
 }
 
@@ -104,6 +117,14 @@
   --accent-soft: #1a2240;
   --focus: var(--ol-indigo-300);
   --shadow-2: 0 8px 30px rgb(0 0 0 / 0.4);
+  --sky-top: #0d0b26;
+  --sky-mid: #272274;
+  --sky-low: #5457c9;
+  --sky-glow: rgb(165 180 252 / 0.4);
+  --land-ridge: rgb(13 11 38 / 0.6);
+  --land-far: #6d72e0;
+  --land-mid: #a9b3f5;
+  --land-near: #e6e9ff;
 }
 
 @media (prefers-reduced-motion: reduce) {

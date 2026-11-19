@@ -8,24 +8,57 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
 <body>
-<div class="wrap">
-  <header class="top">
-    <a class="brand" href="/"><img src="/favicon.svg" alt="">Overlook</a>
-    <nav><a href="#features">Features</a><a href="#install">Install</a><a href="#faq">FAQ</a><a href="https://github.com/kennyrafael/overlook">GitHub</a></nav>
-  </header>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="/"><img src="/favicon.svg" alt="" width="32" height="32">Overlook</a>
+  <nav aria-label="Main"><a href="#features">Features</a><a href="#download">Download</a><a href="#faq">FAQ</a><a href="https://github.com/kennyrafael/overlook">GitHub</a></nav>
+</header>
 
-  <main>
-    <div class="hero">
-      <h1>Every project you build with Claude Code, at a glance</h1>
-      <p>Overlook is a free desktop dashboard that reads your plan files, git repos and Claude Code history on your own computer. See what is done, what is next and where your time goes. No account, nothing uploaded.</p>
-      <div class="btns">
-        <a class="btn primary" id="dl-x64" href="#install">Download for Windows<small id="dl-x64-sub">64-bit (x64)</small></a>
-        <a class="btn" id="dl-arm64" href="#install">Windows on Arm<small id="dl-arm64-sub">arm64</small></a>
-        <a class="btn" id="dl-mac-arm64" aria-disabled="true" href="#install-mac">Mac with Apple silicon<small id="dl-mac-arm64-sub">M1 and later</small></a>
-        <a class="btn" id="dl-mac-x64" aria-disabled="true" href="#install-mac">Mac with Intel<small id="dl-mac-x64-sub">x64</small></a>
+<!--
+  Hero: the view from the overlook. Without JavaScript, with reduced motion or on slow devices this is a
+  still scene (lens at rest over the horizon). src/hero/hero.ts adds .is-animated, which makes the section
+  tall and the stage sticky, and drives --p (scroll, 0..1) and --px/--py (pointer, -1..1).
+-->
+<section class="hero" id="top" aria-labelledby="hero-title">
+  <div class="hero-stage">
+    <div class="sky" aria-hidden="true"></div>
+    <svg class="contours" aria-hidden="true" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice"></svg>
+    <svg class="land land-ridge" aria-hidden="true" viewBox="0 0 1600 400" preserveAspectRatio="none"><path d="M0 250 C 180 180 320 230 470 196 S 760 120 930 170 S 1240 214 1380 160 S 1560 150 1600 168 V400 H0 Z"/></svg>
+    <svg class="land land-far" aria-hidden="true" viewBox="0 0 1600 400" preserveAspectRatio="none"><path d="M0 214 C 260 168 470 196 720 206 S 1180 150 1600 186 V400 H0 Z"/></svg>
+    <svg class="land land-mid" aria-hidden="true" viewBox="0 0 1600 400" preserveAspectRatio="none"><path d="M0 262 C 300 214 560 262 800 252 S 1260 200 1600 236 V400 H0 Z"/></svg>
+    <svg class="land land-near" aria-hidden="true" viewBox="0 0 1600 400" preserveAspectRatio="none"><path d="M0 322 C 340 266 640 318 900 306 S 1320 262 1600 292 V400 H0 Z"/></svg>
+
+    <div class="lens" aria-hidden="true">
+      <div class="lens-anchor"></div>
+      <div class="lens-mask">
+        <picture class="lens-shot">
+          <source type="image/avif" media="(prefers-color-scheme: dark)" srcset="./src/assets/shots/overview-dark@1x.avif 1440w, ./src/assets/shots/overview-dark@2x.avif 2880w" sizes="100vw">
+          <source type="image/webp" media="(prefers-color-scheme: dark)" srcset="./src/assets/shots/overview-dark@1x.webp 1440w, ./src/assets/shots/overview-dark@2x.webp 2880w" sizes="100vw">
+          <source type="image/avif" srcset="./src/assets/shots/overview-light@1x.avif 1440w, ./src/assets/shots/overview-light@2x.avif 2880w" sizes="100vw">
+          <img src="./src/assets/shots/overview-light@1x.webp" srcset="./src/assets/shots/overview-light@1x.webp 1440w, ./src/assets/shots/overview-light@2x.webp 2880w" sizes="100vw" width="1440" height="900" alt="" decoding="async">
+        </picture>
+        <div class="lens-glass"></div>
       </div>
-      <p class="note">Free and open source (MIT). Windows 10 and 11, macOS 12 and later. <span id="dl-version"></span></p>
+      <svg class="lens-ring" viewBox="0 0 200 200"><circle cx="100" cy="100" r="97" vector-effect="non-scaling-stroke"/></svg>
     </div>
+
+    <div class="hero-copy">
+      <p class="eyebrow">Free desktop app for Windows and macOS</p>
+      <h1 id="hero-title">All your Claude Code projects, in one view</h1>
+      <p class="lede">Overlook turns the plan files, git repos and Claude Code history on your computer into progress, a board that edits your plans, and a clear view of where your time goes. No account. Nothing uploaded.</p>
+      <div class="cta">
+        <a class="btn primary btn-main" id="dl-main" href="#download"><span id="dl-main-label">Download for Windows</span><small id="dl-main-sub">Free · open source (MIT)</small></a>
+        <a class="cta-link" href="#download">Other downloads</a>
+      </div>
+    </div>
+
+    <p class="lens-caption" aria-hidden="true">The Overview: every project, its progress and today’s activity.</p>
+    <a class="scroll-hint" href="#features" aria-label="Scroll to the features">Look closer<span aria-hidden="true"></span></a>
+  </div>
+</section>
+
+<div class="wrap">
+  <main id="main">
 
     <section id="features">
       <h2>What you get</h2>
@@ -37,6 +70,17 @@
         <div class="card"><h3>Git at a glance</h3><p>Uncommitted files, unpushed commits and a 90-day commit heatmap across all your repos.</p></div>
         <div class="card"><h3>Live and local</h3><p>Updates as files change. Runs entirely on your computer; the only network call is the update check, which you can turn off.</p></div>
       </div>
+    </section>
+
+    <section id="download">
+      <h2>Download</h2>
+      <div class="btns">
+        <a class="btn primary" id="dl-x64" href="#install">Windows<small id="dl-x64-sub">64-bit (x64)</small></a>
+        <a class="btn" id="dl-arm64" href="#install">Windows on Arm<small id="dl-arm64-sub">arm64</small></a>
+        <a class="btn" id="dl-mac-arm64" aria-disabled="true" href="#install-mac">Mac with Apple silicon<small id="dl-mac-arm64-sub">M1 and later</small></a>
+        <a class="btn" id="dl-mac-x64" aria-disabled="true" href="#install-mac">Mac with Intel<small id="dl-mac-x64-sub">x64</small></a>
+      </div>
+      <p class="note">Free and open source (MIT). Windows 10 and 11, macOS 12 and later. <span id="dl-version"></span></p>
     </section>
 
     <section id="install">

@@ -38,10 +38,13 @@ export async function initDownloads(doc: Document, fetchFn: Fetch, nav: Paramete
     if (sub && bytes) sub.textContent = `${sub.textContent} · ${megabytes(bytes)}`;
   };
 
-  if (isMac(nav)) {
+  const mac = isMac(nav);
+  if (mac) {
     byId('dl-x64')?.classList.remove('primary');
     byId('dl-mac-arm64')?.classList.add('primary');
   }
+  /** Installers found, by button id. */
+  const found: Record<string, { href: string; bytes?: number }> = {};
 
   let version = '';
   for (const [arch, feed] of [['x64', 'latest.yml'], ['arm64', 'latest-arm64.yml']] as const) {
@@ -50,28 +53,48 @@ export async function initDownloads(doc: Document, fetchFn: Fetch, nav: Paramete
       if (!res.ok) continue;
       const f = parseFeed(await res.text());
       if (!isInstallerName(f.path)) continue;
+      const href = `${DOWNLOADS}/${encodeURIComponent(f.path)}`;
       const btn = byId(`dl-${arch}`) as HTMLAnchorElement | null;
-      if (btn) btn.href = `${DOWNLOADS}/${encodeURIComponent(f.path)}`;
+      if (btn) btn.href = href;
       addSize(`dl-${arch}-sub`, f.size);
+      found[`dl-${arch}`] = { href, bytes: f.size };
       version ||= f.version ?? '';
     } catch { /* keep the fallback link */ }
   }
-  if (!isVersion(version)) return;
-  const label = byId('dl-version');
-  if (label) label.textContent = `Latest: v${version}.`;
+  if (isVersion(version)) {
+    const label = byId('dl-version');
+    if (label) label.textContent = `Latest: v${version}.`;
 
-  // macOS: the release ships Overlook-<version>-<arch>.dmg next to the Windows feeds. A button is
-  // enabled only once its file exists (older releases had no macOS build).
-  for (const arch of ['arm64', 'x64'] as const) {
-    const url = `${DOWNLOADS}/Overlook-${version}-${arch}.dmg`;
-    try {
-      const res = await fetchFn(url, { method: 'HEAD', cache: 'no-cache' });
-      if (!res.ok) continue;
-      const btn = byId(`dl-mac-${arch}`) as HTMLAnchorElement | null;
-      if (!btn) continue;
-      btn.href = url;
-      btn.removeAttribute('aria-disabled');
-      addSize(`dl-mac-${arch}-sub`, Number(res.headers.get('content-length')) || undefined);
-    } catch { /* leave it disabled */ }
+    // macOS: the release ships Overlook-<version>-<arch>.dmg next to the Windows feeds. A button is
+    // enabled only once its file exists (older releases had no macOS build).
+    for (const arch of ['arm64', 'x64'] as const) {
+      const url = `${DOWNLOADS}/Overlook-${version}-${arch}.dmg`;
+      try {
+        const res = await fetchFn(url, { method: 'HEAD', cache: 'no-cache' });
+        if (!res.ok) continue;
+        const btn = byId(`dl-mac-${arch}`) as HTMLAnchorElement | null;
+        if (!btn) continue;
+        const bytes = Number(res.headers.get('content-length')) || undefined;
+        btn.href = url;
+        btn.removeAttribute('aria-disabled');
+        addSize(`dl-mac-${arch}-sub`, bytes);
+        found[`dl-mac-${arch}`] = { href: url, bytes };
+      } catch { /* leave it disabled */ }
+    }
   }
+
+  // The hero's main button: the installer for the visitor's system (Apple silicon on a Mac, since
+  // the browser cannot tell the chips apart reliably; x64 on Windows), else the full download list.
+  const main = byId('dl-main') as HTMLAnchorElement | null;
+  if (!main) return;
+  const pick = found[mac ? 'dl-mac-arm64' : 'dl-x64'];
+  const mainLabel = byId('dl-main-label');
+  const mainSub = byId('dl-main-sub');
+  if (mainLabel) mainLabel.textContent = mac ? 'Download for Mac' : 'Download for Windows';
+  if (!pick) {
+    if (mac && mainSub) mainSub.textContent = 'Apple silicon and Intel';
+    return;
+  }
+  main.href = pick.href;
+  if (mainSub) mainSub.textContent = [mac ? 'Apple silicon' : 'Free', isVersion(version) ? `v${version}` : '', pick.bytes ? megabytes(pick.bytes) : ''].filter(Boolean).join(' · ');
 }
