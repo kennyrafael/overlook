@@ -13,7 +13,7 @@
  */
 import { app, dialog, net, shell, type BrowserWindow } from 'electron';
 import { autoUpdater } from 'electron-updater';
-import { readFileSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 const IS_WIN = process.platform === 'win32';
@@ -79,8 +79,20 @@ let prompted = false;
 export function initUpdater(getWindow: () => BrowserWindow | null, log: (msg: string) => void) {
   getWin = getWindow;
   if (!app.isPackaged || !IS_WIN) return;
+  // The updater config is written here instead of relying on resources/app-update.yml: installers
+  // built with `publish: 'never'` shipped without that file (0.1.0), and electron-updater then fails
+  // every check with ENOENT. It also reads the cache folder name from this file.
   // x64 and arm64 installers are published as separate feeds (latest.yml, latest-arm64.yml).
-  autoUpdater.channel = process.arch === 'arm64' ? 'latest-arm64' : 'latest';
+  const channel = process.arch === 'arm64' ? 'latest-arm64' : 'latest';
+  try {
+    const configPath = join(app.getPath('userData'), 'app-update.yml');
+    writeFileSync(configPath, `provider: generic\nurl: ${feedUrl()}\nchannel: ${channel}\nupdaterCacheDirName: overlook-updater\n`);
+    autoUpdater.updateConfigPath = configPath;
+  } catch (e) {
+    log(`Could not write the updater config: ${String(e)}`);
+  }
+  autoUpdater.channel = channel;
+  log(`Version ${app.getVersion()} (${process.arch}), feed ${feedUrl()}/${channel}.yml`);
   autoUpdater.allowDowngrade = false;
   autoUpdater.allowPrerelease = false;
   autoUpdater.autoDownload = true;
@@ -122,6 +134,7 @@ export function setAutoCheck(enabled: boolean) {
   if (!supported()) return;
   if (timer) { clearInterval(timer); timer = null; }
   if (!enabled) return;
+  // Errors are reported through autoUpdater's 'error' event (logged there); the catch only stops an unhandled rejection.
   const check = () => (IS_MAC ? void macCheck(false) : void autoUpdater.checkForUpdates().catch(() => undefined));
   setTimeout(check, 10_000);
   timer = setInterval(check, DAY_MS);

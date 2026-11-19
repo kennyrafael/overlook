@@ -42,6 +42,9 @@ body {
 .palette-item-active .palette-icon { color: inherit; }
 .palette-kbd { display: inline-block; font-family: inherit; font-size: 0.7rem; padding: 0.05rem 0.35rem; margin-right: 0.15rem; border: 1px solid var(--surface-border); border-radius: 4px; background: var(--surface-ground); color: var(--text-color-secondary); }
 .palette-trigger { color: var(--text-color-secondary) !important; }
+/* Switches keep their size beside a wrapping label, and the "on" knob is light so the state reads at a glance. */
+.p-inputswitch { flex-shrink: 0; }
+body .p-inputswitch.p-inputswitch-checked .p-inputswitch-slider:before { background: #ffffff; }
 .task-toggle { background: none; border: none; padding: 0.15rem; margin: 0; cursor: pointer; line-height: 1; border-radius: 4px; }
 .task-toggle:hover i { color: var(--primary-color) !important; }
 .task-toggle:focus-visible { outline: 2px solid var(--primary-color); }

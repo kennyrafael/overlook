@@ -119,6 +119,37 @@ export default function SettingsPage() {
             </div>
           </div>
         </Card>
+        <Card title="Cost estimates" subTitle="USD per million tokens. Matched by model-id prefix; the longest match wins." className="mt-3">
+          <DataTable value={priceRows} dataKey="key" size="small" editMode="cell">
+            <Column field="key" header="Model id prefix" style={{ minWidth: '14rem' }}
+              body={(r: PriceRow) => <code>{r.key}</code>}
+              editor={(o) => <InputText value={o.value as string} onChange={(e) => o.editorCallback?.(e.target.value)} />}
+              onCellEditComplete={(e) => renamePrice(e.rowData.key, String(e.newValue ?? '').trim())} />
+            {(['input', 'output', 'cacheRead'] as const).map((f) => (
+              <Column key={f} field={f} header={f === 'cacheRead' ? 'Cache read' : f[0].toUpperCase() + f.slice(1)}
+                body={(r: PriceRow) => `$${r[f]}`}
+                editor={(o) => <InputNumber value={o.value as number} onValueChange={(e) => o.editorCallback?.(e.value ?? 0)} mode="decimal" minFractionDigits={0} maxFractionDigits={4} min={0} />}
+                onCellEditComplete={(e) => setPrice(e.rowData.key, f, Number(e.newValue ?? 0))} />
+            ))}
+            <Column style={{ width: '3rem' }} body={(r: PriceRow) => (
+              <Button icon="pi pi-trash" rounded text severity="secondary" aria-label={`Remove ${r.key}`} onClick={() => removePrice(r.key)} />
+            )} />
+          </DataTable>
+          <div className="flex flex-wrap align-items-end gap-4 mt-3">
+            <Button label="Add model" icon="pi pi-plus" text size="small" onClick={addPrice} />
+            <Button label="Reset to defaults" icon="pi pi-replay" text size="small" severity="secondary"
+              onClick={() => setSettings({ ...settings, modelPrices: DEFAULT_MODEL_PRICES, cacheWrite5mMultiplier: 1.25, cacheWrite1hMultiplier: 2 })} />
+            <label className="flex flex-column gap-2 ml-auto">
+              <span className="text-sm">Cache write (5 min) × input</span>
+              <InputNumber value={settings.cacheWrite5mMultiplier} min={0} maxFractionDigits={2} onValueChange={(e) => set('cacheWrite5mMultiplier', e.value ?? 1.25)} />
+            </label>
+            <label className="flex flex-column gap-2">
+              <span className="text-sm">Cache write (1 h) × input</span>
+              <InputNumber value={settings.cacheWrite1hMultiplier} min={0} maxFractionDigits={2} onValueChange={(e) => set('cacheWrite1hMultiplier', e.value ?? 2)} />
+            </label>
+          </div>
+          <small className="text-500 block mt-2">Click a cell to edit. Changes apply after Save.</small>
+        </Card>
       </div>
       <div className="col-12 xl:col-5">
         <Card title="Claude history">
@@ -151,39 +182,6 @@ export default function SettingsPage() {
           <ToolList tools={tools} />
         </Card>
         <AppDataCards toast={toast} onChanged={() => { api.settings().then(setSettings); }} />
-      </div>
-      <div className="col-12">
-        <Card title="Cost estimates" subTitle="USD per million tokens. Matched by model-id prefix; the longest match wins.">
-          <DataTable value={priceRows} dataKey="key" size="small" editMode="cell">
-            <Column field="key" header="Model id prefix" style={{ minWidth: '14rem' }}
-              body={(r: PriceRow) => <code>{r.key}</code>}
-              editor={(o) => <InputText value={o.value as string} onChange={(e) => o.editorCallback?.(e.target.value)} />}
-              onCellEditComplete={(e) => renamePrice(e.rowData.key, String(e.newValue ?? '').trim())} />
-            {(['input', 'output', 'cacheRead'] as const).map((f) => (
-              <Column key={f} field={f} header={f === 'cacheRead' ? 'Cache read' : f[0].toUpperCase() + f.slice(1)}
-                body={(r: PriceRow) => `$${r[f]}`}
-                editor={(o) => <InputNumber value={o.value as number} onValueChange={(e) => o.editorCallback?.(e.value ?? 0)} mode="decimal" minFractionDigits={0} maxFractionDigits={4} min={0} />}
-                onCellEditComplete={(e) => setPrice(e.rowData.key, f, Number(e.newValue ?? 0))} />
-            ))}
-            <Column style={{ width: '3rem' }} body={(r: PriceRow) => (
-              <Button icon="pi pi-trash" rounded text severity="secondary" aria-label={`Remove ${r.key}`} onClick={() => removePrice(r.key)} />
-            )} />
-          </DataTable>
-          <div className="flex flex-wrap align-items-end gap-4 mt-3">
-            <Button label="Add model" icon="pi pi-plus" text size="small" onClick={addPrice} />
-            <Button label="Reset to defaults" icon="pi pi-replay" text size="small" severity="secondary"
-              onClick={() => setSettings({ ...settings, modelPrices: DEFAULT_MODEL_PRICES, cacheWrite5mMultiplier: 1.25, cacheWrite1hMultiplier: 2 })} />
-            <label className="flex flex-column gap-2 ml-auto">
-              <span className="text-sm">Cache write (5 min) × input</span>
-              <InputNumber value={settings.cacheWrite5mMultiplier} min={0} maxFractionDigits={2} onValueChange={(e) => set('cacheWrite5mMultiplier', e.value ?? 1.25)} />
-            </label>
-            <label className="flex flex-column gap-2">
-              <span className="text-sm">Cache write (1 h) × input</span>
-              <InputNumber value={settings.cacheWrite1hMultiplier} min={0} maxFractionDigits={2} onValueChange={(e) => set('cacheWrite1hMultiplier', e.value ?? 2)} />
-            </label>
-          </div>
-          <small className="text-500 block mt-2">Click a cell to edit. Changes apply after Save.</small>
-        </Card>
       </div>
       <div className="col-12">
         <Button label="Save & rescan" icon="pi pi-save" loading={saving} onClick={save} />

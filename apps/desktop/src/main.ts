@@ -11,7 +11,7 @@ import {
 } from 'electron';
 import { execFile } from 'child_process';
 import { randomBytes } from 'crypto';
-import { existsSync, readFileSync, writeFileSync } from 'fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'fs';
 import { createServer } from 'net';
 import { homedir } from 'os';
 import { delimiter, join } from 'path';
@@ -335,8 +335,21 @@ async function boot() {
   await startServer(port, token);
   await createWindow();
   createTray();
-  initUpdater(() => mainWindow, (msg) => console.log(`[updater] ${msg}`));
+  initUpdater(() => mainWindow, updaterLog);
   setAutoCheck(prefs.autoUpdate);
+}
+
+/** Updater messages go to <userData>/logs/updater.log (next to the server's overlook.log), so a failed update can be diagnosed. */
+function updaterLog(msg: string) {
+  console.log(`[updater] ${msg}`);
+  try {
+    const dir = join(app.getPath('userData'), 'logs');
+    mkdirSync(dir, { recursive: true });
+    const file = join(dir, 'updater.log');
+    if (existsSync(file) && statSync(file).size > 1_000_000) renameSync(file, `${file}.1`);
+    appendFileSync(file, `${new Date().toISOString()} ${msg}
+`);
+  } catch { /* logging must never break the app */ }
 }
 
 // One running copy only: a second launch focuses the existing window instead.
