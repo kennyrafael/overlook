@@ -76,3 +76,17 @@ jobs:
           name: site-screenshots
           path: site/test-results/
           retention-days: 7
+
+  # The download Worker (workers/downloads): counting rules, the Worker end to end with a fake bucket,
+  # and the stats script. No dependencies; Cloudflare's Workers Builds deploys it separately.
+  workers:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workers/downloads
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test

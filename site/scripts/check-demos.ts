@@ -37,6 +37,11 @@ async function main() {
     console.log(`\n${scheme}, ${size.width}×${size.height}, reduced motion: ${motion}`);
     const ctx = await browser.newContext({ viewport: size, colorScheme: scheme, deviceScaleFactor: 1, reducedMotion: motion });
     await routeSite(ctx);
+    // These checks are for a Windows visitor, whatever system the runner is (CI runs them on Linux,
+    // where the page would rightly offer the Linux packages instead).
+    // (A string, not a function: the TypeScript runner would add helpers the page does not have.)
+    await ctx.addInitScript(`Object.defineProperty(Navigator.prototype, 'platform', { get: () => 'Win32' });
+      Object.defineProperty(Navigator.prototype, 'userAgentData', { get: () => ({ platform: 'Windows' }) });`);
     const page = await ctx.newPage();
     const errors: string[] = [];
     // The fake feed has no .dmg, so the macOS probes 404 by design, and the feedback check provokes one
@@ -115,7 +120,7 @@ async function main() {
     await page.waitForTimeout(900);
     check(await page.evaluate(() => { const r = document.getElementById('git')!.getBoundingClientRect(); return r.top < 200 && r.bottom > 0; }), 'palette: "git" + Enter jumps to the Git section');
 
-    // Install tabs: Windows first (this runs on Windows), arrow keys, and links to #install-mac / #install
+    // Install tabs: Windows first (a Windows visitor, see above), arrow keys, and links to #install-mac / #install
     const selected = () => page.evaluate(() => document.querySelector('.install [aria-selected="true"]')?.id);
     check(await selected() === 'tab-win', 'install: the Windows tab is selected for a Windows visitor');
     await page.locator('#tab-win').focus();
