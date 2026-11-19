@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { DOWNLOADS, initDownloads, isInstallerName, isMac, parseFeed, type Fetch } from './download.ts';
+import { DOWNLOADS, initDownloads, isInstallerName, isMac, parseFeed, releaseLabel, type Fetch } from './download.ts';
 
 const FEED = `version: 0.2.1
 files:
@@ -12,11 +12,15 @@ sha512: abc==
 releaseDate: '2026-11-19T09:00:00.000Z'
 `;
 
-test('parseFeed reads version, path and size (LF and CRLF)', () => {
+test('parseFeed reads version, path, size and release date (LF and CRLF)', () => {
   for (const text of [FEED, FEED.replace(/\n/g, '\r\n')]) {
-    assert.deepEqual(parseFeed(text), { version: '0.2.1', path: 'Overlook-Setup-0.2.1-x64.exe', size: 104857600 });
+    const f = parseFeed(text);
+    assert.deepEqual({ ...f, released: f.released?.toISOString() },
+      { version: '0.2.1', path: 'Overlook-Setup-0.2.1-x64.exe', size: 104857600, released: '2026-11-19T09:00:00.000Z' });
   }
-  assert.deepEqual(parseFeed('nonsense'), { version: undefined, path: undefined, size: undefined });
+  assert.deepEqual(parseFeed('nonsense'), { version: undefined, path: undefined, size: undefined, released: undefined });
+  assert.equal(parseFeed("releaseDate: 'not a date'").released, undefined);
+  assert.equal(releaseLabel(new Date('2026-11-19T23:30:00Z')), '19 Nov 2026');
 });
 
 test('only plain .exe names are accepted as installers', () => {
@@ -44,7 +48,7 @@ class El {
 
 function fakeDoc() {
   const els: Record<string, El> = {};
-  for (const id of ['dl-x64', 'dl-arm64', 'dl-mac-arm64', 'dl-mac-x64', 'dl-version', 'dl-main']) els[id] = new El();
+  for (const id of ['dl-x64', 'dl-arm64', 'dl-mac-arm64', 'dl-mac-x64', 'dl-version', 'dl-main', 'dl-release']) els[id] = new El();
   els['dl-main'].href = '#download';
   els['dl-main-label'] = new El('Download for Windows');
   els['dl-main-sub'] = new El('Free · open source (MIT)');
@@ -74,7 +78,8 @@ test('buttons link to the installers from the feeds; .dmg buttons enable only wh
   assert.equal(els['dl-x64'].href, `${DOWNLOADS}/Overlook-Setup-0.2.1-x64.exe`);
   assert.equal(els['dl-arm64'].href, `${DOWNLOADS}/Overlook-Setup-0.2.1-arm64.exe`);
   assert.equal(els['dl-x64-sub'].textContent, '64-bit (x64) · 100 MB');
-  assert.equal(els['dl-version'].textContent, 'Latest: v0.2.1.');
+  assert.equal(els['dl-version'].textContent, 'Latest: v0.2.1, released 19 Nov 2026.');
+  assert.equal(els['dl-release'].textContent, 'v0.2.1 · 19 Nov 2026');
   assert.equal(els['dl-mac-arm64'].href, `${DOWNLOADS}/Overlook-0.2.1-arm64.dmg`);
   assert.ok(!els['dl-mac-arm64'].attrs.has('aria-disabled'));
   assert.equal(els['dl-mac-arm64-sub'].textContent, 'M1 and later · 150 MB');

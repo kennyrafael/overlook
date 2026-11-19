@@ -190,61 +190,234 @@
     </section>
   </div>
 
-<div class="wrap">
+  <!-- Install guide: tabs once JavaScript runs (src/install.ts picks the visitor's system); without it,
+       both guides are shown one after the other. -->
+  <section class="install" id="install-guide" aria-labelledby="install-title">
+    <div class="install-inner">
+      <div class="install-head reveal">
+        <p class="eyebrow">Install</p>
+        <h2 id="install-title">Up and running in a minute.</h2>
+        <p>Overlook isn’t code-signed yet (certificates cost money every year, and the app is free), so your system asks you to confirm it the first time. Here is exactly what you’ll see.</p>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Your system" hidden>
+        <button type="button" role="tab" id="tab-win" aria-controls="install" aria-selected="true">Windows</button>
+        <button type="button" role="tab" id="tab-mac" aria-controls="install-mac" aria-selected="false" tabindex="-1">macOS</button>
+      </div>
 
-    <section id="download">
-      <h2>Download</h2>
-      <div class="btns">
+      <div class="tab-panel" id="install" role="tabpanel" aria-labelledby="tab-win">
+        <h3 class="panel-title">On Windows 10 and 11</h3>
+        <ol class="steps-visual">
+          <li>
+            <span class="step-n" aria-hidden="true">1</span>
+            <div class="step-body">
+              <h4>Download and run the installer</h4>
+              <p><code>Overlook-Setup-…-x64.exe</code>, or <code>-arm64.exe</code> on Arm devices such as Surface Pro X or Copilot+ PCs.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-n" aria-hidden="true">2</span>
+            <div class="step-body">
+              <h4>If you see “Windows protected your PC”</h4>
+              <p>Click <strong>More info</strong>, then <strong>Run anyway</strong>.</p>
+              <figure class="dlg-fig">
+                <svg viewBox="0 0 340 196" role="img" aria-labelledby="fig-win-cap">
+                  <rect class="dlg" x="1" y="1" width="338" height="194" rx="8"/>
+                  <rect class="dlg-band" x="1" y="1" width="338" height="54" rx="8"/>
+                  <rect class="dlg-band" x="1" y="40" width="338" height="15"/>
+                  <text class="dlg-title" x="18" y="34">Windows protected your PC</text>
+                  <rect class="dlg-line" x="18" y="72" width="270" height="7" rx="3.5"/>
+                  <rect class="dlg-line" x="18" y="86" width="210" height="7" rx="3.5"/>
+                  <text class="dlg-link" x="18" y="116">More info</text>
+                  <line class="dlg-link-u" x1="18" x2="74" y1="119" y2="119"/>
+                  <rect class="dlg-btn dlg-btn-hi" x="152" y="150" width="86" height="28" rx="4"/>
+                  <text class="dlg-btn-t" x="195" y="168" text-anchor="middle">Run anyway</text>
+                  <rect class="dlg-btn" x="246" y="150" width="78" height="28" rx="4"/>
+                  <text class="dlg-btn-t" x="285" y="168" text-anchor="middle">Don’t run</text>
+                  <circle class="dlg-mark" cx="94" cy="111" r="11"/><text class="dlg-mark-t" x="94" y="115" text-anchor="middle">1</text>
+                  <circle class="dlg-mark" cx="140" cy="164" r="11"/><text class="dlg-mark-t" x="140" y="168" text-anchor="middle">2</text>
+                </svg>
+                <figcaption id="fig-win-cap">A sketch of the warning: <strong>More info</strong> (1) shows the <strong>Run anyway</strong> button (2).</figcaption>
+              </figure>
+            </div>
+          </li>
+          <li>
+            <span class="step-n" aria-hidden="true">3</span>
+            <div class="step-body">
+              <h4>Pick the folders that hold your projects</h4>
+              <p>Overlook opens, shows which tools it found (git, VS Code, Claude Code) and scans the folders you choose.</p>
+            </div>
+          </li>
+        </ol>
+        <p class="after">Updates install themselves: Overlook checks for a new release at start-up and once a day, and asks before restarting.</p>
+      </div>
+
+      <div class="tab-panel" id="install-mac" role="tabpanel" aria-labelledby="tab-mac">
+        <h3 class="panel-title">On macOS 12 and later</h3>
+        <ol class="steps-visual">
+          <li>
+            <span class="step-n" aria-hidden="true">1</span>
+            <div class="step-body">
+              <h4>Download the .dmg for your Mac and drag Overlook to Applications</h4>
+              <p>Apple menu → About This Mac shows “Apple M…” (Apple silicon) or “Intel”.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-n" aria-hidden="true">2</span>
+            <div class="step-body">
+              <h4>Open it once, then click Done</h4>
+              <p>macOS says it can’t verify the app. That’s expected for an app that isn’t notarized yet.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-n" aria-hidden="true">3</span>
+            <div class="step-body">
+              <h4>Allow it in Privacy &amp; Security</h4>
+              <p>Open <strong>System Settings → Privacy &amp; Security</strong>, scroll to the message about Overlook, click <strong>Open Anyway</strong> and confirm with your password.</p>
+              <figure class="dlg-fig">
+                <svg viewBox="0 0 340 196" role="img" aria-labelledby="fig-mac-cap">
+                  <rect class="dlg" x="1" y="1" width="338" height="194" rx="10"/>
+                  <rect class="dlg-side" x="1" y="1" width="108" height="194" rx="10"/>
+                  <rect class="dlg-side" x="70" y="1" width="39" height="194"/>
+                  <circle class="dlg-dot" cx="16" cy="16" r="4.5"/><circle class="dlg-dot" cx="30" cy="16" r="4.5"/><circle class="dlg-dot" cx="44" cy="16" r="4.5"/>
+                  <rect class="dlg-line" x="14" y="42" width="62" height="6" rx="3"/>
+                  <rect class="dlg-line" x="14" y="60" width="50" height="6" rx="3"/>
+                  <rect class="dlg-sel" x="7" y="74" width="96" height="20" rx="5"/>
+                  <text class="dlg-sel-t" x="13" y="88">Privacy &amp; Security</text>
+                  <rect class="dlg-line" x="14" y="104" width="56" height="6" rx="3"/>
+                  <rect class="dlg-line" x="14" y="122" width="44" height="6" rx="3"/>
+                  <text class="dlg-title dlg-title-s" x="124" y="34">Privacy &amp; Security</text>
+                  <rect class="dlg-line" x="124" y="50" width="196" height="6" rx="3"/>
+                  <rect class="dlg-line" x="124" y="64" width="150" height="6" rx="3"/>
+                  <text class="dlg-body-t" x="124" y="98">“Overlook” was blocked to protect</text><text class="dlg-body-t" x="124" y="112">your Mac.</text>
+                  <rect class="dlg-btn dlg-btn-hi" x="124" y="126" width="96" height="26" rx="6"/>
+                  <text class="dlg-btn-t" x="172" y="143" text-anchor="middle">Open Anyway</text>
+                  <circle class="dlg-mark" cx="236" cy="139" r="11"/><text class="dlg-mark-t" x="236" y="143" text-anchor="middle">1</text>
+                </svg>
+                <figcaption id="fig-mac-cap">A sketch of System Settings: click <strong>Open Anyway</strong> (1) next to the message about Overlook.</figcaption>
+              </figure>
+            </div>
+          </li>
+          <li>
+            <span class="step-n" aria-hidden="true">4</span>
+            <div class="step-body">
+              <h4>Allow Terminal control, once</h4>
+              <p>The first time you use <strong>Start Claude Code</strong>, macOS asks whether Overlook may control Terminal (or iTerm). Click <strong>Allow</strong>.</p>
+            </div>
+          </li>
+        </ol>
+        <p class="after">Overlook tells you when a new version is out: download it and drag it to Applications again. Your settings are kept.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="faq" id="faq" aria-labelledby="faq-title">
+    <div class="faq-inner">
+      <div class="faq-head reveal">
+        <p class="eyebrow">Questions</p>
+        <h2 id="faq-title">Good to know.</h2>
+        <p>Something missing? <a href="https://github.com/kennyrafael/overlook/issues">Ask on GitHub</a>.</p>
+      </div>
+      <div class="faq-list">
+        <details>
+          <summary>Does it send my code or plans anywhere?</summary>
+          <p>No. Everything is read and stored on your computer. The only outbound request is the update check to <code>overlook-downloads.kennyrafael-cg.workers.dev</code>, listed in Settings → Network activity, and you can switch it off.</p>
+        </details>
+        <details>
+          <summary>How does it read my plans?</summary>
+          <p>Any Markdown file named <code>PLAN.md</code>, <code>ROADMAP.md</code>, <code>TODO.md</code> or <code>CLAUDE.md</code> (you can change the names in Settings). A <code>##</code> heading with checkboxes under it is a milestone:</p>
+          <pre class="plan-sample"><code>## Phase 1: Scaffold
+- [x] Monorepo        ← done
+- [~] API             ← in progress
+- [ ] Web app         ← to do
+
+## ✅ Research        ← reached, even without tasks</code></pre>
+          <p>Moving a card changes only that checkbox. Every write re-reads the file first, keeps a backup and offers Undo.</p>
+        </details>
+        <details>
+          <summary>Do I need Claude Code?</summary>
+          <p>No, but it is built for it. Without Claude Code you still get projects, plans, the board and git activity; the usage pages stay empty. Claude Code installed inside WSL is detected too.</p>
+        </details>
+        <details>
+          <summary>Are the costs what I pay?</summary>
+          <p>No. They are estimates at API list prices, worked out from the token counts in your session logs, so you can compare projects and models. On a subscription your bill is different. You can edit the prices in Settings.</p>
+        </details>
+        <details>
+          <summary>Why does Windows or macOS warn about the app?</summary>
+          <p>Signing certificates cost money every year, and Overlook is free. The installers are built and tested by an automated release process; the warning goes away once the app is signed, which is planned if there is enough interest.</p>
+        </details>
+        <details>
+          <summary>Linux or iOS?</summary>
+          <p>Not planned for now. Linux users can run it from source (<code>npm install &amp;&amp; npm start</code>, then open it in a browser). iOS cannot read your local files, so a phone app would not be useful.</p>
+        </details>
+        <details>
+          <summary>Is it really free?</summary>
+          <p>Yes, MIT licensed. If there is demand, paid extras may come later; the current features stay free.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final call to action: the landscape again, at night, with the lens closed. -->
+  <section class="get" id="download" aria-labelledby="download-title">
+    <div class="get-scene" aria-hidden="true">
+      <svg class="contours" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice"></svg>
+      <svg class="get-land get-ridge" viewBox="0 0 1600 400" preserveAspectRatio="none"><path d="M0 250 C 180 180 320 230 470 196 S 760 120 930 170 S 1240 214 1380 160 S 1560 150 1600 168 V400 H0 Z"/></svg>
+      <svg class="get-land get-far" viewBox="0 0 1600 400" preserveAspectRatio="none"><path d="M0 214 C 260 168 470 196 720 206 S 1180 150 1600 186 V400 H0 Z"/></svg>
+      <svg class="get-land get-mid" viewBox="0 0 1600 400" preserveAspectRatio="none"><path d="M0 262 C 300 214 560 262 800 252 S 1260 200 1600 236 V400 H0 Z"/></svg>
+      <svg class="get-land get-near" viewBox="0 0 1600 400" preserveAspectRatio="none"><path d="M0 322 C 340 266 640 318 900 306 S 1320 262 1600 292 V400 H0 Z"/></svg>
+      <svg class="get-lens" viewBox="0 0 64 64">
+        <defs><clipPath id="get-lens-clip"><circle cx="32" cy="32" r="15.5"/></clipPath></defs>
+        <circle cx="32" cy="32" r="15.5" class="get-lens-sky"/>
+        <g clip-path="url(#get-lens-clip)">
+          <path d="M10 30 Q22 26 32 29 T56 27 V56 H10 Z" fill="#8b93f5"/>
+          <path d="M10 35 Q22 30 33 34 T56 32 V56 H10 Z" fill="#c7d2fe"/>
+          <path d="M10 41 Q24 36 35 40.5 T56 38.5 V56 H10 Z" fill="#ffffff"/>
+        </g>
+        <circle cx="32" cy="32" r="18" fill="none" stroke="#ffffff" stroke-width="3"/>
+      </svg>
+    </div>
+    <div class="get-inner reveal">
+      <h2 id="download-title">Take the overlook.</h2>
+      <p class="get-lede">Every project you build with Claude Code, in one view. Free, open source and yours to keep.</p>
+      <div class="btns get-btns">
         <a class="btn primary" id="dl-x64" href="#install">Windows<small id="dl-x64-sub">64-bit (x64)</small></a>
         <a class="btn" id="dl-arm64" href="#install">Windows on Arm<small id="dl-arm64-sub">arm64</small></a>
         <a class="btn" id="dl-mac-arm64" aria-disabled="true" href="#install-mac">Mac with Apple silicon<small id="dl-mac-arm64-sub">M1 and later</small></a>
         <a class="btn" id="dl-mac-x64" aria-disabled="true" href="#install-mac">Mac with Intel<small id="dl-mac-x64-sub">x64</small></a>
       </div>
-      <p class="note">Free and open source (MIT). Windows 10 and 11, macOS 12 and later. <span id="dl-version"></span></p>
-    </section>
-
-    <section id="install">
-      <h2>Install on Windows</h2>
-      <p>Overlook is not code-signed yet, so Windows SmartScreen warns about it the first time:</p>
-      <ol class="steps">
-        <li>Download and run <code>Overlook-Setup-…-x64.exe</code> (or <code>-arm64.exe</code> on Arm devices).</li>
-        <li>If you see “Windows protected your PC”, click <strong>More info</strong>, then <strong>Run anyway</strong>.</li>
-        <li>Pick where to install. Overlook opens and asks for the folders that hold your projects.</li>
-      </ol>
-      <p>Updates install themselves: Overlook checks for a new release at start-up and once a day and asks before restarting.</p>
-    </section>
-
-    <section id="install-mac">
-      <h2>Install on macOS</h2>
-      <p>Overlook is not notarized by Apple yet, so macOS blocks the first launch until you allow it:</p>
-      <ol class="steps">
-        <li>Download the <code>.dmg</code> for your Mac (Apple menu → About This Mac shows “Apple M…” or “Intel”).</li>
-        <li>Open it and drag <strong>Overlook</strong> to <strong>Applications</strong>.</li>
-        <li>Open Overlook from Applications. When macOS says it cannot verify the app, click <strong>Done</strong>.</li>
-        <li>Open <strong>System Settings → Privacy &amp; Security</strong>, scroll down to the message about Overlook and click <strong>Open Anyway</strong>, then confirm with your password.</li>
-        <li>The first time you use <strong>Start Claude Code</strong>, macOS asks whether Overlook may control Terminal (or iTerm). Click <strong>Allow</strong>.</li>
-      </ol>
-      <p>Overlook tells you when a new version is out; download it and drag it to Applications again to replace the old one. Your settings are kept.</p>
-    </section>
-
-    <section id="faq">
-      <h2>FAQ</h2>
-      <details><summary>Does it send my code or plans anywhere?</summary><p>No. Everything is read and stored on your computer. The only outbound request is the update check to overlook-downloads.kennyrafael-cg.workers.dev, listed in Settings → Network activity, and you can switch it off.</p></details>
-      <details><summary>Do I need Claude Code?</summary><p>No, but it is built for it. Without Claude Code you still get projects, plans, the board and git activity; the usage pages stay empty. Claude Code installed inside WSL is detected too.</p></details>
-      <details><summary>What does a plan file look like?</summary><p>Any Markdown file named like <code>PLAN.md</code> or <code>ROADMAP.md</code>: <code>## Milestone</code> headings with <code>- [ ]</code> / <code>- [x]</code> checkboxes, and <code>[~]</code> for in progress. You can change the file names in Settings.</p></details>
-      <details><summary>Why does macOS or Windows warn about the app?</summary><p>Signing certificates cost money every year, and Overlook is free. The installers are built and tested by an automated release process; the warning goes away once the app is signed, which is planned if there is enough interest.</p></details>
-      <details><summary>Linux or iOS?</summary><p>Not planned for now. Linux users can run it from source (<code>npm install &amp;&amp; npm start</code>, then open it in a browser). iOS cannot read your local files, so a phone app would not be useful.</p></details>
-      <details><summary>Is it really free?</summary><p>Yes, MIT licensed. If there is demand, paid extras may come later; the current features stay free.</p></details>
-    </section>
-</div>
+      <p class="note">Windows 10 and 11, macOS 12 and later. <span id="dl-version"></span> <a href="#install-guide">How to install</a></p>
+      <ul class="trust">
+        <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7 3 12l5 5M16 7l5 5-5 5"/></svg><span><strong>Open source</strong>MIT license</span></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span><strong>Local only</strong>Nothing leaves your machine</span></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><span><strong>No account</strong>No sign-up, no telemetry</span></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8L3 12Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span><strong>Latest release</strong><span id="dl-release">Windows and macOS</span></span></li>
+      </ul>
+    </div>
+  </section>
 </main>
 
-<div class="wrap">
-  <footer>
-    <p>Overlook by <a href="https://agenthub.pt">AgentHub</a> · MIT License · <a href="https://github.com/kennyrafael/overlook">Source on GitHub</a> · <a href="/third-party-notices.txt">Third-party notices</a></p>
-    <p>Overlook is an independent project. It is not affiliated with, endorsed by or sponsored by Anthropic, PBC. “Claude” and “Claude Code” are trademarks of Anthropic, used here only to describe the tool this app works with.</p>
-  </footer>
-</div>
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a class="brand" href="/"><img src="/favicon.svg" alt="" width="28" height="28">Overlook</a>
+      <p>A project dashboard for Claude Code, by <a href="https://agenthub.pt">AgentHub</a>.</p>
+    </div>
+    <nav class="footer-nav" aria-label="Footer">
+      <div>
+        <p class="footer-h">Product</p>
+        <a href="#features">Features</a><a href="#install-guide">Install</a><a href="#faq">FAQ</a><a href="#download">Download</a>
+      </div>
+      <div>
+        <p class="footer-h">Open source</p>
+        <a href="https://github.com/kennyrafael/overlook">Source on GitHub</a><a href="https://github.com/kennyrafael/overlook/blob/main/LICENSE">MIT License</a><a href="/third-party-notices.txt">Third-party notices</a><a href="https://github.com/kennyrafael/overlook/issues">Report an issue</a>
+      </div>
+    </nav>
+    <div class="footer-legal">
+      <p>© 2026 AgentHub. Overlook is free software under the MIT License.</p>
+      <p>Overlook is an independent project. It is not affiliated with, endorsed by or sponsored by Anthropic, PBC. “Claude” and “Claude Code” are trademarks of Anthropic, used here only to describe the tool this app works with.</p>
+    </div>
+  </div>
+</footer>
 <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

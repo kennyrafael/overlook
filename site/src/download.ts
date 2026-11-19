@@ -8,14 +8,25 @@ export interface Feed {
   version?: string;
   path?: string;
   size?: number;
+  released?: Date;
 }
 
-/** Reads `version`, `path` and the first file's `size` from an electron-builder feed. */
+/** Reads `version`, `path`, `releaseDate` and the first file's `size` from an electron-builder feed. */
 export function parseFeed(text: string): Feed {
   const get = (key: string) => text.match(new RegExp(`^${key}:\\s*'?([^'\\n\\r]+?)'?\\s*$`, 'm'))?.[1];
   const size = Number(text.match(/^\s+size:\s*(\d+)/m)?.[1]);
-  return { version: get('version'), path: get('path'), size: Number.isFinite(size) ? size : undefined };
+  const released = new Date(get('releaseDate') ?? '');
+  return {
+    version: get('version'),
+    path: get('path'),
+    size: Number.isFinite(size) ? size : undefined,
+    released: Number.isNaN(released.getTime()) ? undefined : released,
+  };
 }
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** "19 Nov 2026" (UTC, so every visitor sees the same date). */
+export const releaseLabel = (d: Date) => `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 
 /** Only plain installer names are linked, so a tampered feed cannot point the button elsewhere. */
 export const isInstallerName = (path: string | undefined): path is string => !!path && /^[\w.-]+\.exe$/.test(path);
@@ -47,6 +58,7 @@ export async function initDownloads(doc: Document, fetchFn: Fetch, nav: Paramete
   const found: Record<string, { href: string; bytes?: number }> = {};
 
   let version = '';
+  let released: Date | undefined;
   for (const [arch, feed] of [['x64', 'latest.yml'], ['arm64', 'latest-arm64.yml']] as const) {
     try {
       const res = await fetchFn(`${DOWNLOADS}/${feed}`, { cache: 'no-cache' });
@@ -59,11 +71,16 @@ export async function initDownloads(doc: Document, fetchFn: Fetch, nav: Paramete
       addSize(`dl-${arch}-sub`, f.size);
       found[`dl-${arch}`] = { href, bytes: f.size };
       version ||= f.version ?? '';
+      released ??= f.released;
     } catch { /* keep the fallback link */ }
   }
   if (isVersion(version)) {
+    const when = released ? releaseLabel(released) : '';
     const label = byId('dl-version');
-    if (label) label.textContent = `Latest: v${version}.`;
+    if (label) label.textContent = `Latest: v${version}${when ? `, released ${when}` : ''}.`;
+    // Trust strip: "v0.2.1 · 19 Nov 2026"
+    const strip = byId('dl-release');
+    if (strip) strip.textContent = [`v${version}`, when].filter(Boolean).join(' · ');
 
     // macOS: the release ships Overlook-<version>-<arch>.dmg next to the Windows feeds. A button is
     // enabled only once its file exists (older releases had no macOS build).

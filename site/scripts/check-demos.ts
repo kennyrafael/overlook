@@ -16,7 +16,7 @@ const { chromium } = require('@playwright/test') as typeof import('@playwright/t
 const vercel = JSON.parse(readFileSync(join(here, '..', 'vercel.json'), 'utf8')) as { headers: { source: string; headers: { key: string; value: string }[] }[] };
 const HEADERS = Object.fromEntries(vercel.headers[0].headers.map((h) => [h.key, h.value]));
 const TYPES: Record<string, string> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.avif': 'image/avif', '.webp': 'image/webp', '.woff2': 'font/woff2', '.txt': 'text/plain' };
-const FEED = "version: 0.2.1\nfiles:\n  - url: Overlook-Setup-0.2.1-x64.exe\n    size: 104857600\npath: Overlook-Setup-0.2.1-x64.exe\n";
+const FEED = "version: 0.2.1\nfiles:\n  - url: Overlook-Setup-0.2.1-x64.exe\n    size: 104857600\npath: Overlook-Setup-0.2.1-x64.exe\nreleaseDate: '2026-11-19T09:00:00.000Z'\n";
 
 const problems: string[] = [];
 const check = (ok: unknown, what: string) => { if (!ok) problems.push(what); console.log(`${ok ? '  ok ' : '  FAIL'} ${what}`); };
@@ -114,11 +114,54 @@ async function main() {
     await page.waitForTimeout(900);
     check(await page.evaluate(() => { const r = document.getElementById('git')!.getBoundingClientRect(); return r.top < 200 && r.bottom > 0; }), 'palette: "git" + Enter jumps to the Git section');
 
+    // Install tabs: Windows first (this runs on Windows), arrow keys, and links to #install-mac / #install
+    const selected = () => page.evaluate(() => document.querySelector('.install [aria-selected="true"]')?.id);
+    check(await selected() === 'tab-win', 'install: the Windows tab is selected for a Windows visitor');
+    await page.locator('#tab-win').focus();
+    await page.keyboard.press('ArrowRight');
+    check(await selected() === 'tab-mac' && await page.locator('#install').isHidden() && await page.locator('#install-mac').isVisible(), 'install: → switches to the macOS guide');
+    await page.evaluate(() => { location.hash = '#install'; });
+    await page.waitForTimeout(100);
+    check(await selected() === 'tab-win', 'install: a link to #install opens the Windows guide');
+    await page.locator('#install-guide').screenshot({ path: join(out, `install-${scheme}.png`) });
+    await page.evaluate(() => { location.hash = '#install-mac'; });
+    await page.waitForTimeout(100);
+    check(await selected() === 'tab-mac', 'install: a link to #install-mac opens the macOS guide');
+    await page.locator('#install-guide').screenshot({ path: join(out, `install-mac-${scheme}.png`) });
+
+    // FAQ, download section, footer
+    await page.locator('#faq summary', { hasText: 'How does it read my plans?' }).click();
+    check(await page.locator('#faq .plan-sample').isVisible(), 'faq: the plan format example opens');
+    await page.locator('#faq').screenshot({ path: join(out, `faq-${scheme}.png`) });
+    check((await page.locator('#dl-release').textContent()) === 'v0.2.1 · 19 Nov 2026', 'download: trust strip shows version and release date');
+    await page.locator('#download').scrollIntoViewIfNeeded();
+    await page.waitForTimeout(500);
+    await page.locator('#download').screenshot({ path: join(out, `download-${scheme}.png`) });
+    await page.locator('.site-footer').screenshot({ path: join(out, `footer-${scheme}.png`) });
+
     // Layout: no sideways scroll
     check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no horizontal scroll');
     check(errors.length === 0, `no console errors${errors.length ? `: ${errors.slice(0, 3).join(' | ')}` : ''}`);
     await ctx.close();
   }
+  // Without JavaScript: the still hero, screenshots in place of demos, both install guides.
+  console.log('\nlight, 1440×900, JavaScript off');
+  const nojs = await browser.newContext({ viewport: { width: 1440, height: 900 }, javaScriptEnabled: false });
+  await nojs.route('https://overlook.test/**', (route) => {
+    const path = new URL(route.request().url()).pathname;
+    const file = normalize(join(dist, path === '/' ? 'index.html' : path));
+    if (!file.startsWith(dist) || !existsSync(file)) return route.fulfill({ status: 404, body: 'not found' });
+    return route.fulfill({ status: 200, body: readFileSync(file), headers: { ...HEADERS, 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' } });
+  });
+  const p2 = await nojs.newPage();
+  await p2.goto('https://overlook.test/');
+  check(await p2.locator('.hero-copy h1').isVisible(), 'no JS: hero headline visible');
+  check(await p2.locator('.demo-fallback img').count() === 4 && await p2.locator('.net-static').isVisible(), 'no JS: demos show their screenshots (privacy: its text panel)');
+  check(await p2.locator('#install').isVisible() && await p2.locator('#install-mac').isVisible(), 'no JS: both install guides visible');
+  check(await p2.locator('.install [role="tablist"]').isHidden(), 'no JS: no tab buttons');
+  check(await p2.locator('.feature-copy').first().isVisible(), 'no JS: feature text visible (no reveal hiding)');
+  await nojs.close();
+
   await browser.close();
   console.log(problems.length ? `\n${problems.length} problem(s)` : '\nAll checks passed');
   process.exit(problems.length ? 1 : 0);

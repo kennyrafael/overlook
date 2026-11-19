@@ -175,11 +175,11 @@ projects at once.**
 - [x] `cd site && npm run check:demos` drives the built site in Chrome with no server (files served from disk with the Vercel headers and CSP, feed faked): every demo, light desktop, dark phone and reduced motion
 
 ## Phase 4b-4: Install, FAQ and trust
-- [ ] Install steps as Windows / macOS tabs, picked from the visitor's OS, with small annotated images of the SmartScreen and "Open Anyway" dialogs
-- [ ] FAQ kept and refreshed (same answers; add "How does it read my plans?" with the plan format)
-- [ ] Trust strip: MIT, open source on GitHub, local-only, no account, current version and release date from the feed
-- [ ] Final call to action: the landscape again at night, lens closed, download buttons for all four builds
-- [ ] Footer: AgentHub, license, GitHub, not-affiliated notice
+- [x] Install steps as Windows / macOS tabs, picked from the visitor's OS (links to `#install` / `#install-mac` open the right one; both shown without JavaScript), with annotated sketches of the SmartScreen and "Open Anyway" dialogs drawn in the page's own colours
+- [x] FAQ kept and refreshed (added "How does it read my plans?" with the plan format and "Are the costs what I pay?")
+- [x] Trust strip: MIT, open source on GitHub, local-only, no account, current version and release date from the feed
+- [x] Final call to action: the landscape again at night, lens closed, download buttons for all four builds
+- [x] Footer: AgentHub, license, GitHub, not-affiliated notice
 
 ## Phase 4b-5: Polish and checks
 - [ ] Responsive pass at 320, 375, 768, 1024, 1440 and 1920 px; no horizontal scroll; touch drag works in the board demo
