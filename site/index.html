@@ -57,20 +57,140 @@
   </div>
 </section>
 
-<div class="wrap">
-  <main id="main">
-
-    <section id="features">
-      <h2>What you get</h2>
-      <div class="grid">
-        <div class="card"><h3>Projects found for you</h3><p>Point it at the folders that hold your work. Every repo, <code>CLAUDE.md</code> or plan file becomes a project, plus anything in your Claude Code history.</p></div>
-        <div class="card"><h3>Plans as progress</h3><p>Milestones and checkboxes from your Markdown plans become progress bars, burnup charts and a status for each project.</p></div>
-        <div class="card"><h3>A board that edits your plans</h3><p>Drag a card to Done and the checkbox in the plan file is ticked. The file stays the source of truth.</p></div>
-        <div class="card"><h3>Claude Code usage</h3><p>Sessions, prompts, tokens and estimated cost per day, model and project, read from local session logs.</p></div>
-        <div class="card"><h3>Git at a glance</h3><p>Uncommitted files, unpushed commits and a 90-day commit heatmap across all your repos.</p></div>
-        <div class="card"><h3>Live and local</h3><p>Updates as files change. Runs entirely on your computer; the only network call is the update check, which you can turn off.</p></div>
+<main id="main">
+  <!--
+    Feature sections. Each .demo holds a real screenshot of the app as its fallback (no JavaScript); the
+    live demo (src/demos/<name>.ts) loads when the section comes near and replaces it.
+  -->
+  <div id="features">
+    <section class="feature" id="discover" aria-labelledby="discover-title">
+      <div class="feature-inner">
+        <div class="feature-copy reveal">
+          <p class="eyebrow">Found for you</p>
+          <h2 id="discover-title">Point it at your code. It finds the projects.</h2>
+          <p>Pick the folders that hold your work. Every repo, <code>CLAUDE.md</code> or plan file becomes a project, merged with every folder you have used Claude Code in. Nothing to set up per project.</p>
+          <ul class="points">
+            <li>Status from real activity: active, paused after two quiet weeks, done when every milestone is reached</li>
+            <li>Live: new folders and edits show up as they happen</li>
+          </ul>
+        </div>
+        <div class="demo reveal" data-demo="discovery" role="region" aria-label="Demo: projects found in a folder">
+          <picture class="demo-fallback">
+            <source type="image/avif" media="(prefers-color-scheme: dark)" srcset="./src/assets/shots/projects-dark@1x.avif">
+            <source type="image/avif" srcset="./src/assets/shots/projects-light@1x.avif">
+            <img src="./src/assets/shots/projects-light@1x.webp" width="1440" height="900" alt="The Projects page listing five projects with status, progress and last activity" loading="lazy" decoding="async">
+          </picture>
+        </div>
       </div>
     </section>
+
+    <section class="feature feature-stack feature-tint" id="plans" aria-labelledby="plans-title">
+      <div class="feature-inner">
+        <div class="feature-copy reveal">
+          <p class="eyebrow">Plans become progress</p>
+          <h2 id="plans-title">Drag a card. Your plan file changes.</h2>
+          <p>Overlook reads the Markdown plans you already keep, <code>## milestones</code> and <code>- [ ] tasks</code>, and turns them into progress bars, burnup charts and a board. Move a card and the checkbox in the file is ticked. The file stays the source of truth.</p>
+          <ul class="points">
+            <li>A backup, a conflict check and Undo on every write</li>
+            <li>Works with <code>PLAN.md</code>, <code>ROADMAP.md</code>, <code>TODO.md</code> or names you choose</li>
+          </ul>
+        </div>
+        <div class="demo demo-wide reveal" data-demo="board" role="region" aria-label="Demo: a plan file and its board">
+          <picture class="demo-fallback">
+            <source type="image/avif" media="(prefers-color-scheme: dark)" srcset="./src/assets/shots/board-dark@1x.avif">
+            <source type="image/avif" srcset="./src/assets/shots/board-light@1x.avif">
+            <img src="./src/assets/shots/board-light@1x.webp" width="1440" height="900" alt="The Board page with To do, In progress and Done columns" loading="lazy" decoding="async">
+          </picture>
+        </div>
+      </div>
+    </section>
+
+    <section class="feature" id="usage" aria-labelledby="usage-title">
+      <div class="feature-inner">
+        <div class="feature-copy reveal">
+          <p class="eyebrow">Claude Code usage</p>
+          <h2 id="usage-title">See where your tokens go.</h2>
+          <p>Sessions, prompts, tokens and estimated cost per day, model and project, read from Claude Code’s own session logs on your computer.</p>
+          <ul class="points">
+            <li>Filter by project, model and date range</li>
+            <li>Costs are estimates at API list prices, not your subscription bill</li>
+          </ul>
+        </div>
+        <div class="demo reveal" data-demo="usage" role="region" aria-label="Demo: estimated Claude Code cost per day">
+          <picture class="demo-fallback">
+            <source type="image/avif" media="(prefers-color-scheme: dark)" srcset="./src/assets/shots/claude-dark@1x.avif">
+            <source type="image/avif" srcset="./src/assets/shots/claude-light@1x.avif">
+            <img src="./src/assets/shots/claude-light@1x.webp" width="1440" height="900" alt="The Claude page with estimated cost per day by model and cost by project" loading="lazy" decoding="async">
+          </picture>
+        </div>
+      </div>
+    </section>
+
+    <section class="feature feature-flip feature-tint" id="git" aria-labelledby="git-title">
+      <div class="feature-inner">
+        <div class="feature-copy reveal">
+          <p class="eyebrow">Git at a glance</p>
+          <h2 id="git-title">Every repo’s loose ends, in one list.</h2>
+          <p>Uncommitted files, unpushed commits and a 90-day commit heatmap across all your repos.</p>
+          <ul class="points">
+            <li>Read-only: Overlook never takes git’s lock or changes your repos</li>
+            <li>No git installed? Projects and plans still work</li>
+          </ul>
+        </div>
+        <div class="demo reveal" data-demo="git" role="region" aria-label="Demo: commit heatmap and repository status">
+          <picture class="demo-fallback">
+            <source type="image/avif" media="(prefers-color-scheme: dark)" srcset="./src/assets/shots/git-dark@1x.avif">
+            <source type="image/avif" srcset="./src/assets/shots/git-light@1x.avif">
+            <img src="./src/assets/shots/git-light@1x.webp" width="1440" height="900" alt="The Git page with a commit heatmap and the status of each repository" loading="lazy" decoding="async">
+          </picture>
+        </div>
+      </div>
+    </section>
+
+    <section class="feature" id="keyboard" aria-labelledby="keyboard-title">
+      <div class="feature-inner">
+        <div class="feature-copy reveal">
+          <p class="eyebrow">Keyboard first</p>
+          <h2 id="keyboard-title">One shortcut to everything.</h2>
+          <p>Jump to any page or project, open a project in VS Code or start Claude Code in it, from one search box. Try it on this page.</p>
+          <p><button class="btn btn-palette" type="button" data-open-palette><span class="keys"><kbd data-mod>Ctrl</kbd><kbd>K</kbd></span> Open the command palette</button></p>
+        </div>
+        <div class="demo demo-keys reveal" aria-hidden="true">
+          <div class="keycaps"><kbd class="keycap" data-mod>Ctrl</kbd><span class="plus">+</span><kbd class="keycap">K</kbd></div>
+          <ul class="palette-preview">
+            <li><span>Go to</span> Projects</li>
+            <li class="is-active"><span>trailmap</span> Start Claude Code</li>
+            <li><span>trailmap</span> Open in VS Code</li>
+            <li><span>View</span> Paused projects</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="feature feature-night" id="privacy" aria-labelledby="privacy-title">
+      <svg class="contours" aria-hidden="true" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice"></svg>
+      <div class="feature-inner">
+        <div class="feature-copy reveal">
+          <p class="eyebrow">Local only</p>
+          <h2 id="privacy-title">Nothing leaves your machine.</h2>
+          <p>No account, no telemetry, no cloud. Overlook reads your files where they are. The only network call it can make is the update check, and you can switch that off.</p>
+          <ul class="points">
+            <li>Listens on 127.0.0.1 only, with a per-launch token</li>
+            <li>Open source (MIT): read every line on GitHub</li>
+          </ul>
+        </div>
+        <div class="demo demo-privacy reveal" data-demo="privacy" role="region" aria-label="Demo: the app's network activity list">
+          <div class="net-static">
+            <p class="net-title">Settings → Network activity</p>
+            <p><strong>Update check</strong>: overlook-downloads.kennyrafael-cg.workers.dev, at start-up and once a day. You can turn it off.</p>
+            <p>Nothing else. Your code, plans, prompts and usage are never sent.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+<div class="wrap">
 
     <section id="download">
       <h2>Download</h2>
@@ -116,8 +236,10 @@
       <details><summary>Linux or iOS?</summary><p>Not planned for now. Linux users can run it from source (<code>npm install &amp;&amp; npm start</code>, then open it in a browser). iOS cannot read your local files, so a phone app would not be useful.</p></details>
       <details><summary>Is it really free?</summary><p>Yes, MIT licensed. If there is demand, paid extras may come later; the current features stay free.</p></details>
     </section>
-  </main>
+</div>
+</main>
 
+<div class="wrap">
   <footer>
     <p>Overlook by <a href="https://agenthub.pt">AgentHub</a> · MIT License · <a href="https://github.com/kennyrafael/overlook">Source on GitHub</a> · <a href="/third-party-notices.txt">Third-party notices</a></p>
     <p>Overlook is an independent project. It is not affiliated with, endorsed by or sponsored by Anthropic, PBC. “Claude” and “Claude Code” are trademarks of Anthropic, used here only to describe the tool this app works with.</p>

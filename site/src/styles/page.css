@@ -26,7 +26,8 @@ nav a:hover { color: var(--text); }
 .btn.primary small { color: inherit; opacity: 0.8; }
 .btn[aria-disabled='true'] { opacity: 0.6; pointer-events: none; }
 .note { color: var(--text-muted); font-size: 0.9rem; margin-top: 14px; }
-main section { padding: 48px 0; scroll-margin-top: 16px; }
+.wrap section { padding: 48px 0; scroll-margin-top: 16px; }
+[hidden] { display: none !important; }
 h2 { font-size: 1.6rem; margin: 0 0 20px; letter-spacing: -0.01em; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 16px; }
 .card { background: var(--bg-raised); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }

@@ -165,12 +165,14 @@ projects at once.**
 - [x] Static fallback: reduced motion, data saver, very slow devices and no JavaScript get the still scene (same markup, one screen tall, lens at rest) instead of a separate image
 
 ## Phase 4b-3: Feature demos
-- [ ] Discovery: scattered folders and repos fly into a tidy project grid as the section scrolls in, each with status and progress
-- [ ] Plans become a board (the main demo): a plan file on the left, a Kanban board on the right; drag a card to Done and the `- [ ]` in the file turns into `- [x]`, the progress bar and burnup chart move, and an Undo toast appears; keyboard-usable
-- [ ] Usage: a daily tokens and estimated-cost chart that draws itself, with a model and project filter and hover tooltips; says "estimates at API list prices"
-- [ ] Git: a 90-day commit heatmap that ripples in, with uncommitted/unpushed badges; hover shows the day
-- [ ] Ctrl+K / ⌘K on the page opens a copy of the command palette ("alpha: Start Claude Code") that jumps between sections
-- [ ] Privacy: "Nothing leaves your machine": the lens closes over a laptop, and a network list shows the update check as the only outbound call (with its on/off switch)
+- [x] Discovery: scattered folders and repos fly into a tidy project grid as the section scrolls in, each with status and progress
+- [x] Plans become a board (the main demo): a plan file on the left, a Kanban board on the right; drag a card to Done (mouse), tap it and pick a column (touch), or use the arrow keys, and the `- [ ]` in the file turns into `- [x]`, the progress bars and burnup move, and an Undo toast appears; clicking a checkbox in the file works too
+- [x] Usage: a daily tokens and estimated-cost chart that draws itself, with a model and project filter and hover tooltips; says "estimates at API list prices"
+- [x] Git: a 90-day commit heatmap that ripples in, with uncommitted/unpushed badges; hover shows the day
+- [x] Ctrl+K / ⌘K on the page opens a copy of the command palette ("alpha: Start Claude Code") that jumps between sections
+- [x] Privacy: "Nothing leaves your machine": the lens closes over a laptop, and a network list shows the update check as the only outbound call (with its on/off switch)
+- [x] Demos load only when their section comes near (first load: 7 KB of JS gzip; all demos together ~13 KB more); each shows a real screenshot until then and without JavaScript
+- [x] `cd site && npm run check:demos` drives the built site in Chrome with no server (files served from disk with the Vercel headers and CSP, feed faked): every demo, light desktop, dark phone and reduced motion
 
 ## Phase 4b-4: Install, FAQ and trust
 - [ ] Install steps as Windows / macOS tabs, picked from the visitor's OS, with small annotated images of the SmartScreen and "Open Anyway" dialogs
