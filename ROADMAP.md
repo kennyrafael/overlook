@@ -108,7 +108,8 @@ Decision (2026-11-19): Linux, out of scope for 1.0, is now supported. AppImage f
 - [x] Updates: the AppImage via electron-updater (`APPIMAGE` is set); the `.deb` compares `latest-linux.yml` with the running version and offers the download page
 - [x] CI: `ubuntu-latest` in the `ci.yml` matrix (typecheck, unit, e2e, browser smoke), plus an x64 package, the AppImage smoke-tested and the `.deb` installed with apt and smoke-tested, under Xvfb. `release.yml` builds Linux in parallel; publish (R2, then GitHub Release) runs only if all three pass
 - [x] Landing page: Linux buttons (AppImage, `.deb`; arm64 links) enabled only for files listed in `latest-linux.yml`; Linux visitors get the AppImage as the main button and the Linux install tab; FAQ and copy updated
-- [ ] First tagged release with the Linux builds; check the feeds, and that an AppImage updates itself to the next release
+- [x] First tagged release with the Linux builds: `v0.3.0` (2026-11-19), all three platforms built, smoke-tested and published; `latest-linux.yml` and `latest-linux-arm64.yml` list the AppImage and `.deb`, all four Linux files download, and the live landing page gives Linux visitors the AppImage and the Linux guide
+- [ ] An AppImage updates itself to the next release (needs a release after `v0.3.0`)
 - [ ] Acceptance: on a real Ubuntu 24.04 desktop (and one KDE distribution), the AppImage and the `.deb` start from the launcher, projects are found, quick actions work or are hidden, and the arm64 build runs on an Arm machine (CI covers x64 under Xvfb only)
 
 ## Phase 4: Free public release
