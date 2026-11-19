@@ -6,6 +6,23 @@ import type { Project, ProjectPatch } from '@overlook/shared';
 import { useFilters } from '../store/filters';
 import { relativeTime, statusSeverity } from '../format';
 import { ProjectActionsMenu } from '../actions/projectActions';
+import { useLiveSessions } from '../tasks/useLiveSessions';
+import type { LiveSession } from '@overlook/shared';
+
+/** "Claude is working" line for a project with a live session (the most recent one, plus a count). */
+function LiveLine({ sessions }: { sessions: LiveSession[] }) {
+  const working = sessions.filter((s) => s.state === 'working');
+  const s = working[0] ?? sessions[0];
+  const label = working.length > 1 ? `${working.length} Claude sessions working` : working.length ? 'Claude is working' : 'Claude is idle';
+  const detail = s.current ? `Now: ${s.current}` : s.title;
+  return (
+    <div className="project-card-live" title={[s.title, s.current && `Now: ${s.current}`].filter(Boolean).join('\n')}>
+      <span className={`live-dot ${working.length ? 'live-dot-working' : ''}`} aria-hidden />
+      <span className="font-semibold">{label}</span>
+      {detail && <span className="project-card-live-detail">· {detail}</span>}
+    </div>
+  );
+}
 
 interface Props {
   projects: Project[];
@@ -16,6 +33,9 @@ interface Props {
 /** The Projects page as a grid of cards: one card per project, the whole card opens it. */
 export default function ProjectCards({ projects, onUpdate, onEdit }: Props) {
   const filters = useFilters();
+  const { sessions } = useLiveSessions(projects.map((p) => p.id));
+  const liveBy = new Map<string, LiveSession[]>();
+  for (const s of sessions) liveBy.set(s.projectId, [...(liveBy.get(s.projectId) ?? []), s]);
   return (
     <ul className="project-cards" aria-label="Projects">
       {projects.map((p) => (
@@ -34,6 +54,7 @@ export default function ProjectCards({ projects, onUpdate, onEdit }: Props) {
           </div>
           <span className="project-card-path" title={p.path}>{p.path}</span>
           {!p.exists && <Tag severity="danger" value="missing" className="align-self-start" />}
+          {liveBy.has(p.id) && <LiveLine sessions={liveBy.get(p.id)!} />}
 
           <div>
             <ProgressBar value={p.progress} showValue={false} style={{ height: '0.45rem' }}

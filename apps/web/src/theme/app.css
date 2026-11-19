@@ -85,6 +85,9 @@ body .p-inputswitch.p-inputswitch-checked .p-inputswitch-slider:before { backgro
 .project-card-name:focus-visible::after { outline: 2px solid var(--primary-color); outline-offset: 2px; }
 .project-card-control { position: relative; z-index: 1; }
 .project-card-path { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.75rem; color: var(--text-color-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-card-live { display: flex; align-items: center; gap: 0.4rem; min-width: 0; font-size: 0.8rem; }
+.project-card-live > .font-semibold { white-space: nowrap; flex: none; }
+.project-card-live-detail { color: var(--text-color-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .project-card-meta { display: flex; justify-content: space-between; gap: 0.5rem; margin-top: 0.4rem; font-size: 0.78rem; color: var(--text-color-secondary); }
 .project-card-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; }
 .project-card-chips .p-tag { font-size: 0.7rem; padding: 0.1rem 0.5rem; }
