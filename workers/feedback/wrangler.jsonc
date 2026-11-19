@@ -7,7 +7,7 @@
   "workers_dev": true,
   "d1_databases": [
     // Created once in the Cloudflare dashboard (or `npx wrangler d1 create overlook-feedback`).
-    { "binding": "DB", "database_name": "overlook-feedback", "database_id": "00000000-0000-0000-0000-000000000000" }
+    { "binding": "DB", "database_name": "overlook-feedback", "database_id": "146e57cd-8e53-429a-96b6-8afec6d87c71" }
   ],
   // Per-IP limit (the hashed IP is only the limiter's key; nothing about it is stored).
   "ratelimits": [
