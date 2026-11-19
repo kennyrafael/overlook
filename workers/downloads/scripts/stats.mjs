@@ -62,5 +62,10 @@ async function main() {
 }
 
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop())) {
-  main().catch((e) => { console.error(e.message); process.exit(1); });
+  main().catch((e) => {
+    // fetch's own message is just "fetch failed"; the reason (DNS, proxy, TLS certificate, …) is in e.cause.
+    const cause = e.cause ? ` (${[e.cause.code, e.cause.message].filter(Boolean).join(': ')})` : '';
+    console.error(`${e.message}${cause}`);
+    process.exit(1);
+  });
 }
