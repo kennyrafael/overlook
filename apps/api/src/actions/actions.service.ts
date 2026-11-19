@@ -1,20 +1,37 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { execFile, spawn } from 'child_process';
-import { existsSync } from 'fs';
+import { accessSync, constants, existsSync, realpathSync, statSync } from 'fs';
 import { homedir } from 'os';
-import { dirname, join } from 'path';
+import { delimiter, dirname, join } from 'path';
 import type { ProjectAction, SystemTools } from '@overlook/shared';
 import { PROJECT_ACTIONS } from '@overlook/shared';
 import { SettingsService } from '../config/settings.service';
 import { claudeRoots } from '../discovery/claude-roots';
 import { ProjectsService } from '../projects/projects.service';
+import { LINUX_TERMINAL_LABEL, linuxTerminalArgs, linuxTerminalOrder, terminalBehind, type LinuxTerminal } from './linux-terminal';
 
 const IS_WIN = process.platform === 'win32';
 const IS_MAC = process.platform === 'darwin';
+const IS_LINUX = process.platform === 'linux';
 
+/**
+ * The full path of a command on PATH, or null. Windows asks where.exe (it knows PATHEXT); elsewhere PATH is
+ * searched directly, since minimal Linux installs (Arch, Fedora containers) have no `which`.
+ */
 function which(cmd: string): Promise<string | null> {
+  if (!IS_WIN) {
+    for (const dir of (process.env.PATH ?? '').split(delimiter)) {
+      if (!dir.startsWith('/')) continue;
+      const file = join(dir, cmd);
+      try {
+        accessSync(file, constants.X_OK);
+        if (statSync(file).isFile()) return Promise.resolve(file);
+      } catch { /* not here */ }
+    }
+    return Promise.resolve(null);
+  }
   return new Promise((resolve) => {
-    execFile(IS_WIN ? 'where.exe' : 'which', [cmd], { windowsHide: true }, (err, out) => {
+    execFile('where.exe', [cmd], { windowsHide: true }, (err, out) => {
       resolve(err ? null : out.split(/\r?\n/).map((s) => s.trim()).find(Boolean) ?? null);
     });
   });
@@ -81,16 +98,18 @@ export class ActionsService {
   /** Which local tools are available, for onboarding and to hide actions that cannot work. */
   async tools(): Promise<SystemTools> {
     this.resolved.clear(); // re-detect: the user may have installed something since
-    const [git, claude, vscode, wt, roots] = await Promise.all([
+    const [git, claude, vscode, wt, linuxTerm, opener, roots] = await Promise.all([
       this.resolve('git'),
       this.resolve('claude'),
       this.vsCodePath(),
       IS_WIN ? this.resolve('wt.exe') : Promise.resolve(null),
+      IS_LINUX ? this.linuxTerminal() : Promise.resolve(null),
+      IS_WIN || IS_MAC ? Promise.resolve('builtin') : this.resolve('xdg-open'),
       this.settings.get().then((s) => claudeRoots(s.useWsl)),
     ]);
     const terminal: SystemTools['terminal'] = IS_WIN ? (wt ? 'Windows Terminal' : 'Command Prompt')
       : IS_MAC ? (macApp('iTerm.app') ? 'iTerm' : 'Terminal')
-      : (await this.resolve('x-terminal-emulator')) ?? (await this.resolve('gnome-terminal')) ? 'terminal emulator' : null;
+      : linuxTerm ? LINUX_TERMINAL_LABEL[linuxTerm.term] : null;
     const present = roots.filter((r) => existsSync(r.dir));
     return {
       platform: process.platform,
@@ -98,6 +117,7 @@ export class ActionsService {
       claude: !!claude,
       vscode: !!vscode,
       terminal,
+      openFolder: !!opener,
       wslClaude: [...new Set(present.filter((r) => r.label.startsWith('WSL: ')).map((r) => r.label.slice(5)))],
       claudeHistory: present.map((r) => ({ label: r.label, dir: r.dir })),
     };
@@ -151,10 +171,29 @@ export class ActionsService {
     return found;
   }
 
-  openFolder(path: string) {
+  async openFolder(path: string) {
     if (IS_WIN) return launch('explorer.exe', [path], path);
     if (IS_MAC) return launch('open', [path], path);
-    return launch('xdg-open', [path], path);
+    // xdg-open hands the folder to the desktop's file manager (xdg-utils; a dependency of the .deb).
+    return launch(await this.require('xdg-open', 'xdg-open (xdg-utils)'), [path], path);
+  }
+
+  /**
+   * The terminal to use on Linux, or null: the desktop's own, else x-terminal-emulator (resolved to the
+   * terminal behind it when it is one we know), else the first common one on PATH.
+   */
+  private async linuxTerminal(): Promise<{ term: LinuxTerminal; file: string } | null> {
+    for (const term of linuxTerminalOrder(process.env.XDG_CURRENT_DESKTOP)) {
+      const file = await this.resolve(term);
+      if (!file) continue;
+      if (term !== 'x-terminal-emulator') return { term, file };
+      let real = file;
+      try { real = realpathSync(file); } catch { /* keep the link */ }
+      const behind = terminalBehind(real);
+      const direct = behind === 'x-terminal-emulator' ? null : await this.resolve(behind);
+      return direct ? { term: behind, file: direct } : { term, file };
+    }
+    return null;
   }
 
   private async openVsCode(path: string) {
@@ -177,8 +216,8 @@ export class ActionsService {
       if (!program) return launch('open', ['-a', iterm ?? 'Terminal', path], path);
       return launch('osascript', macClaudeArgs(path, program, !!iterm), path);
     }
-    const term = (await this.resolve('x-terminal-emulator')) ?? (await this.resolve('gnome-terminal'));
-    if (!term) throw new ServiceUnavailableException('No terminal emulator found');
-    return launch(term, program ? ['-e', program] : [], path);
+    const found = await this.linuxTerminal();
+    if (!found) throw new ServiceUnavailableException('No terminal emulator found (GNOME Terminal, Konsole, xterm, …)');
+    return launch(found.file, linuxTerminalArgs(found.term, path, program), path);
   }
 }

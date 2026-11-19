@@ -28,5 +28,6 @@ export function actionAvailable(tools: SystemTools | null, action: ProjectAction
   if (action === 'vscode') return tools.vscode;
   if (action === 'claude') return tools.claude && !!tools.terminal;
   if (action === 'terminal') return !!tools.terminal;
+  if (action === 'explorer') return tools.openFolder !== false; // false only on Linux without xdg-open
   return true;
 }

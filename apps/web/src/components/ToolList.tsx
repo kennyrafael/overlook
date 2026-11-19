@@ -10,7 +10,8 @@ function rows(t: SystemTools): Row[] {
     { label: 'Claude Code', ok: t.claude, detail: '"Start Claude Code" opens it in the project folder', missing: 'The claude command is not on PATH, so "Start Claude Code" is hidden.' },
     { label: 'Claude Code history', ok: t.claudeHistory.length > 0, detail: `Usage and projects from: ${history}`, missing: 'No Claude Code history found yet.' },
     { label: 'VS Code', ok: t.vscode, detail: '"Open in VS Code" is available', missing: 'Not found, so "Open in VS Code" is hidden. Install it with "Add to PATH".' },
-    { label: 'Terminal', ok: !!t.terminal, detail: `"Open terminal" uses ${t.terminal}`, missing: 'No terminal found.' },
+    { label: 'Terminal', ok: !!t.terminal, detail: `"Open terminal" uses ${t.terminal}`, missing: t.platform === 'linux' ? 'No terminal found (GNOME Terminal, Konsole, xterm, …), so "Open terminal" and "Start Claude Code" are hidden.' : 'No terminal found.' },
+    ...(t.openFolder === false ? [{ label: 'File manager', ok: false, detail: '', missing: 'xdg-open is not installed (package xdg-utils), so "Show in folder" is hidden.' }] : []),
   ];
 }
 

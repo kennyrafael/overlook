@@ -46,9 +46,12 @@ writeFileSync(join(out, 'package.json'), JSON.stringify({
   productName: 'Overlook',
   version: rootPkg.version,
   description: 'A project dashboard for Claude Code',
+  homepage: 'https://overlook.agenthub.pt', // required by the Linux .deb
   author: 'AgentHub',
   license: 'MIT',
   main: 'desktop/main.js',
+  // Linux: Electron's app id / WM_CLASS and the name of the installed .desktop file (linux.syncDesktopName).
+  desktopName: 'overlook.desktop',
   dependencies: deps,
 }, null, 2));
 

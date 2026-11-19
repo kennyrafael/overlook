@@ -1,4 +1,5 @@
-# Unit + e2e + browser smoke tests on every push to main.
+# Unit + e2e + browser smoke tests on every push to main (Windows, macOS, Linux). On Linux the app is also
+# packaged (x64 AppImage and .deb), the .deb installed, and the installed app smoke-tested under Xvfb.
 name: CI
 on:
   push:
@@ -13,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [windows-latest, macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +26,28 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run test:smoke
+      - name: Package the Linux app (x64 AppImage and .deb)
+        if: runner.os == 'Linux'
+        run: npm run dist
+        env:
+          OVERLOOK_ARCHS: x64
+      - name: Smoke-test the AppImage
+        if: runner.os == 'Linux'
+        run: |
+          ls -la apps/desktop/release
+          cat apps/desktop/release/latest-linux.yml
+          chmod +x apps/desktop/release/Overlook-*-x86_64.AppImage
+          OVERLOOK_EXE=$(ls "$PWD"/apps/desktop/release/Overlook-*-x86_64.AppImage) xvfb-run -a npm run test:desktop
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1' # no FUSE needed on the runner
+      - name: Install the .deb and smoke-test the installed app
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y ./apps/desktop/release/Overlook-*-amd64.deb
+          xvfb-run -a npm run test:desktop
+        env:
+          OVERLOOK_EXE: /opt/Overlook/overlook
 
   # Landing page (site/, its own package): unit tests, production build, then the built page in the
   # runner's Chrome with no server: every demo, install tabs, reduced motion, JavaScript off, six widths,

@@ -20,6 +20,7 @@ import { checkNow, initUpdater, setAutoCheck } from './updater';
 const TOKEN_COOKIE = 'cpd_token';
 const READY_TIMEOUT_MS = 30_000;
 const IS_MAC = process.platform === 'darwin';
+const IS_LINUX = process.platform === 'linux';
 const SHUTDOWN_TIMEOUT_MS = 4_000;
 
 // Layout inside the packaged app (and the staging folder): desktop/, api/dist/, web/dist/.
@@ -43,7 +44,7 @@ let quitting = false;
 interface DesktopPrefs {
   /** Closing the window keeps Overlook running in the tray (live updates continue). */
   closeToTray: boolean;
-  /** Check GitHub Releases for a new version at start-up and once a day (Windows). */
+  /** Check the release feed for a new version at start-up and once a day. */
   autoUpdate: boolean;
 }
 const DEFAULT_PREFS: DesktopPrefs = { closeToTray: false, autoUpdate: true };
@@ -77,16 +78,21 @@ function freePort(): Promise<number> {
 }
 
 /**
- * Apps opened from Finder or the Dock get a minimal PATH (/usr/bin:/bin:/usr/sbin:/sbin), so git, claude
- * and code would not be found. Ask the user's login shell for its PATH (fixed command, 4 s limit) and add
- * the usual install folders as a fallback.
+ * Apps opened from Finder or the Dock get a minimal PATH (/usr/bin:/bin:/usr/sbin:/sbin), and apps started
+ * from a Linux desktop launcher get the session's PATH without what ~/.bashrc or ~/.zshrc add (often
+ * ~/.local/bin, where Claude Code installs), so git, claude and code would not be found. Ask the user's
+ * login shell for its PATH (fixed command, 4 s limit) and add the usual install folders as a fallback.
  */
-function macPath(): Promise<string> {
-  const extras = ['/opt/homebrew/bin', '/usr/local/bin', join(homedir(), '.local', 'bin'), join(homedir(), '.claude', 'local'),
-    join(homedir(), '.npm-global', 'bin'), join(homedir(), '.volta', 'bin'), '/usr/bin', '/bin', '/usr/sbin', '/sbin'];
+function loginShellPath(): Promise<string> {
+  const home = homedir();
+  const extras = [
+    ...(IS_MAC ? ['/opt/homebrew/bin'] : ['/home/linuxbrew/.linuxbrew/bin', join(home, '.linuxbrew', 'bin'), '/snap/bin']),
+    '/usr/local/bin', join(home, '.local', 'bin'), join(home, '.claude', 'local'),
+    join(home, '.npm-global', 'bin'), join(home, '.volta', 'bin'), '/usr/bin', '/bin', '/usr/sbin', '/sbin',
+  ];
   const merge = (...lists: string[][]) => [...new Set(lists.flat().filter(Boolean))].join(delimiter);
   const current = (process.env.PATH ?? '').split(delimiter);
-  const shellPath = process.env.SHELL && /^\/[\w/.-]+$/.test(process.env.SHELL) ? process.env.SHELL : '/bin/zsh';
+  const shellPath = process.env.SHELL && /^\/[\w/.-]+$/.test(process.env.SHELL) ? process.env.SHELL : IS_MAC ? '/bin/zsh' : '/bin/bash';
   return new Promise((resolve) => {
     execFile(shellPath, ['-ilc', 'printf "__OVERLOOK_PATH__%s__OVERLOOK_PATH__" "$PATH"'], { timeout: 4000 }, (err, out) => {
       const found = /__OVERLOOK_PATH__(.*?)__OVERLOOK_PATH__/s.exec(out ?? '')?.[1];
@@ -97,7 +103,7 @@ function macPath(): Promise<string> {
 
 /** Starts the server and resolves once it reports that it is listening. */
 async function startServer(port: number, token: string): Promise<void> {
-  const path = IS_MAC ? await macPath() : process.env.PATH ?? '';
+  const path = IS_MAC || IS_LINUX ? await loginShellPath() : process.env.PATH ?? '';
   return new Promise((resolve, reject) => {
     const env: Record<string, string> = {
       ...(process.env as Record<string, string>),
@@ -267,7 +273,9 @@ async function createWindow() {
 
 function createTray() {
   if (!existsSync(iconPath)) return;
-  tray = new Tray(nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 }));
+  // Linux panels (AppIndicator / StatusNotifier) draw tray icons at about 22 px; Windows uses 16.
+  const size = IS_LINUX ? 22 : 16;
+  tray = new Tray(nativeImage.createFromPath(iconPath).resize({ width: size, height: size }));
   tray.setToolTip('Overlook');
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Open Overlook', click: showWindow },
@@ -275,6 +283,7 @@ function createTray() {
     { type: 'separator' },
     { label: 'Quit', click: () => { quitting = true; app.quit(); } },
   ]));
+  // Windows and most Linux panels send clicks; AppIndicator panels (Ubuntu) only open the menu, which has "Open Overlook".
   tray.on('click', showWindow);
 }
 
@@ -286,7 +295,7 @@ function sendCommand(cmd: 'about' | 'settings') {
 
 /**
  * macOS needs an application menu: it holds About, Settings (⌘,), Quit (⌘Q) and the Edit roles that make
- * ⌘C / ⌘V / ⌘A work in text fields. Windows keeps no menu bar.
+ * ⌘C / ⌘V / ⌘A work in text fields. Windows and Linux keep no menu bar (Ctrl+C / Ctrl+V work without one).
  */
 function setMenu() {
   if (!IS_MAC) { Menu.setApplicationMenu(null); return; }

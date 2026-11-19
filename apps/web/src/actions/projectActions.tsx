@@ -7,12 +7,12 @@ import type { Project, ProjectAction } from '@overlook/shared';
 import { api } from '../api';
 import { appToast } from '../toast';
 import { actionAvailable, useTools } from '../store/tools';
-import { isMac } from '../platform';
+import { isLinux, isMac } from '../platform';
 
 export const ACTION_META: Record<ProjectAction, { label: string; icon: string; done: string }> = {
   vscode: { label: 'Open in VS Code', icon: 'pi pi-code', done: 'Opening VS Code' },
   terminal: { label: 'Open terminal', icon: 'pi pi-desktop', done: 'Opening a terminal' },
-  explorer: { label: isMac ? 'Show in Finder' : 'Show in Explorer', icon: 'pi pi-folder-open', done: 'Opening the folder' },
+  explorer: { label: isMac ? 'Show in Finder' : isLinux ? 'Show in folder' : 'Show in Explorer', icon: 'pi pi-folder-open', done: 'Opening the folder' },
   claude: { label: 'Start Claude Code', icon: 'pi pi-microchip-ai', done: 'Starting Claude Code' },
 };
 
@@ -46,7 +46,8 @@ const items = (project: Pick<Project, 'id' | 'name' | 'exists'>, actions: Projec
 /** Header control: the first available action (usually "Open in VS Code") with the rest in the dropdown. */
 export function ProjectActionsButton({ project }: { project: Project }) {
   const actions = useAvailableActions();
-  const primary = actions[0] ?? 'explorer';
+  const primary = actions[0];
+  if (!primary) return null; // no tool for any action on this machine (e.g. Linux without a terminal or xdg-open)
   return (
     <SplitButton
       label={ACTION_META[primary].label}
@@ -64,6 +65,7 @@ export function ProjectActionsButton({ project }: { project: Project }) {
 export function ProjectActionsMenu({ project }: { project: Project }) {
   const menu = useRef<Menu>(null);
   const actions = useAvailableActions();
+  if (!actions.length) return null;
   return (
     <>
       <Menu model={items(project, actions)} popup ref={menu} />

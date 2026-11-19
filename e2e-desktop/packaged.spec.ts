@@ -1,6 +1,7 @@
 /**
- * Smoke tests for the packaged app (Windows: release/win-unpacked/Overlook.exe; macOS: release/mac or mac-arm64/Overlook.app).
- * Run `npm run dist -w @overlook/desktop` first, then `npm run test:desktop`.
+ * Smoke tests for the packaged app (Windows: release/win-unpacked/Overlook.exe; macOS: release/mac or mac-arm64/Overlook.app;
+ * Linux: release/linux-unpacked/overlook, or the installed .deb when OVERLOOK_EXE=/opt/Overlook/overlook, as CI does).
+ * Run `npm run dist -w @overlook/desktop` first, then `npm run test:desktop` (on Linux without a display: xvfb-run -a).
  *
  * The app runs against a throwaway fixture (CPD_DATA_DIR / CLAUDE_CONFIG_DIR in a temp folder), never
  * the user's data. Playwright attaches over Chromium's DevTools protocol (--remote-debugging-port),
@@ -13,10 +14,13 @@ import { join } from 'path';
 import { createFixture, type Fixture } from '../apps/api/test/fixture';
 
 const RELEASE = join(__dirname, '..', 'apps', 'desktop', 'release');
-// The app built for this machine's arch: Windows x64 → win-unpacked; macOS → mac (x64) or mac-arm64.
-const EXE = process.platform === 'darwin'
+// The app built for this machine's arch: Windows x64 → win-unpacked; macOS → mac (x64) or mac-arm64;
+// Linux → linux-unpacked (x64) or linux-arm64-unpacked. OVERLOOK_EXE points at another copy (an installed .deb).
+const EXE = process.env.OVERLOOK_EXE || (process.platform === 'darwin'
   ? join(RELEASE, process.arch === 'arm64' ? 'mac-arm64' : 'mac', 'Overlook.app', 'Contents', 'MacOS', 'Overlook')
-  : join(RELEASE, 'win-unpacked', 'Overlook.exe');
+  : process.platform === 'linux'
+    ? join(RELEASE, process.arch === 'arm64' ? 'linux-arm64-unpacked' : 'linux-unpacked', 'overlook')
+    : join(RELEASE, 'win-unpacked', 'Overlook.exe'));
 const CDP_PORT = 9339;
 
 let fx: Fixture;

@@ -251,8 +251,13 @@ export interface SystemTools {
   /** Claude Code CLI (`claude`) on PATH. */
   claude: boolean;
   vscode: boolean;
-  /** What "Open terminal" will use. */
-  terminal: 'Windows Terminal' | 'Command Prompt' | 'Terminal' | 'iTerm' | 'terminal emulator' | null;
+  /**
+   * What "Open terminal" will use: Windows Terminal / Command Prompt, Terminal / iTerm, or on Linux the
+   * detected terminal (GNOME Terminal, Konsole, …, or "terminal emulator" for x-terminal-emulator).
+   */
+  terminal: string | null;
+  /** "Show in folder" can work (always on Windows and macOS; on Linux when xdg-open is installed). */
+  openFolder: boolean;
   /** Running WSL distros where Claude Code history was found. */
   wslClaude: string[];
   /** Where Claude Code history is read from (local folder plus any WSL folders). */

@@ -1,10 +1,12 @@
-# Tag vX.Y.Z (matching package.json "version") → on Windows and macOS: test, build the installers
-# (Windows NSIS .exe x64/arm64, macOS .dmg x64/arm64, ad-hoc signed) and smoke-test the packaged app.
-# Then one publish job, only if both builds passed:
+# Tag vX.Y.Z (matching package.json "version") → on Windows, macOS and Linux in parallel: test, build the
+# installers (Windows NSIS .exe x64/arm64, macOS .dmg x64/arm64 ad-hoc signed, Linux AppImage and .deb
+# x64/arm64) and smoke-test the packaged app (Linux: the installed .deb, under Xvfb).
+# Then one publish job, only if all three builds passed:
 #   1. Cloudflare R2 (download site + update feed, served by the overlook-downloads Worker):
-#      installers + blockmaps first, then latest.yml (x64) and latest-arm64.yml (arm64), so the feed
-#      never points at a file that is not uploaded yet. latest.yml's version also drives the macOS
-#      "new version available" prompt and the landing page's macOS buttons.
+#      installers + blockmaps first, then latest.yml (x64), latest-arm64.yml (arm64), latest-linux.yml and
+#      latest-linux-arm64.yml (AppImage auto-update; the .deb is listed there too), so a feed never points at
+#      a file that is not uploaded yet. latest.yml's version also drives the macOS "new version available"
+#      prompt and the landing page's macOS buttons; latest-linux.yml drives the .deb prompt and Linux buttons.
 #   2. A GitHub Release with the same files.
 # Repository secrets: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET.
 # Repository variable (optional): OVERLOOK_DOWNLOAD_URL, the public URL of the R2 folder; it is baked
@@ -33,6 +35,12 @@ jobs:
             files: |
               apps/desktop/release/Overlook-*.dmg
               apps/desktop/release/Overlook-*.dmg.blockmap
+          - os: ubuntu-latest
+            files: |
+              apps/desktop/release/Overlook-*.AppImage
+              apps/desktop/release/Overlook-*.deb
+              apps/desktop/release/latest-linux.yml
+              apps/desktop/release/latest-linux-arm64.yml
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -54,7 +62,16 @@ jobs:
           OVERLOOK_DOWNLOAD_URL: ${{ vars.OVERLOOK_DOWNLOAD_URL }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       - name: Smoke-test the packaged app (this runner's arch)
+        if: runner.os != 'Linux'
         run: npm run test:desktop
+      - name: Install the .deb and smoke-test the installed app (x64, under Xvfb)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y ./apps/desktop/release/Overlook-*-amd64.deb
+          xvfb-run -a npm run test:desktop
+        env:
+          OVERLOOK_EXE: /opt/Overlook/overlook
       - uses: actions/upload-artifact@v4
         with:
           name: installers-${{ matrix.os }}
@@ -85,15 +102,15 @@ jobs:
           cd release
           ls -la
           put() { aws s3 cp "$1" "s3://$BUCKET/$PREFIX/$1" --endpoint-url "$ENDPOINT" --only-show-errors --cache-control "$2"; }
-          for f in Overlook-*.exe Overlook-*.dmg *.blockmap; do put "$f" "public, max-age=31536000, immutable"; done
-          for f in latest.yml latest-arm64.yml; do put "$f" "no-cache"; done
+          for f in Overlook-*.exe Overlook-*.dmg Overlook-*.AppImage Overlook-*.deb *.blockmap; do put "$f" "public, max-age=31536000, immutable"; done
+          for f in latest.yml latest-arm64.yml latest-linux.yml latest-linux-arm64.yml; do put "$f" "no-cache"; done
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           cd release
-          files=$(ls Overlook-* latest.yml latest-arm64.yml)
+          files=$(ls Overlook-* latest.yml latest-arm64.yml latest-linux.yml latest-linux-arm64.yml)
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" $files --clobber
           else

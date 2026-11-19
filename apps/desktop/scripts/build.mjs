@@ -1,5 +1,6 @@
 // Stages the app (scripts/stage.mjs) and packages it with electron-builder.
-// Output: apps/desktop/release/ (Windows: NSIS installers for x64 and arm64 + win-unpacked/; macOS: a .dmg per arch + mac/, mac-arm64/).
+// Output: apps/desktop/release/ (Windows: NSIS installers for x64 and arm64 + win-unpacked/; macOS: a .dmg per arch + mac/, mac-arm64/;
+// Linux: an AppImage and a .deb per arch + linux-unpacked/, linux-arm64-unpacked/).
 // The staged app lives outside the repo, so all paths here are absolute.
 import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
@@ -89,9 +90,39 @@ const config = {
     artifactName: 'Overlook-${version}-${arch}.${ext}',
     title: 'Overlook ${version}',
   },
+  linux: {
+    icon: join(desktop, 'resources', 'icon.png'), // electron-builder renders the hicolor icon sizes from it
+    category: 'Development',
+    executableName: 'overlook',
+    synopsis: 'A project dashboard for Claude Code',
+    description: 'Plan progress, a Kanban board that edits your plan files, git activity and Claude Code usage for your local projects.',
+    // desktopName in the staged package.json (stage.mjs) names the .desktop file and Electron's app id / WM_CLASS,
+    // so the running window is matched to its launcher entry.
+    syncDesktopName: true,
+    maintainer: 'AgentHub',
+    vendor: 'AgentHub',
+    desktop: {
+      entry: { Keywords: 'claude;dashboard;projects;plans;kanban;git;' },
+    },
+  },
+  // AppImage toolset 1.0.3: the static AppImage runtime (no libfuse2 needed) and an AppRun that starts the app
+  // with --no-sandbox only when user namespaces are blocked (Ubuntu 24.04's AppArmor restriction); the legacy
+  // toolset crashes there when the AppImage is run directly.
+  toolsets: { appimage: '1.0.3' },
+  // AppImage (x86_64 / arm64 in the name): updates itself from latest-linux.yml / latest-linux-arm64.yml.
+  appImage: {
+    artifactName: 'Overlook-${version}-${arch}.${ext}',
+  },
+  // .deb (amd64 / arm64 in the name): installed with apt; the app shows a "new version available" notice instead.
+  deb: {
+    artifactName: 'Overlook-${version}-${arch}.${ext}',
+    // Electron's runtime libraries; libasound2 was renamed libasound2t64 in Ubuntu 24.04.
+    depends: ['libgtk-3-0', 'libnotify4', 'libnss3', 'libxss1', 'libxtst6', 'xdg-utils', 'libatspi2.0-0', 'libuuid1', 'libsecret-1-0', 'libasound2 | libasound2t64', 'libgbm1'],
+  },
 };
 
 const IS_MAC = process.platform === 'darwin';
+const IS_LINUX = process.platform === 'linux';
 
 /** Downloads the prebuilt better-sqlite3 binary for this Electron version and arch into the staged app. */
 function fetchSqlite(arch, platform) {
@@ -105,14 +136,22 @@ function fetchSqlite(arch, platform) {
 // One arch at a time, because the staged app holds one native binary at a time.
 // Windows: NSIS installers. macOS: one .dmg per arch (a universal build would need both native binaries
 // merged with lipo; two smaller downloads are simpler and the download page picks the right one).
+// Linux: an AppImage and a .deb per arch (arm64 is cross-packaged on x64; both only bundle files).
+const platform = IS_MAC ? 'darwin' : IS_LINUX ? 'linux' : 'win32';
+// OVERLOOK_ARCHS=x64 builds one arch only (CI's packaged smoke test); releases build both.
+const archs = (process.env.OVERLOOK_ARCHS || 'x64,arm64').split(',').map((a) => a.trim()).filter((a) => a === 'x64' || a === 'arm64');
 const built = [];
-for (const arch of ['x64', 'arm64']) {
-  fetchSqlite(arch, IS_MAC ? 'darwin' : 'win32');
-  const targets = IS_MAC ? Platform.MAC.createTarget('dmg', Arch[arch]) : Platform.WINDOWS.createTarget('nsis', Arch[arch]);
+for (const arch of archs) {
+  fetchSqlite(arch, platform);
+  const targets = IS_MAC ? Platform.MAC.createTarget('dmg', Arch[arch])
+    : IS_LINUX ? Platform.LINUX.createTarget(['AppImage', 'deb'], Arch[arch])
+    : Platform.WINDOWS.createTarget('nsis', Arch[arch]);
   // electron-builder mutates the config it is given, so each build gets a fresh copy.
   const archConfig = structuredClone(config);
-  archConfig.publish = { ...config.publish, channel: arch === 'arm64' ? 'latest-arm64' : 'latest' };
+  // Windows feeds are named by channel (latest.yml, latest-arm64.yml); on Linux electron-builder and
+  // electron-updater add the platform and arch themselves (latest-linux.yml, latest-linux-arm64.yml).
+  archConfig.publish = { ...config.publish, channel: arch === 'arm64' && !IS_LINUX ? 'latest-arm64' : 'latest' };
   // Uploading happens in CI (gh release upload), never from a local build.
   built.push(...await build({ projectDir: appDir, targets, config: archConfig, publish: 'never' }));
 }
-console.log('\nBuilt:\n' + built.filter((f) => /\.(exe|dmg)$/.test(f)).map((f) => '  ' + f).join('\n'));
+console.log('\nBuilt:\n' + built.filter((f) => /\.(exe|dmg|AppImage|deb)$/.test(f)).map((f) => '  ' + f).join('\n'));
