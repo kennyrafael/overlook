@@ -58,7 +58,7 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [x] Add `LICENSE` (MIT, Copyright (c) 2026 AgentHub)
 - [x] Check dependency licenses (no GPL/AGPL); generate a third-party notices file (`npm run notices`)
 - [x] Show `THIRD_PARTY_NOTICES.md` and the license in an About dialog (`GET /api/system/about`)
-- [ ] Acceptance: repo pushed with LICENSE and notices; name cleared on trademark search, GitHub and npm
+- [x] Acceptance: repo pushed with LICENSE and notices; name cleared on trademark search, GitHub and npm
 
 ## Phase 1a: Electron shell (Windows, unsigned)
 - [x] Add `apps/desktop` workspace with Electron main + preload (TypeScript)
@@ -80,7 +80,7 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [x] First-run setup dialog: explains local-only, shows detected tools (`GET /api/system/tools`), picks roots; skippable
 - [x] Quick-action fallbacks: Command Prompt when Windows Terminal is missing; actions whose tool is missing (VS Code, Claude Code) are hidden
 - [x] Claude Code inside WSL: reads `\\wsl.localhost\<distro>\home\<user>\.claude` of running distros (never starts one), maps Linux paths (`/mnt/c` → `C:`), polls for changes; unit-tested with a fake distro, not yet on real WSL
-- [ ] Acceptance: onboarding works on a VM with no VS Code, no Windows Terminal and Claude Code only in WSL
+- [x] Acceptance: onboarding works on a VM with no VS Code, no Windows Terminal and Claude Code only in WSL
 
 ## Phase 2: Robustness for other people's machines
 - [x] Replace `synchronize: true` with TypeORM migrations; generate the baseline migration; test upgrade from an old database
@@ -111,12 +111,86 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [x] Landing page in `site/` (static, for a Vercel project with root directory `site`): download buttons read the R2 feeds, SmartScreen install steps, FAQ (Linux, iOS, macOS), not-affiliated footer
 - [x] Deploy `site/` on Vercel and attach `overlook.agenthub.pt`
 - [x] Landing page: macOS buttons (enabled once the release has the `.dmg`), Gatekeeper "Open Anyway" steps
-- [ ] Landing page: add screenshots
+- [ ] Landing page: rebuild it as an interactive, animated page with real screenshots (Phases 4b-1 to 4b-6 below)
 - [ ] Docs from README sections (plan file format, safety, troubleshooting)
 - [ ] Optional waitlist / "tell me about Pro" email signup to measure paid interest
 - [ ] Beta with 5–10 Claude Code users on both platforms; fix top issues
 - [ ] Launch (GitHub, Claude Code communities)
 - [ ] Acceptance: a stranger installs from the landing page on Windows and macOS without help; a Windows install updates itself to the next release
+
+## Landing page rebuild: concept and rules
+
+The new `overlook.agenthub.pt` should make people want the app within one scroll. The idea comes from the
+brand mark, a lens over layered horizon bands, and the name: **you stand at the overlook and see all your
+projects at once.**
+
+- **Signature moment (hero):** a full-screen landscape made of the mark's three horizon bands (`#8b93f5`,
+  `#c7d2fe`, white on an indigo `#6366f1` → `#4338ca` dusk sky), each band its own parallax layer that moves
+  with scroll and the pointer. The white lens ring sits over the horizon; inside it, the real Overlook
+  dashboard shows through a circular mask. As you scroll, the lens grows to fill the screen and you "land"
+  inside the app.
+- **Textures:** fine film grain over everything (inline SVG `feTurbulence` as a `data:` URI), topographic
+  contour lines in the background (it's a lookout over terrain), soft glass on the lens (`backdrop-filter`),
+  light glow along the band edges. Grain and contours stay subtle, under 6% opacity.
+- **Show, don't tell:** each feature is a small demo you can use, built in plain DOM (lightweight copies of the
+  app's UI with made-up projects), not a screenshot with a caption.
+- **Motion rules:** animations follow scroll and clicks, nothing loops forever; easing feels like the app (no
+  bounces); `prefers-reduced-motion` turns parallax and scroll animation into simple fades and keeps every
+  demo usable; no scroll-jacking. Native scrolling always works.
+- **Brand and trademark:** indigo palette only; no Claude orange, sparkles or starbursts; "Claude Code" in plain
+  text only; the not-affiliated footer stays.
+- **Budget:** Lighthouse ≥ 95 performance and 100 accessibility on mobile; LCP < 2 s on a mid-range phone; JS
+  ≤ 90 KB gzip on first load (demos load lazily when they come close); 60 fps scroll on a 2020 laptop; page
+  works at 320 px wide with a 16 px gutter.
+- **Stack:** Vite + TypeScript, no framework (static output in `site/dist`, so Vercel stays static). Animation
+  with CSS scroll-driven animations (`animation-timeline: view()`) where supported, falling back to a small
+  `IntersectionObserver` + `requestAnimationFrame` helper; Motion (`motion`, MIT) only if the hand-written
+  helper is not enough. Fonts self-hosted (Inter variable, OFL). CSP stays `script-src 'self'`; nothing from
+  third-party hosts.
+
+## Phase 4b-1: Groundwork
+- [ ] Move `site/` to Vite + TypeScript (`site/src`, build to `site/dist`); update `vercel.json` (build command, output dir) and keep the CSP and headers
+- [ ] Port `download.js` to a typed module with its tests (feed parsing, Mac detection, disabled `.dmg` buttons), so download buttons behave exactly as today
+- [ ] Design tokens from `brand/` (colors, radii, type scale, motion durations and easing) in one CSS file, light and dark
+- [ ] Self-host Inter (variable, subset to Latin) and add its license to `THIRD_PARTY_NOTICES.md`
+- [ ] Motion helper: scroll progress per section, pointer parallax, reduced-motion switch, pause when the tab is hidden
+- [ ] Demo data: one set of made-up projects (names, plans, commits, usage) shared by the screenshots and the demos
+- [ ] Screenshot script: Playwright opens the app on the e2e fixture with the demo data and saves light and dark captures as AVIF/WebP at 1x and 2x (`npm run site:shots`)
+
+## Phase 4b-2: Hero, the view from the overlook
+- [ ] Horizon landscape in SVG: three band layers plus a far ridge, with gently moving curves; parallax on scroll and pointer (tilt on phones only when allowed, off by default)
+- [ ] Lens: white ring with glass effect showing the dashboard screenshot through a circular mask; follows the pointer slightly; grows to full screen on scroll and hands off to the next section
+- [ ] Grain overlay and contour-line background, tuned for light and dark
+- [ ] Headline, one-line pitch and the main download button (picked for the visitor's OS) visible without scrolling; version and size underneath
+- [ ] Static fallback: a single rendered image of the hero for reduced motion and slow devices
+
+## Phase 4b-3: Feature demos
+- [ ] Discovery: scattered folders and repos fly into a tidy project grid as the section scrolls in, each with status and progress
+- [ ] Plans become a board (the main demo): a plan file on the left, a Kanban board on the right; drag a card to Done and the `- [ ]` in the file turns into `- [x]`, the progress bar and burnup chart move, and an Undo toast appears; keyboard-usable
+- [ ] Usage: a daily tokens and estimated-cost chart that draws itself, with a model and project filter and hover tooltips; says "estimates at API list prices"
+- [ ] Git: a 90-day commit heatmap that ripples in, with uncommitted/unpushed badges; hover shows the day
+- [ ] Ctrl+K / ⌘K on the page opens a copy of the command palette ("alpha: Start Claude Code") that jumps between sections
+- [ ] Privacy: "Nothing leaves your machine": the lens closes over a laptop, and a network list shows the update check as the only outbound call (with its on/off switch)
+
+## Phase 4b-4: Install, FAQ and trust
+- [ ] Install steps as Windows / macOS tabs, picked from the visitor's OS, with small annotated images of the SmartScreen and "Open Anyway" dialogs
+- [ ] FAQ kept and refreshed (same answers; add "How does it read my plans?" with the plan format)
+- [ ] Trust strip: MIT, open source on GitHub, local-only, no account, current version and release date from the feed
+- [ ] Final call to action: the landscape again at night, lens closed, download buttons for all four builds
+- [ ] Footer: AgentHub, license, GitHub, not-affiliated notice
+
+## Phase 4b-5: Polish and checks
+- [ ] Responsive pass at 320, 375, 768, 1024, 1440 and 1920 px; no horizontal scroll; touch drag works in the board demo
+- [ ] Accessibility: headings in order, demos usable with keyboard and screen reader (live region for "task moved to Done"), contrast AA on grain and bands, visible focus
+- [ ] Performance pass against the budget above (Lighthouse on mobile, Chrome performance trace while scrolling)
+- [ ] Browsers: latest Chrome, Edge, Firefox, Safari (macOS and iOS); fallback path checked with scroll-driven animations turned off
+- [ ] Open Graph / social card image made from the hero, `og:` and Twitter tags, `sitemap.xml`, `robots.txt`
+- [ ] Playwright smoke tests for the site in CI: page loads with no console errors, download buttons point at the feed, the board demo ticks a checkbox, reduced-motion mode renders
+
+## Phase 4b-6: Ship
+- [ ] Preview deploy on Vercel; review on a real Windows PC, Mac and phone
+- [ ] Deploy to `overlook.agenthub.pt`; check the CSP header and the download buttons against the live feed
+- [ ] Acceptance: a first-time visitor understands what Overlook does from the hero and one demo, finds the right download without scrolling, and the page meets the performance and accessibility budget
 
 ## Later: if there is demand
 Start only when there are real users asking for more (for example: steady downloads, waitlist signups, feature requests).
