@@ -13,8 +13,15 @@ async function openProject(page: Page, name: string) {
 }
 
 test.beforeEach(async ({ page }) => {
-  // Start every test from clean, per-browser filters.
-  await page.addInitScript(() => { try { localStorage.removeItem('cpd-filters'); } catch { /* ignore */ } });
+  // Start every test from clean, per-browser filters and layout (once per test, so a reload keeps them).
+  await page.addInitScript(() => {
+    try {
+      if (sessionStorage.getItem('smoke-clean')) return;
+      sessionStorage.setItem('smoke-clean', '1');
+      localStorage.removeItem('cpd-filters');
+      localStorage.removeItem('cpd-projects-layout');
+    } catch { /* ignore */ }
+  });
 });
 
 test('overview shows KPIs and connects live', async ({ page }) => {
@@ -33,6 +40,22 @@ test('projects table lists fixtures and filters by search', async ({ page }) => 
   await page.getByPlaceholder('Search name, path, tag…').fill('bet');
   await expect(page.getByText('1 of 2 projects')).toBeVisible();
   await expect(page.getByRole('link', { name: 'alpha', exact: true })).toHaveCount(0);
+});
+
+test('projects show as cards by default and toggle to the list', async ({ page }) => {
+  await page.goto('/projects');
+  await expect(page.locator('.project-card')).toHaveCount(2);
+  await expect(page.locator('.p-datatable')).toHaveCount(0);
+  await page.getByRole('button', { name: 'List', exact: true }).click();
+  await expect(page.locator('.p-datatable')).toBeVisible();
+  await expect(page.locator('.project-card')).toHaveCount(0);
+  await expect(page.getByText('2 of 2 projects')).toBeVisible();
+  // The choice survives a reload.
+  await page.evaluate(() => location.reload());
+  await expect(page.locator('.p-datatable')).toBeVisible();
+  await page.getByRole('button', { name: 'Cards', exact: true }).click();
+  await page.locator('.project-card', { hasText: 'beta' }).click({ position: { x: 150, y: 70 } });
+  await expect(page.getByRole('heading', { name: 'beta', exact: true })).toBeVisible();
 });
 
 test('toggling a task in the Milestones tab writes the plan file', async ({ page }) => {

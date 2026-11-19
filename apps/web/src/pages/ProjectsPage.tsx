@@ -7,17 +7,27 @@ import { Tag } from 'primereact/tag';
 import { Button } from 'primereact/button';
 import { Toast } from 'primereact/toast';
 import { Tooltip } from 'primereact/tooltip';
+import { SelectButton } from 'primereact/selectbutton';
+import { ProgressSpinner } from 'primereact/progressspinner';
 import type { Project, ProjectPatch } from '@overlook/shared';
 import FilterBar from '../components/FilterBar';
 import { filterProjects, useFilters } from '../store/filters';
 import { useProjects } from '../store/projects';
+import { useProjectsLayout, type ProjectsLayout } from '../store/projectsLayout';
+import ProjectCards from './ProjectCards';
 import { relativeTime, sourceLabel, statusSeverity } from '../format';
 import ProjectEditDialog from './ProjectEditDialog';
 import { ProjectActionsMenu } from '../actions/projectActions';
 
+const LAYOUTS: { value: ProjectsLayout; label: string; icon: string }[] = [
+  { value: 'cards', label: 'Cards', icon: 'pi pi-th-large' },
+  { value: 'list', label: 'List', icon: 'pi pi-list' },
+];
+
 export default function ProjectsPage() {
   const { projects, loaded, loading, rescan, update } = useProjects();
   const filters = useFilters();
+  const { layout, setLayout } = useProjectsLayout();
   const [expanded, setExpanded] = useState<DataTableExpandedRows | undefined>();
   const [editing, setEditing] = useState<Project | null>(null);
   const toast = useRef<Toast>(null);
@@ -92,53 +102,77 @@ export default function ProjectsPage() {
     </div>
   );
 
+  const layoutToggle = (
+    <SelectButton value={layout} onChange={(e) => e.value && setLayout(e.value as ProjectsLayout)}
+      options={LAYOUTS} optionValue="value" allowEmpty={false} className="layout-toggle"
+      itemTemplate={(o: (typeof LAYOUTS)[number]) => (
+        <><i className={o.icon} aria-hidden="true" /><span className="layout-toggle-label">{o.label}</span></>
+      )} />
+  );
+
   const header = (
     <div className="flex flex-column gap-2">
       <FilterBar />
-      <div className="flex justify-content-end">
+      <div className="flex justify-content-between align-items-center gap-2">
+        {layoutToggle}
         <Button icon="pi pi-refresh" label="Rescan" outlined size="small" loading={loading} onClick={doRescan} />
       </div>
     </div>
   );
 
+  const emptyMessage = projects.length ? 'No projects match the filters.' : 'No projects found. Add a root folder in Settings, then Rescan.';
+  const footer = `${visible.length} of ${projects.length} projects`;
+
   return (
     <>
       <Toast ref={toast} />
       <Tooltip target=".status-tag" position="top" />
-      <DataTable value={visible} loading={!loaded && loading} dataKey="id" header={header}
-        emptyMessage={projects.length ? 'No projects match the filters.' : 'No projects found. Add a root folder in Settings, then Rescan.'}
-        stripedRows removableSort sortMode="single" paginator rows={25} rowsPerPageOptions={[10, 25, 50]}
-        expandedRows={expanded} onRowToggle={(e) => setExpanded(e.data as DataTableExpandedRows)}
-        rowExpansionTemplate={rowExpansion}
-        footer={`${visible.length} of ${projects.length} projects`}>
-        <Column expander style={{ width: '3rem' }} />
-        <Column style={{ width: '3rem' }} body={(p: Project) => (
-          <Button icon={p.pinned ? 'pi pi-star-fill' : 'pi pi-star'} rounded text
-            severity={p.pinned ? 'warning' : 'secondary'} aria-label={p.pinned ? 'Unpin' : 'Pin'}
-            onClick={() => doUpdate(p.id, { pinned: !p.pinned }).catch(() => {})} />
-        )} />
-        <Column field="name" header="Project" sortable body={nameBody} />
-        <Column field="status" header="Status" sortable body={statusBody} style={{ width: '9rem' }} />
-        <Column field="progress" header="Progress" sortable style={{ width: '13rem' }}
-          body={(p: Project) => (
-            <div>
-              <ProgressBar value={p.progress} style={{ height: '0.6rem' }} showValue={false} />
-              <small className="text-500">
-                {p.milestonesTotal
-                  ? `${p.progress}% · ${p.milestonesReached}/${p.milestonesTotal} milestones · ${p.tasksDone}/${p.tasksTotal} tasks`
-                  : 'No plan'}
-              </small>
-            </div>
+      {layout === 'cards' ? (
+        <div className="flex flex-column gap-3">
+          <div className="projects-toolbar">{header}</div>
+          {!loaded && loading
+            ? <div className="flex justify-content-center p-5"><ProgressSpinner style={{ width: '2.5rem', height: '2.5rem' }} /></div>
+            : visible.length
+              ? <ProjectCards projects={visible} onUpdate={doUpdate} onEdit={setEditing} />
+              : <div className="projects-empty">{emptyMessage}</div>}
+          <div className="projects-count">{footer}</div>
+        </div>
+      ) : (
+        <DataTable value={visible} loading={!loaded && loading} dataKey="id" header={header}
+          emptyMessage={emptyMessage}
+          stripedRows removableSort sortMode="single" paginator rows={25} rowsPerPageOptions={[10, 25, 50]}
+          expandedRows={expanded} onRowToggle={(e) => setExpanded(e.data as DataTableExpandedRows)}
+          rowExpansionTemplate={rowExpansion}
+          footer={footer}>
+          <Column expander style={{ width: '3rem' }} />
+          <Column style={{ width: '3rem' }} body={(p: Project) => (
+            <Button icon={p.pinned ? 'pi pi-star-fill' : 'pi pi-star'} rounded text
+              severity={p.pinned ? 'warning' : 'secondary'} aria-label={p.pinned ? 'Unpin' : 'Pin'}
+              onClick={() => doUpdate(p.id, { pinned: !p.pinned }).catch(() => {})} />
           )} />
-        <Column field="lastActivityAt" header="Last activity" sortable style={{ width: '9rem' }}
-          body={(p: Project) => <span title={p.lastActivityAt ?? ''}>{relativeTime(p.lastActivityAt)}</span>} />
-        <Column field="claudeSessions" header="Sessions" sortable style={{ width: '7rem' }}
-          body={(p: Project) => <span><i className="pi pi-microchip-ai text-primary mr-1" />{p.claudeSessions}</span>} />
-        <Column style={{ width: '4rem' }} body={(p: Project) => <ProjectActionsMenu project={p} />} />
-        <Column style={{ width: '4rem' }} body={(p: Project) => (
-          <Button icon="pi pi-pencil" rounded text aria-label="Edit" onClick={() => setEditing(p)} />
-        )} />
-      </DataTable>
+          <Column field="name" header="Project" sortable body={nameBody} />
+          <Column field="status" header="Status" sortable body={statusBody} style={{ width: '9rem' }} />
+          <Column field="progress" header="Progress" sortable style={{ width: '13rem' }}
+            body={(p: Project) => (
+              <div>
+                <ProgressBar value={p.progress} style={{ height: '0.6rem' }} showValue={false} />
+                <small className="text-500">
+                  {p.milestonesTotal
+                    ? `${p.progress}% · ${p.milestonesReached}/${p.milestonesTotal} milestones · ${p.tasksDone}/${p.tasksTotal} tasks`
+                    : 'No plan'}
+                </small>
+              </div>
+            )} />
+          <Column field="lastActivityAt" header="Last activity" sortable style={{ width: '9rem' }}
+            body={(p: Project) => <span title={p.lastActivityAt ?? ''}>{relativeTime(p.lastActivityAt)}</span>} />
+          <Column field="claudeSessions" header="Sessions" sortable style={{ width: '7rem' }}
+            body={(p: Project) => <span><i className="pi pi-microchip-ai text-primary mr-1" />{p.claudeSessions}</span>} />
+          <Column style={{ width: '4rem' }} body={(p: Project) => <ProjectActionsMenu project={p} />} />
+          <Column style={{ width: '4rem' }} body={(p: Project) => (
+            <Button icon="pi pi-pencil" rounded text aria-label="Edit" onClick={() => setEditing(p)} />
+          )} />
+        </DataTable>
+      )}
       <ProjectEditDialog project={editing} onHide={() => setEditing(null)} onSave={doUpdate} />
     </>
   );
