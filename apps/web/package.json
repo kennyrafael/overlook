@@ -1,6 +1,6 @@
 {
   "name": "@overlook/web",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
-    "@overlook/shared": "0.2.1",
+    "@overlook/shared": "0.3.0",
     "chart.js": "^4.4.7",
     "lottie-web": "^5.13.0",
     "primeflex": "^3.3.1",
