@@ -45,6 +45,8 @@ async function main() {
     await page.goto(SITE);
     await page.waitForLoadState('networkidle');
 
+    // The download buttons are filled in after the first paint, from the (faked) feed: wait for it.
+    await page.waitForFunction(() => document.getElementById('dl-release')?.textContent?.startsWith('v'), null, { timeout: 8000 }).catch(() => {});
     check((await page.getAttribute('#dl-main', 'href'))?.endsWith('Overlook-Setup-0.2.1-x64.exe'), 'main download button points at the installer');
     // The scroll story makes the hero section much taller than the screen.
     const animated = await page.evaluate(() => document.querySelector('.hero')!.getBoundingClientRect().height > innerHeight * 1.5);
