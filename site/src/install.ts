@@ -35,19 +35,20 @@ export function initInstallTabs(root: ParentNode = document, nav: NavLike = navi
 
   // A link to a guide selects its tab and scrolls to it (the panel may have been hidden when the
   // browser first tried to scroll there).
-  const fromHash = () => {
+  // Opening the page at a guide jumps there; following a link glides (CSS scroll-behavior).
+  const fromHash = (instant = false) => {
     const i = panels.findIndex((p) => `#${p!.id}` === location.hash);
     if (i >= 0) {
       select(i);
-      panels[i]!.scrollIntoView({ block: 'start' });
+      panels[i]!.scrollIntoView({ block: 'start', behavior: instant ? 'instant' : 'auto' });
     }
     return i >= 0;
   };
-  if (!fromHash()) {
+  if (!fromHash(true)) {
     const own = isMac(nav) ? 'tab-mac' : isLinux(nav) ? 'tab-linux' : 'tab-win';
     select(Math.max(0, tabs.findIndex((t) => t.id === own)));
   }
-  window.addEventListener('hashchange', fromHash);
+  window.addEventListener('hashchange', () => fromHash());
   // Clicking a link to the current hash does not fire hashchange; catch those too.
   document.addEventListener('click', (e) => {
     const a = (e.target as Element | null)?.closest?.('a[href^="#install"]');

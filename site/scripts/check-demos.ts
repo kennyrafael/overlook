@@ -137,7 +137,8 @@ async function main() {
 
     // FAQ, download section, footer
     await page.locator('#faq summary', { hasText: 'How does it read my plans?' }).click();
-    check(await page.locator('#faq .plan-sample').isVisible(), 'faq: the plan format example opens');
+    // Answers slide open, so wait for it rather than checking the first frame.
+    check(await page.locator('#faq .plan-sample').waitFor({ state: 'visible', timeout: 2000 }).then(() => true, () => false), 'faq: the plan format example opens');
     await page.locator('#faq').screenshot({ path: join(out, `faq-${scheme}.png`) });
     // Feedback forms (the Worker is faked in site-harness.ts and records what the page sends)
     await page.locator('#feedback').scrollIntoViewIfNeeded();
@@ -196,7 +197,9 @@ async function main() {
     // Opening the page at #install-mac lands on the macOS guide (it is hidden until the tabs start).
     await page.goto(SITE + '#install-mac');
     await page.waitForFunction(() => document.getElementById('tab-mac')?.getAttribute('aria-selected') === 'true', null, { timeout: 5000 }).catch(() => {});
-    await page.waitForTimeout(600);
+    // On the already-open page this is a hash change, which glides (smooth scroll): wait for it to settle.
+    await page.waitForFunction(() => { const t = document.getElementById('install-mac')!.getBoundingClientRect().top; return t >= 0 && t < 260; }, null, { timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(300);
     const macTop = await page.evaluate(() => document.getElementById('install-mac')!.getBoundingClientRect().top);
     check(macTop >= 0 && macTop < 260, `a link to #install-mac lands on the macOS guide (top ${Math.round(macTop)}px)`);
 

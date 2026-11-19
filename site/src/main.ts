@@ -14,6 +14,7 @@ import { initFeedback } from './feedback.ts';
 import { initHero } from './hero/hero.ts';
 import { initInstallTabs } from './install.ts';
 import { initMotion, reveal, whenIdle } from './motion/motion.ts';
+import { initNav } from './nav.ts';
 import { initTheme } from './theme.ts';
 
 // Before anything else, so the screenshots load in the chosen theme and the toggle shows the right icon.
@@ -23,6 +24,7 @@ initTheme();
 // afterwards changes nothing on screen, and the headline is never held back by script work.
 requestAnimationFrame(() => setTimeout(() => {
   initMotion();
+  initNav();
   const hero = document.querySelector<HTMLElement>('.hero');
   if (hero) initHero(hero);
   void initDownloads(document, (url, init) => fetch(url, init), navigator as Parameters<typeof initDownloads>[2]);

@@ -1,5 +1,9 @@
 /* Sections below the hero (the original page; Phases 4b-3 and 4b-4 replace them one by one). */
 * { box-sizing: border-box; }
+/* In-page links glide instead of jumping, and land below the fixed header bar. */
+html { scroll-padding-top: 76px; }
+/* .smooth-scroll is added after load (src/nav.ts): opening the page at a #hash should jump, not glide. */
+@media (prefers-reduced-motion: no-preference) { html.smooth-scroll { scroll-behavior: smooth; } }
 body {
   margin: 0;
   background: var(--bg);

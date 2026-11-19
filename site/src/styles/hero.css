@@ -25,6 +25,22 @@
 .site-header nav a:hover { color: #fff; }
 .site-header nav { display: flex; align-items: center; }
 
+/* From Features down the header is a fixed bar (src/nav.ts adds .is-fixed, then .is-shown to slide it in). */
+.site-header.is-fixed {
+  position: fixed; z-index: 90; padding-top: 10px; padding-bottom: 10px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px); backdrop-filter: saturate(1.4) blur(14px);
+  border-bottom: 1px solid var(--border); box-shadow: 0 6px 24px rgb(15 23 42 / 0.06);
+  transform: translateY(-100%); transition: transform var(--dur-base) var(--ease-out);
+}
+.site-header.is-fixed.is-shown { transform: none; }
+.site-header.is-fixed .brand { color: var(--text); }
+.site-header.is-fixed nav a { color: var(--text-muted); transition: color var(--dur-fast); }
+.site-header.is-fixed nav a:hover, .site-header.is-fixed nav a[aria-current] { color: var(--text); }
+.site-header.is-fixed nav a[aria-current] { text-decoration: underline 2px var(--accent); text-underline-offset: 6px; }
+.site-header.is-fixed .theme-toggle { color: var(--text); border-color: var(--border); background: var(--bg-raised); }
+.site-header.is-fixed .theme-toggle:hover { border-color: var(--accent); }
+
 /* Light/dark toggle: shows the sun in dark mode (click for light) and the moon in light mode. */
 .theme-toggle {
   position: relative; display: inline-grid; place-items: center; width: 36px; height: 36px; margin-left: 18px; padding: 0;
