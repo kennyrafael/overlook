@@ -3,7 +3,7 @@
 //   cd site && npm run shots
 // Builds the demo world (scripts/demo-world.ts), runs the built API + UI on it in this process, opens
 // each page in Chrome (Playwright, installed Chrome as in the smoke tests) in light and dark, and
-// writes AVIF + WebP at 1x and 2x to src/assets/shots/. Nothing outside the temp folder is touched.
+// writes AVIF + WebP at 2x, 1x and sm (900 px, for phones) to src/assets/shots/. Nothing outside the temp folder is touched.
 import { existsSync, mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { homedir, userInfo } from 'node:os';
@@ -118,7 +118,7 @@ async function main() {
             await page.waitForTimeout(1200); // charts finish drawing
             await maskPaths(page, world.root, world.base);
             const png = await page.screenshot({ type: 'png' });
-            for (const [scale, width] of [['2x', VIEWPORT.width * 2], ['1x', VIEWPORT.width]] as const) {
+            for (const [scale, width] of [['2x', VIEWPORT.width * 2], ['1x', VIEWPORT.width], ['sm', 900]] as const) {
               const img = sharp(png).resize({ width });
               await img.clone().avif({ quality: 60, effort: 6 }).toFile(join(out, `${s.name}-${theme}@${scale}.avif`));
               await img.clone().webp({ quality: 82 }).toFile(join(out, `${s.name}-${theme}@${scale}.webp`));

@@ -65,14 +65,13 @@ export function drawContours(svg: SVGSVGElement, hills: Hill[] = HILLS): void {
   if (svg.childElementCount) return;
   const ns = 'http://www.w3.org/2000/svg';
   const g = document.createElementNS(ns, 'g');
-  hills.forEach((h, hi) =>
-    hillPaths(h).forEach((d, ri) => {
+  hills.forEach((h) =>
+    hillPaths(h).forEach((d) => {
       const p = document.createElementNS(ns, 'path');
       p.setAttribute('d', d);
-      p.setAttribute('pathLength', '1');
-      p.style.setProperty('--i', String(hi * 3 + ri));
       g.append(p);
     }),
   );
   svg.append(g);
+  requestAnimationFrame(() => requestAnimationFrame(() => svg.classList.add('is-in')));
 }

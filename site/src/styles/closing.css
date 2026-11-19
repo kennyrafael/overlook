@@ -14,6 +14,7 @@
   transition: background var(--dur-fast), color var(--dur-fast);
 }
 .tabs [role='tab'][aria-selected='true'] { background: var(--bg-raised); color: var(--text); box-shadow: var(--shadow-1); }
+.tab-panel { scroll-margin-top: 96px; }
 .panel-title { margin: var(--space-6) 0 var(--space-4); font-size: var(--step-1); }
 .install.has-tabs .panel-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 
@@ -136,3 +137,8 @@ footer.site-footer { border: 0; margin: 0; padding: 0 0 48px; background: var(--
 .footer-legal p { margin: 0 0 6px; }
 .site-footer :focus-visible { outline-color: #fff; }
 @media (max-width: 700px) { .footer-inner { grid-template-columns: minmax(0, 1fr); } }
+
+
+/* Sections below the hero skip style, layout and paint until they come near the screen. "auto" keeps
+   each section's real height once it has been rendered, so scrolling back does not jump. */
+main .feature, .install, .faq, .get { content-visibility: auto; contain-intrinsic-size: auto 1100px; }

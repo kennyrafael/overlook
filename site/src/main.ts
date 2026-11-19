@@ -11,14 +11,18 @@ import { initDemos } from './demos/loader.ts';
 import { initDownloads } from './download.ts';
 import { initHero } from './hero/hero.ts';
 import { initInstallTabs } from './install.ts';
-import { initMotion, reveal } from './motion/motion.ts';
+import { initMotion, reveal, whenIdle } from './motion/motion.ts';
 
 document.documentElement.classList.add('js');
 initMotion();
+// The hero is set up before the first paint, so it never re-lays out the page after it.
 const hero = document.querySelector<HTMLElement>('.hero');
 if (hero) initHero(hero);
-reveal(document.querySelectorAll('.reveal'));
-initDemos();
-initInstallTabs();
-initClosing();
+// Everything below the fold starts once the browser is idle, so the hero paints first.
+whenIdle(() => {
+  reveal(document.querySelectorAll('.reveal'));
+  initDemos();
+  initInstallTabs();
+  initClosing();
+});
 void initDownloads(document, (url, init) => fetch(url, init), navigator as Parameters<typeof initDownloads>[2]);

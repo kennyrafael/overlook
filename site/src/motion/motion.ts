@@ -24,6 +24,12 @@ function wake() {
   }
 }
 
+/** Runs `fn` when the browser is idle (after first paint), or soon on browsers without idle callbacks. */
+export function whenIdle(fn: () => void, timeout = 1500): void {
+  if ('requestIdleCallback' in window) requestIdleCallback(() => fn(), { timeout });
+  else setTimeout(fn, 200);
+}
+
 /** Runs `tick` on every frame until the returned function is called. */
 export function onFrame(tick: Tick): () => void {
   ticks.add(tick);
@@ -54,7 +60,8 @@ export function initMotion(root: HTMLElement = document.documentElement): void {
 
 /** Runs `cb(true)` while `el` is within `margin` of the viewport, `cb(false)` when it leaves. */
 export function whenNear(el: Element, cb: (near: boolean) => void, margin = '25%'): () => void {
-  const io = new IntersectionObserver(([e]) => cb(e.isIntersecting), { rootMargin: `${margin} 0px` });
+  // Several changes can arrive in one batch (fast scrolling); the last one is the current state.
+  const io = new IntersectionObserver((entries) => cb(entries[entries.length - 1].isIntersecting), { rootMargin: `${margin} 0px` });
   io.observe(el);
   return () => io.disconnect();
 }

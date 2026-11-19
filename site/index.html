@@ -6,6 +6,21 @@
 <title>Overlook by AgentHub</title>
 <meta name="description" content="A free, local-only project dashboard for Claude Code users: plan progress, a Kanban board that edits your plan files, git activity and usage. Windows and macOS.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://overlook.agenthub.pt/">
+<meta name="theme-color" content="#312e81">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Overlook by AgentHub">
+<meta property="og:url" content="https://overlook.agenthub.pt/">
+<meta property="og:title" content="Overlook: all your Claude Code projects, in one view">
+<meta property="og:description" content="A free, local-only desktop dashboard: plan progress, a board that edits your plan files, git activity and estimated Claude Code usage. Windows and macOS.">
+<meta property="og:image" content="https://overlook.agenthub.pt/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Overlook: a lens over a horizon showing the project dashboard, with the headline All your Claude Code projects, in one view">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Overlook: all your Claude Code projects, in one view">
+<meta name="twitter:description" content="A free, local-only desktop dashboard for Claude Code users. Windows and macOS.">
+<meta name="twitter:image" content="https://overlook.agenthub.pt/og.jpg">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -32,10 +47,10 @@
       <div class="lens-anchor"></div>
       <div class="lens-mask">
         <picture class="lens-shot">
-          <source type="image/avif" media="(prefers-color-scheme: dark)" srcset="./src/assets/shots/overview-dark@1x.avif 1440w, ./src/assets/shots/overview-dark@2x.avif 2880w" sizes="100vw">
-          <source type="image/webp" media="(prefers-color-scheme: dark)" srcset="./src/assets/shots/overview-dark@1x.webp 1440w, ./src/assets/shots/overview-dark@2x.webp 2880w" sizes="100vw">
-          <source type="image/avif" srcset="./src/assets/shots/overview-light@1x.avif 1440w, ./src/assets/shots/overview-light@2x.avif 2880w" sizes="100vw">
-          <img src="./src/assets/shots/overview-light@1x.webp" srcset="./src/assets/shots/overview-light@1x.webp 1440w, ./src/assets/shots/overview-light@2x.webp 2880w" sizes="100vw" width="1440" height="900" alt="" decoding="async">
+          <source type="image/avif" media="(prefers-color-scheme: dark)" srcset="./src/assets/shots/overview-dark@sm.avif 900w, ./src/assets/shots/overview-dark@1x.avif 1440w, ./src/assets/shots/overview-dark@2x.avif 2880w" sizes="100vw">
+          <source type="image/webp" media="(prefers-color-scheme: dark)" srcset="./src/assets/shots/overview-dark@sm.webp 900w, ./src/assets/shots/overview-dark@1x.webp 1440w, ./src/assets/shots/overview-dark@2x.webp 2880w" sizes="100vw">
+          <source type="image/avif" srcset="./src/assets/shots/overview-light@sm.avif 900w, ./src/assets/shots/overview-light@1x.avif 1440w, ./src/assets/shots/overview-light@2x.avif 2880w" sizes="100vw">
+          <img src="./src/assets/shots/overview-light@1x.webp" srcset="./src/assets/shots/overview-light@sm.webp 900w, ./src/assets/shots/overview-light@1x.webp 1440w, ./src/assets/shots/overview-light@2x.webp 2880w" sizes="100vw" width="1440" height="900" alt="" decoding="async">
         </picture>
         <div class="lens-glass"></div>
       </div>
@@ -53,7 +68,7 @@
     </div>
 
     <p class="lens-caption" aria-hidden="true">The Overview: every project, its progress and today’s activity.</p>
-    <a class="scroll-hint" href="#features" aria-label="Scroll to the features">Look closer<span aria-hidden="true"></span></a>
+    <a class="scroll-hint" href="#features">Look closer<span aria-hidden="true"></span></a>
   </div>
 </section>
 
@@ -76,9 +91,9 @@
         </div>
         <div class="demo reveal" data-demo="discovery" role="region" aria-label="Demo: projects found in a folder">
           <picture class="demo-fallback">
-            <source type="image/avif" media="(prefers-color-scheme: dark)" srcset="./src/assets/shots/projects-dark@1x.avif">
-            <source type="image/avif" srcset="./src/assets/shots/projects-light@1x.avif">
-            <img src="./src/assets/shots/projects-light@1x.webp" width="1440" height="900" alt="The Projects page listing five projects with status, progress and last activity" loading="lazy" decoding="async">
+            <source type="image/avif" media="(prefers-color-scheme: dark)" srcset="./src/assets/shots/projects-dark@sm.avif 900w, ./src/assets/shots/projects-dark@1x.avif 1440w" sizes="(max-width: 860px) 100vw, 700px">
+            <source type="image/avif" srcset="./src/assets/shots/projects-light@sm.avif 900w, ./src/assets/shots/projects-light@1x.avif 1440w" sizes="(max-width: 860px) 100vw, 700px">
+            <img src="./src/assets/shots/projects-light@1x.webp" srcset="./src/assets/shots/projects-light@sm.webp 900w, ./src/assets/shots/projects-light@1x.webp 1440w" sizes="(max-width: 860px) 100vw, 700px" width="1440" height="900" alt="The Projects page listing five projects with status, progress and last activity" loading="lazy" decoding="async">
           </picture>
         </div>
       </div>
@@ -97,9 +112,9 @@
         </div>
         <div class="demo demo-wide reveal" data-demo="board" role="region" aria-label="Demo: a plan file and its board">
           <picture class="demo-fallback">
-            <source type="image/avif" media="(prefers-color-scheme: dark)" srcset="./src/assets/shots/board-dark@1x.avif">
-            <source type="image/avif" srcset="./src/assets/shots/board-light@1x.avif">
-            <img src="./src/assets/shots/board-light@1x.webp" width="1440" height="900" alt="The Board page with To do, In progress and Done columns" loading="lazy" decoding="async">
+            <source type="image/avif" media="(prefers-color-scheme: dark)" srcset="./src/assets/shots/board-dark@sm.avif 900w, ./src/assets/shots/board-dark@1x.avif 1440w" sizes="(max-width: 860px) 100vw, 700px">
+            <source type="image/avif" srcset="./src/assets/shots/board-light@sm.avif 900w, ./src/assets/shots/board-light@1x.avif 1440w" sizes="(max-width: 860px) 100vw, 700px">
+            <img src="./src/assets/shots/board-light@1x.webp" srcset="./src/assets/shots/board-light@sm.webp 900w, ./src/assets/shots/board-light@1x.webp 1440w" sizes="(max-width: 860px) 100vw, 700px" width="1440" height="900" alt="The Board page with To do, In progress and Done columns" loading="lazy" decoding="async">
           </picture>
         </div>
       </div>
@@ -118,9 +133,9 @@
         </div>
         <div class="demo reveal" data-demo="usage" role="region" aria-label="Demo: estimated Claude Code cost per day">
           <picture class="demo-fallback">
-            <source type="image/avif" media="(prefers-color-scheme: dark)" srcset="./src/assets/shots/claude-dark@1x.avif">
-            <source type="image/avif" srcset="./src/assets/shots/claude-light@1x.avif">
-            <img src="./src/assets/shots/claude-light@1x.webp" width="1440" height="900" alt="The Claude page with estimated cost per day by model and cost by project" loading="lazy" decoding="async">
+            <source type="image/avif" media="(prefers-color-scheme: dark)" srcset="./src/assets/shots/claude-dark@sm.avif 900w, ./src/assets/shots/claude-dark@1x.avif 1440w" sizes="(max-width: 860px) 100vw, 700px">
+            <source type="image/avif" srcset="./src/assets/shots/claude-light@sm.avif 900w, ./src/assets/shots/claude-light@1x.avif 1440w" sizes="(max-width: 860px) 100vw, 700px">
+            <img src="./src/assets/shots/claude-light@1x.webp" srcset="./src/assets/shots/claude-light@sm.webp 900w, ./src/assets/shots/claude-light@1x.webp 1440w" sizes="(max-width: 860px) 100vw, 700px" width="1440" height="900" alt="The Claude page with estimated cost per day by model and cost by project" loading="lazy" decoding="async">
           </picture>
         </div>
       </div>
@@ -139,9 +154,9 @@
         </div>
         <div class="demo reveal" data-demo="git" role="region" aria-label="Demo: commit heatmap and repository status">
           <picture class="demo-fallback">
-            <source type="image/avif" media="(prefers-color-scheme: dark)" srcset="./src/assets/shots/git-dark@1x.avif">
-            <source type="image/avif" srcset="./src/assets/shots/git-light@1x.avif">
-            <img src="./src/assets/shots/git-light@1x.webp" width="1440" height="900" alt="The Git page with a commit heatmap and the status of each repository" loading="lazy" decoding="async">
+            <source type="image/avif" media="(prefers-color-scheme: dark)" srcset="./src/assets/shots/git-dark@sm.avif 900w, ./src/assets/shots/git-dark@1x.avif 1440w" sizes="(max-width: 860px) 100vw, 700px">
+            <source type="image/avif" srcset="./src/assets/shots/git-light@sm.avif 900w, ./src/assets/shots/git-light@1x.avif 1440w" sizes="(max-width: 860px) 100vw, 700px">
+            <img src="./src/assets/shots/git-light@1x.webp" srcset="./src/assets/shots/git-light@sm.webp 900w, ./src/assets/shots/git-light@1x.webp 1440w" sizes="(max-width: 860px) 100vw, 700px" width="1440" height="900" alt="The Git page with a commit heatmap and the status of each repository" loading="lazy" decoding="async">
           </picture>
         </div>
       </div>

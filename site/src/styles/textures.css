@@ -11,21 +11,13 @@ body::after {
   background-size: 180px 180px;
 }
 
-/* Topographic contour lines (paths added by src/textures/contours.ts). They draw in once, then stay. */
+/* Topographic contour lines (paths added by src/textures/contours.ts once the page is idle). They fade
+   in as one layer: animating the paths themselves would repaint the whole SVG on every frame. */
 .contours {
   fill: none;
   stroke: #fff;
   stroke-width: 1.1;
   opacity: var(--contour-opacity);
+  transition: opacity 1.6s var(--ease-out);
 }
-.contours path {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 0;
-}
-html[data-motion='full'] .contours.is-drawing path {
-  animation: contour-draw 2.4s var(--ease-out) both;
-  animation-delay: calc(var(--i, 0) * 70ms);
-}
-@keyframes contour-draw {
-  from { stroke-dashoffset: 1; }
-}
+svg.contours:not(.is-in) { opacity: 0; }

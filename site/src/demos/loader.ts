@@ -16,8 +16,12 @@ export function initDemos(): void {
     const load = DEMOS[el.dataset.demo ?? ''];
     if (!load) continue;
     let started = false;
-    const stop = whenNear(el, (near) => {
-      if (!near || started) return;
+    // Watch the section, not the demo: sections use content-visibility: auto, and WebKit does not report
+    // intersections for elements inside content it is still skipping.
+    const target = el.closest('section') ?? el;
+    const stop = whenNear(target, (near) => {
+      // Load when near, or once scrolled past (so it is ready if the visitor scrolls back up).
+      if (started || (!near && target.getBoundingClientRect().top > 0)) return;
       started = true;
       stop();
       load()
@@ -27,7 +31,7 @@ export function initDemos(): void {
           mount(el);
           el.classList.add('is-live');
         })
-        .catch(() => { /* keep the screenshot */ });
+        .catch((e) => { console.error(`Overlook demo "${el.dataset.demo}" failed to load`, e); }); // the screenshot stays
     }, '60%');
   }
 

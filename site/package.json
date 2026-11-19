@@ -12,10 +12,15 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
     "shots": "node --import tsx scripts/shots.ts",
-    "check:demos": "node --import tsx scripts/check-demos.ts"
+    "check:demos": "node --import tsx scripts/check-demos.ts",
+    "audit": "node --import tsx scripts/audit.ts",
+    "serve": "node --import tsx scripts/serve.ts",
+    "og": "node --import tsx scripts/og.ts"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@types/node": "^22.20.5",
+    "axe-core": "^4.14.1",
     "sharp": "^0.35.5",
     "tsx": "^4.23.15",
     "typescript": "~5.7.3",

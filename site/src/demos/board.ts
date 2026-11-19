@@ -36,7 +36,8 @@ export function mount(root: HTMLElement): void {
         appWindow('Overlook · Board',
           h('div', { class: 'board-toolbar' },
             h('span', { class: 'chip chip-project' }, initial.project.name),
-            h('span', { class: 'board-hint' }, 'Drag a card, tap it, or use the arrow keys')),
+            h('span', { class: 'board-hint' }, 'Drag a card, tap it, or use the arrow keys'),
+            h('span', { class: 'sr-only', id: 'board-help' }, 'Left or right arrow moves the card to the previous or next column. Enter shows the columns to move it to.')),
           cols,
           progressEl)),
       toast));
@@ -50,7 +51,8 @@ export function mount(root: HTMLElement): void {
         const mark = l.text.slice(2, 5);
         li.dataset.task = t.id;
         li.append(h('span', { class: 'ln-text' }, '- ',
-          h('button', { class: `ck ck-${t.state}`, type: 'button', 'aria-label': `${t.text}: ${TITLE[t.state]}. Toggle done`, onclick: () => move(t.id, t.state === 'done' ? 'todo' : 'done') }, mark),
+          h('button', { class: `ck ck-${t.state}`, type: 'button', onclick: () => move(t.id, t.state === 'done' ? 'todo' : 'done') },
+            h('span', { 'aria-hidden': 'true' }, mark), h('span', { class: 'sr-only' }, `${t.text}: ${TITLE[t.state]}. Toggle done`)),
           ' ' + t.text));
         if (t.id === changed) li.classList.add('flash');
       } else {
@@ -73,7 +75,7 @@ export function mount(root: HTMLElement): void {
   const card = (t: BoardTask) => {
     const c = h('button', {
       class: `card${openMenu === t.id ? ' is-open' : ''}`, type: 'button', 'data-id': t.id,
-      'aria-label': `${t.text}, ${t.milestone}, ${TITLE[t.state]}. Press left or right arrow to move, Enter for options.`,
+      'aria-describedby': 'board-help',
     },
       h('span', { class: 'chip chip-ms' }, t.milestone.replace(/^Phase \d+: /, '')),
       h('span', { class: 'card-text' }, t.text),

@@ -26,7 +26,9 @@ jobs:
       - run: npm test
       - run: npm run test:smoke
 
-  # Landing page (site/, its own package): type check, unit tests and production build.
+  # Landing page (site/, its own package): unit tests, production build, then the built page in the
+  # runner's Chrome with no server: every demo, install tabs, reduced motion, JavaScript off, six widths,
+  # touch, heading order and axe (WCAG 2.1 A/AA).
   site:
     runs-on: ubuntu-latest
     defaults:
@@ -42,3 +44,11 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - run: npm run check:demos
+      - run: npm run audit
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: site-screenshots
+          path: site/test-results/
+          retention-days: 7

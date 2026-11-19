@@ -182,12 +182,12 @@ projects at once.**
 - [x] Footer: AgentHub, license, GitHub, not-affiliated notice
 
 ## Phase 4b-5: Polish and checks
-- [ ] Responsive pass at 320, 375, 768, 1024, 1440 and 1920 px; no horizontal scroll; touch drag works in the board demo
-- [ ] Accessibility: headings in order, demos usable with keyboard and screen reader (live region for "task moved to Done"), contrast AA on grain and bands, visible focus
-- [ ] Performance pass against the budget above (Lighthouse on mobile, Chrome performance trace while scrolling)
-- [ ] Browsers: latest Chrome, Edge, Firefox, Safari (macOS and iOS); fallback path checked with scroll-driven animations turned off
-- [ ] Open Graph / social card image made from the hero, `og:` and Twitter tags, `sitemap.xml`, `robots.txt`
-- [ ] Playwright smoke tests for the site in CI: page loads with no console errors, download buttons point at the feed, the board demo ticks a checkbox, reduced-motion mode renders
+- [x] Responsive pass at 320, 375, 768, 1024, 1440 and 1920 px; no horizontal scroll, nothing sticking out; on touch screens, board cards move by tap + "Move to" (drag is for mouse and pen); the hero lens is placed from the bottom on phones so it never covers the text (`npm run audit`)
+- [x] Accessibility: headings in order, demos usable with keyboard and screen reader (live region for "task moved to Done"), contrast AA, visible focus; axe-core (WCAG 2.1 A/AA) finds nothing in light and dark (fixed: heatmap roles, checkbox and chip contrast, names that did not match the visible text)
+- [x] Performance pass: Lighthouse mobile 97–98 / 100 / 96 / 100 (performance / accessibility / best practices / SEO) and LCP 1.96 s on a quiet machine (85–91 when the laptop was busy: same requests, slower CPU); desktop 100 / 100 / 96 / 100. CSS inlined, font preloaded, 900 px images for phones, contours fade instead of animating paths, below-the-fold setup on idle, `content-visibility` for off-screen sections. Re-check on the live site with PageSpeed Insights
+- [x] Browsers: Chrome, Edge, Firefox and WebKit (Safari's engine) pass both suites (`BROWSER=msedge|firefox|webkit`); the motion system is JS-driven, so there is no CSS scroll-timeline path to fall back from. Real Safari on macOS / iOS still to try by hand
+- [x] Open Graph / social card image made from the hero (`npm run og` → `public/og.jpg`), `og:` and Twitter tags, canonical URL, `sitemap.xml`, `robots.txt`
+- [x] Browser checks for the site in CI (`site` job: `check:demos` + `audit` in the runner's Chrome, screenshots uploaded on failure): no console errors, download buttons point at the feed, the board demo ticks a checkbox, reduced motion and JavaScript-off render
 
 ## Phase 4b-6: Ship
 - [ ] Preview deploy on Vercel; review on a real Windows PC, Mac and phone

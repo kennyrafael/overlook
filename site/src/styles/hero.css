@@ -274,10 +274,11 @@
 /* Phones and narrow windows: copy on top, the lens below it. */
 @media (max-width: 760px) {
   .hero-stage {
+    /* The lens rests near the bottom edge, below the text, whatever the phone's height. */
     --cx0: 50%;
-    --cy0: 79%;
-    --r0: min(25vw, 13svh);
-    min-height: 640px;
+    --r0: min(22vw, 11svh, 90px);
+    --cy0: calc(100% - var(--r0) - 30px);
+    min-height: 740px; /* short phones: the lens sits just below the fold, the button stays above it */
   }
   .hero-copy {
     top: 92px;

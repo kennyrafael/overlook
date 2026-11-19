@@ -1,7 +1,7 @@
 // Drives the hero scene (markup in index.html, look in src/styles/hero.css, story in frame.ts).
 // The still scene needs no JavaScript. This adds the scroll story and pointer parallax, but only when
 // motion is allowed and the device is not low-end; otherwise the still scene stays.
-import { onReducedMotion, pointerParallax, scrollProgress } from '../motion/motion.ts';
+import { onReducedMotion, pointerParallax, scrollProgress, whenIdle } from '../motion/motion.ts';
 import { drawContours } from '../textures/contours.ts';
 import { heroFrame, type LensGeometry, type Shot } from './frame.ts';
 
@@ -17,10 +17,8 @@ export function initHero(hero: HTMLElement): void {
   const contours = hero.querySelector<SVGSVGElement>('.contours');
   if (!stage || !anchor) return;
 
-  if (contours) {
-    drawContours(contours);
-    contours.classList.add('is-drawing');
-  }
+  // Decorative: drawn once the page is idle, so they never delay the first paint.
+  if (contours) whenIdle(() => drawContours(contours));
 
   let geom: LensGeometry | null = null;
   let progress = 0;

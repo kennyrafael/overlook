@@ -1,30 +1,24 @@
-// Drives the built site (dist/) in Chrome without any local server: requests to https://overlook.test
-// are answered from disk with the same headers Vercel sends (vercel.json, including the CSP), and the
-// download feed is faked. Exercises every demo and saves screenshots.
-//   npm run build && node --import tsx scripts/check-demos.ts [out-dir]
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { dirname, extname, join, normalize } from 'node:path';
+// Functional checks of the built site in a real browser, with no server (see site-harness.ts):
+// every demo, the install tabs, the FAQ and the download section, in light desktop, dark phone,
+// reduced motion and with JavaScript off. Saves screenshots.
+//   npm run build && npm run check:demos [-- out-dir]      BROWSER=msedge|firefox|webkit to switch
+import { mkdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertBuilt, launch, routeSite, SITE, type Engine } from './site-harness.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const dist = join(here, '..', 'dist');
 const out = process.argv[2] ?? join(here, '..', 'test-results', 'demos');
-const require = createRequire(join(here, '..', '..', 'package.json'));
-const { chromium } = require('@playwright/test') as typeof import('@playwright/test');
-
-const vercel = JSON.parse(readFileSync(join(here, '..', 'vercel.json'), 'utf8')) as { headers: { source: string; headers: { key: string; value: string }[] }[] };
-const HEADERS = Object.fromEntries(vercel.headers[0].headers.map((h) => [h.key, h.value]));
-const TYPES: Record<string, string> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.avif': 'image/avif', '.webp': 'image/webp', '.woff2': 'font/woff2', '.txt': 'text/plain' };
-const FEED = "version: 0.2.1\nfiles:\n  - url: Overlook-Setup-0.2.1-x64.exe\n    size: 104857600\npath: Overlook-Setup-0.2.1-x64.exe\nreleaseDate: '2026-11-19T09:00:00.000Z'\n";
+const engine = (process.env.BROWSER as Engine) || 'chrome';
 
 const problems: string[] = [];
 const check = (ok: unknown, what: string) => { if (!ok) problems.push(what); console.log(`${ok ? '  ok ' : '  FAIL'} ${what}`); };
 
 async function main() {
-  if (!existsSync(join(dist, 'index.html'))) throw new Error('Run "npm run build" first');
+  assertBuilt();
   mkdirSync(out, { recursive: true });
-  const browser = await chromium.launch({ channel: 'chrome' });
+  console.log(`Browser: ${engine}`);
+  const browser = await launch(engine);
   const runs = [
     ['light', { width: 1440, height: 900 }, 'no-preference'],
     ['dark', { width: 390, height: 844 }, 'no-preference'],
@@ -33,22 +27,13 @@ async function main() {
   for (const [scheme, size, motion] of runs) {
     console.log(`\n${scheme}, ${size.width}×${size.height}, reduced motion: ${motion}`);
     const ctx = await browser.newContext({ viewport: size, colorScheme: scheme, deviceScaleFactor: 1, reducedMotion: motion });
-    await ctx.route('https://overlook.test/**', (route) => {
-      const path = new URL(route.request().url()).pathname;
-      const file = normalize(join(dist, path === '/' ? 'index.html' : path));
-      if (!file.startsWith(dist) || !existsSync(file)) return route.fulfill({ status: 404, body: 'not found' });
-      return route.fulfill({ status: 200, body: readFileSync(file), headers: { ...HEADERS, 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' } });
-    });
-    await ctx.route('https://overlook-downloads.kennyrafael-cg.workers.dev/**', (route) =>
-      route.request().url().endsWith('.yml')
-        ? route.fulfill({ status: 200, body: FEED, headers: { 'access-control-allow-origin': 'https://overlook.test' } })
-        : route.fulfill({ status: 404, headers: { 'access-control-allow-origin': 'https://overlook.test' } }));
+    await routeSite(ctx);
     const page = await ctx.newPage();
     const errors: string[] = [];
     // The fake feed has no .dmg, so the macOS probes 404 by design; anything else counts.
     page.on('console', (m) => { if (m.type() === 'error' && !m.location().url.endsWith('.dmg')) errors.push(`${m.text()} ${m.location().url}`); });
     page.on('pageerror', (e) => errors.push(String(e)));
-    await page.goto('https://overlook.test/');
+    await page.goto(SITE);
     await page.waitForLoadState('networkidle');
 
     check((await page.getAttribute('#dl-main', 'href'))?.endsWith('Overlook-Setup-0.2.1-x64.exe'), 'main download button points at the installer');
@@ -57,6 +42,8 @@ async function main() {
 
     for (const id of ['discover', 'plans', 'usage', 'git', 'privacy']) {
       const demo = page.locator(`#${id} .demo`);
+      // Scroll to the section first: content-visibility skips its content until it is near.
+      await page.locator(`#${id}`).scrollIntoViewIfNeeded();
       await demo.scrollIntoViewIfNeeded();
       await page.locator(`#${id} .demo.is-live`).waitFor({ timeout: 5000 }).catch(() => {});
       check(await demo.evaluate((e) => e.classList.contains('is-live')), `${id}: live demo mounted`);
@@ -65,6 +52,7 @@ async function main() {
     }
 
     // Discovery assembled once in view
+    await page.locator('#discover').scrollIntoViewIfNeeded();
     await page.locator('#discover .demo').scrollIntoViewIfNeeded();
     await page.waitForTimeout(400);
     check((await page.locator('.disc-count').textContent())?.startsWith('5'), 'discovery: 5 projects found once in view');
@@ -135,9 +123,17 @@ async function main() {
     await page.locator('#faq').screenshot({ path: join(out, `faq-${scheme}.png`) });
     check((await page.locator('#dl-release').textContent()) === 'v0.2.1 · 19 Nov 2026', 'download: trust strip shows version and release date');
     await page.locator('#download').scrollIntoViewIfNeeded();
+    await page.waitForTimeout(200);
     await page.waitForTimeout(500);
     await page.locator('#download').screenshot({ path: join(out, `download-${scheme}.png`) });
     await page.locator('.site-footer').screenshot({ path: join(out, `footer-${scheme}.png`) });
+
+    // Opening the page at #install-mac lands on the macOS guide (it is hidden until the tabs start).
+    await page.goto(SITE + '#install-mac');
+    await page.waitForFunction(() => document.getElementById('tab-mac')?.getAttribute('aria-selected') === 'true', null, { timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(600);
+    const macTop = await page.evaluate(() => document.getElementById('install-mac')!.getBoundingClientRect().top);
+    check(macTop >= 0 && macTop < 260, `a link to #install-mac lands on the macOS guide (top ${Math.round(macTop)}px)`);
 
     // Layout: no sideways scroll
     check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no horizontal scroll');
@@ -147,14 +143,9 @@ async function main() {
   // Without JavaScript: the still hero, screenshots in place of demos, both install guides.
   console.log('\nlight, 1440×900, JavaScript off');
   const nojs = await browser.newContext({ viewport: { width: 1440, height: 900 }, javaScriptEnabled: false });
-  await nojs.route('https://overlook.test/**', (route) => {
-    const path = new URL(route.request().url()).pathname;
-    const file = normalize(join(dist, path === '/' ? 'index.html' : path));
-    if (!file.startsWith(dist) || !existsSync(file)) return route.fulfill({ status: 404, body: 'not found' });
-    return route.fulfill({ status: 200, body: readFileSync(file), headers: { ...HEADERS, 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' } });
-  });
+  await routeSite(nojs);
   const p2 = await nojs.newPage();
-  await p2.goto('https://overlook.test/');
+  await p2.goto(SITE);
   check(await p2.locator('.hero-copy h1').isVisible(), 'no JS: hero headline visible');
   check(await p2.locator('.demo-fallback img').count() === 4 && await p2.locator('.net-static').isVisible(), 'no JS: demos show their screenshots (privacy: its text panel)');
   check(await p2.locator('#install').isVisible() && await p2.locator('#install-mac').isVisible(), 'no JS: both install guides visible');

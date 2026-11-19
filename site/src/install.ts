@@ -33,9 +33,14 @@ export function initInstallTabs(root: ParentNode = document, nav: Parameters<typ
     });
   });
 
+  // A link to a guide selects its tab and scrolls to it (the panel may have been hidden when the
+  // browser first tried to scroll there).
   const fromHash = () => {
     const i = panels.findIndex((p) => `#${p!.id}` === location.hash);
-    if (i >= 0) select(i);
+    if (i >= 0) {
+      select(i);
+      panels[i]!.scrollIntoView({ block: 'start' });
+    }
     return i >= 0;
   };
   if (!fromHash()) select(isMac(nav) ? 1 : 0);

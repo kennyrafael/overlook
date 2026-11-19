@@ -10,7 +10,7 @@ export function mount(root: HTMLElement): void {
   let cells: HeatCell[] = [];
   let active = -1;
 
-  const grid = h('div', { class: 'heat', role: 'grid', 'aria-label': 'Commits per day, last 90 days', tabindex: 0 });
+  const grid = h('div', { class: 'heat', role: 'group', 'aria-label': 'Commits per day, last 90 days. Use the arrow keys to read each day.', tabindex: 0 });
   const months = h('div', { class: 'heat-months', 'aria-hidden': 'true' });
   const tip = h('p', { class: 'heat-tip', 'aria-live': 'polite' }, 'Hover a day, or focus the grid and use the arrow keys.');
   const chips = h('div', { class: 'chips', role: 'group', 'aria-label': 'Projects' });
@@ -52,8 +52,7 @@ export function mount(root: HTMLElement): void {
     months.style.setProperty('--cols', String(cols));
     const fresh = grid.childElementCount === 0;
     grid.replaceChildren(...cells.map((c, i) => h('span', {
-      class: `cell lv-${c.level}${i === active ? ' is-active' : ''}`, role: 'gridcell', 'data-i': i,
-      'aria-label': `${dayLabel(c.date)}: ${c.count} commits`,
+      class: `cell lv-${c.level}${i === active ? ' is-active' : ''}`, 'data-i': i, title: `${dayLabel(c.date)}: ${c.count} commits`,
       style: { 'grid-column': String(c.col + 1), 'grid-row': String(c.row + 1), '--d': `${(c.col + c.row) * 16}ms` },
     })));
     // Month labels over the first column of each month.
