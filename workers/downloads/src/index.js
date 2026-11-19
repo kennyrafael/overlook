@@ -1,7 +1,26 @@
 // Overlook downloads: serves overlook/* from the R2 bucket (installers, blockmaps, update feeds).
 // Supports Range requests (electron-updater downloads only the changed blocks of an update) and
 // conditional requests. CORS allows the landing page to read the feeds.
+// Downloads and update checks are counted (no personal data) in the Analytics Engine dataset bound as
+// `overlook`; see src/count.js for what counts, and scripts/stats.mjs to read the numbers.
+import { classify, dataPoint } from './count.js';
+
 const ALLOWED_ORIGIN = 'https://overlook.agenthub.pt';
+
+/** Records one data point for a served file. Counting must never break a download. */
+function count(req, env, file) {
+  try {
+    const c = classify({
+      method: req.method,
+      file,
+      range: req.headers.get('range'),
+      origin: req.headers.get('origin'),
+      userAgent: req.headers.get('user-agent'),
+      country: req.cf?.country ?? '',
+    }, ALLOWED_ORIGIN);
+    if (c) env.overlook?.writeDataPoint(dataPoint(c));
+  } catch { /* ignore */ }
+}
 
 export default {
   async fetch(req, env) {
@@ -23,6 +42,7 @@ export default {
     headers.set('ETag', obj.httpEtag);
     headers.set('Accept-Ranges', 'bytes');
     if (!('body' in obj)) return new Response(null, { status: 304, headers });
+    count(req, env, key.slice('overlook/'.length));
 
     let status = 200;
     if (obj.range && req.headers.has('range')) {

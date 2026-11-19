@@ -7,5 +7,9 @@
   "workers_dev": true,
   "r2_buckets": [
     { "binding": "BUCKET", "bucket_name": "overlook" }
+  ],
+  // Download and update-check counts (src/count.js); read them with scripts/stats.mjs.
+  "analytics_engine_datasets": [
+    { "binding": "overlook", "dataset": "overlook" }
   ]
 }

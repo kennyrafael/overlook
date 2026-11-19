@@ -1,0 +1,11 @@
+{
+  "name": "overlook-downloads",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Cloudflare Worker serving Overlook downloads from R2, with download counts in Analytics Engine.",
+  "scripts": {
+    "test": "node --test",
+    "stats": "node scripts/stats.mjs"
+  }
+}
