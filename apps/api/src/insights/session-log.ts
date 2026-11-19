@@ -85,7 +85,7 @@ export class LogAccumulator {
   private read(line: string) {
     // Cheap pre-filter: most lines are tool output we do not need to parse.
     // Tolerates whitespace around ':' in case the writer's JSON style changes.
-    const kind = /"type"s*:s*"(assistant|user|summary|custom-title)"/.exec(line)?.[1];
+    const kind = /"type"\s*:\s*"(assistant|user|summary|custom-title)"/.exec(line)?.[1];
     const isAssistant = kind === 'assistant';
     const isUser = kind === 'user';
     const isTitle = kind === 'summary' || kind === 'custom-title';

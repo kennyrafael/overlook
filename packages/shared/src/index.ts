@@ -114,6 +114,30 @@ export interface ClaudeOverview {
   logFormat: { files: number; unrecognizedFiles: number; examples: string[] };
 }
 
+/** One item of the task list Claude keeps for itself during a session. */
+export interface LiveStep {
+  text: string;
+  status: TaskStatus;
+}
+
+/**
+ * A Claude Code session with recent activity (GET /api/insights/live), read from its log.
+ * `suggestion` is a guess at the open plan task the session is on; it is shown for the user to
+ * confirm and never changes the plan file by itself.
+ */
+export interface LiveSession {
+  id: string;
+  projectId: string;
+  title: string | null;
+  lastActivityAt: string;
+  /** working = mid-turn; idle = the turn ended or the log went quiet. */
+  state: 'working' | 'idle';
+  steps: LiveStep[];
+  /** The step Claude marked in progress, if any. */
+  current: string | null;
+  suggestion: { taskId: string; text: string; score: number } | null;
+}
+
 /** USD per million tokens. Cache writes are priced from input × multiplier (5-minute / 1-hour TTL). */
 export interface ModelPrice {
   input: number;

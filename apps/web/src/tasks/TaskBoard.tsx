@@ -13,6 +13,8 @@ import { Badge } from 'primereact/badge';
 import type { Milestone, ProjectDetail, Task, TaskStatus } from '@overlook/shared';
 import TaskDialog, { type TaskDialogState } from './TaskDialog';
 import { TASK_STATUS_LABEL, useTaskActions } from './useTaskActions';
+import LiveSessions, { TaskSuggestion } from './LiveSessions';
+import { useLiveSessions } from './useLiveSessions';
 
 const COLUMNS: { status: TaskStatus; icon: string; accent: string }[] = [
   { status: 'todo', icon: 'pi pi-circle', accent: 'var(--surface-400)' },
@@ -33,7 +35,10 @@ interface Props {
   onConflict?: () => void;
 }
 
-function TaskCard({ card, showProject, dragging, onOpen }: { card: Card; showProject: boolean; dragging?: boolean; onOpen?: () => void }) {
+function TaskCard({ card, showProject, dragging, onOpen, suggestion }: {
+  card: Card; showProject: boolean; dragging?: boolean; onOpen?: () => void;
+  suggestion?: { onAccept: () => void; onDismiss: () => void };
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.key, data: card });
   return (
     <div
@@ -52,6 +57,7 @@ function TaskCard({ card, showProject, dragging, onOpen }: { card: Card; showPro
       </div>
       <div className={`board-card-text ${card.task.status === 'done' ? 'line-through text-500' : ''}`}>{card.task.text}</div>
       <small className="text-500 block mt-2">{card.milestone.relFile}:{card.task.line}</small>
+      {suggestion && <TaskSuggestion {...suggestion} />}
     </div>
   );
 }
@@ -91,6 +97,7 @@ export default function TaskBoard({ projects, onProjectChanged, onConflict }: Pr
   const handleConflict = useCallback(() => { setDialog(null); onConflict?.(); }, [onConflict]);
   const actions = useTaskActions(onProjectChanged, handleConflict);
   const multi = projects.length > 1;
+  const live = useLiveSessions(projects.map((p) => p.id));
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -126,7 +133,11 @@ export default function TaskBoard({ projects, onProjectChanged, onConflict }: Pr
     setActive(null);
     const card = e.active.data.current as Card | undefined;
     const to = e.over?.id as TaskStatus | undefined;
-    if (!card || !to || statusOf(card) === to) return;
+    if (card && to) await move(card, to);
+  };
+
+  const move = async (card: Card, to: TaskStatus) => {
+    if (statusOf(card) === to) return;
     setPending((p) => ({ ...p, [card.key]: to })); // optimistic
     await actions.setStatus(card.project.id, card.task, to);
     setPending((p) => { const { [card.key]: _drop, ...rest } = p; return rest; });
@@ -144,8 +155,19 @@ export default function TaskBoard({ projects, onProjectChanged, onConflict }: Pr
 
   const totalTasks = projects.reduce((s, p) => s + p.tasksTotal, 0);
 
+  const suggestionFor = (c: Card) => {
+    const s = statusOf(c) === 'todo' ? live.suggestions.get(c.key) : undefined;
+    if (!s?.suggestion) return undefined;
+    const taskId = s.suggestion.taskId;
+    return {
+      onAccept: () => { void move(c, 'in_progress'); },
+      onDismiss: () => live.dismiss(s.id, taskId),
+    };
+  };
+
   return (
     <div className="flex flex-column gap-3">
+      <LiveSessions sessions={live.sessions} projectName={multi ? (id) => projects.find((p) => p.id === id)?.name : undefined} />
       <div className="flex flex-wrap gap-2 align-items-center">
         <IconField iconPosition="left" className="flex-grow-1" style={{ minWidth: '12rem' }}>
           <InputIcon className="pi pi-search" />
@@ -167,7 +189,7 @@ export default function TaskBoard({ projects, onProjectChanged, onConflict }: Pr
             const colCards = cards.filter((c) => statusOf(c) === col.status);
             return (
               <Column key={col.status} {...col} cards={colCards.length} onAdd={() => setDialog({ mode: 'add', status: col.status })}>
-                {colCards.map((c) => <TaskCard key={c.key} card={c} showProject={multi} onOpen={() => openEdit(c)} />)}
+                {colCards.map((c) => <TaskCard key={c.key} card={c} showProject={multi} onOpen={() => openEdit(c)} suggestion={suggestionFor(c)} />)}
                 {!colCards.length && <div className="text-500 text-sm p-3 text-center">Drop tasks here</div>}
               </Column>
             );

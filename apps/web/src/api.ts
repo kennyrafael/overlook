@@ -1,4 +1,4 @@
-import type { ClaudeOverview, GitOverview, Project, ProjectAction, ProjectDetail, ProjectPatch, SavedView, Settings, TaskStatus, ViewFilters, SystemTools, SystemInfo, AppDataExport, AboutInfo, FeedbackInput } from '@overlook/shared';
+import type { LiveSession, ClaudeOverview, GitOverview, Project, ProjectAction, ProjectDetail, ProjectPatch, SavedView, Settings, TaskStatus, ViewFilters, SystemTools, SystemInfo, AppDataExport, AboutInfo, FeedbackInput } from '@overlook/shared';
 
 export class ApiError extends Error {
   /** Field errors from a 400 answer (feedback form), keyed by field name. */
@@ -44,6 +44,8 @@ export const api = {
     if (projectIds) q.set('projects', projectIds.join(','));
     return request<ClaudeOverview>(`/insights/claude?${q}`);
   },
+  live: (projectIds?: string[]) =>
+    request<LiveSession[]>(`/insights/live${projectIds ? `?projects=${encodeURIComponent(projectIds.join(','))}` : ''}`),
   runAction: (projectId: string, action: ProjectAction) =>
     request<{ ok: true }>(`/projects/${projectId}/actions/${action}`, { method: 'POST' }),
   views: () => request<SavedView[]>('/views'),

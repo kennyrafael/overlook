@@ -53,6 +53,13 @@ body .p-inputswitch.p-inputswitch-checked .p-inputswitch-slider:before { backgro
 .board-card { touch-action: none; transition: border-color .15s; }
 .board-card:hover, .board-card:focus-visible { border-color: var(--primary-color) !important; outline: none; }
 .board-card-text { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
+.live-dot { width: .55rem; height: .55rem; border-radius: 50%; background: var(--surface-400); flex: none; display: inline-block; }
+.live-dot-working { background: var(--green-500); animation: live-pulse 1.6s ease-in-out infinite; }
+@keyframes live-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--green-500) 55%, transparent); } 50% { box-shadow: 0 0 0 .3rem transparent; } }
+@media (prefers-reduced-motion: reduce) { .live-dot-working { animation: none; } }
+.live-title, .live-now { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.live-title { flex: 1 1 8rem; }
+.live-suggestion { background: color-mix(in srgb, var(--green-500) 10%, transparent); border: 1px solid color-mix(in srgb, var(--green-500) 35%, transparent); cursor: default; }
 .board-milestone-tag { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Projects page: cards layout (default) and the cards/list toggle. */
