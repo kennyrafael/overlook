@@ -38,7 +38,7 @@ export function announce(text: string): void {
   requestAnimationFrame(() => { if (live) live.textContent = text; });
 }
 
-export const reducedMotion = () => document.documentElement.dataset.motion === 'reduced';
+export const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /** A small window frame around a demo, like the app's own window. */
 export function appWindow(title: string, ...children: Child[]): HTMLElement {

@@ -37,7 +37,8 @@ async function main() {
     await page.waitForLoadState('networkidle');
 
     check((await page.getAttribute('#dl-main', 'href'))?.endsWith('Overlook-Setup-0.2.1-x64.exe'), 'main download button points at the installer');
-    const animated = await page.evaluate(() => document.querySelector('.hero')!.classList.contains('is-animated'));
+    // The scroll story makes the hero section much taller than the screen.
+    const animated = await page.evaluate(() => document.querySelector('.hero')!.getBoundingClientRect().height > innerHeight * 1.5);
     check(animated === (motion !== 'reduce'), `hero is ${motion === 'reduce' ? 'the still scene' : 'animated'}`);
 
     for (const id of ['discover', 'plans', 'usage', 'git', 'privacy']) {

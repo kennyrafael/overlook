@@ -41,7 +41,6 @@ const reducedQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-red
 const finePointerQuery = typeof matchMedia === 'function' ? matchMedia('(hover: hover) and (pointer: fine)') : null;
 
 export const prefersReducedMotion = () => reducedQuery?.matches ?? false;
-export const supportsScrollTimeline = () => typeof CSS !== 'undefined' && CSS.supports?.('animation-timeline: view()') === true;
 
 /** Calls `cb` now and whenever the reduced-motion setting changes. */
 export function onReducedMotion(cb: (reduced: boolean) => void): () => void {
@@ -51,10 +50,11 @@ export function onReducedMotion(cb: (reduced: boolean) => void): () => void {
   return () => reducedQuery?.removeEventListener('change', listener);
 }
 
-/** Sets `data-motion` and `data-scroll-timeline` on <html> and keeps them current. Call once at start-up. */
-export function initMotion(root: HTMLElement = document.documentElement): void {
-  root.dataset.scrollTimeline = supportsScrollTimeline() ? 'native' : 'js';
-  onReducedMotion((reduced) => { root.dataset.motion = reduced ? 'reduced' : 'full'; });
+/**
+ * Call once at start-up. Motion preferences are read by CSS media queries directly, so nothing is written
+ * to <html> (a change there would restyle the whole page).
+ */
+export function initMotion(): void {
   document.addEventListener('visibilitychange', wake);
 }
 
@@ -71,6 +71,8 @@ export interface ScrollOptions {
   mode?: 'view' | 'sticky';
   /** CSS variable written on the element (default `--progress`); `null` writes none. */
   cssVar?: string | null;
+  /** Measure straight away (default). `false` waits for the first frame, so start-up forces no layout. */
+  immediate?: boolean;
 }
 
 /**
@@ -79,10 +81,11 @@ export interface ScrollOptions {
  * switch state; whether to animate is up to the CSS.
  */
 export function scrollProgress(el: HTMLElement, cb?: (p: number) => void, opts: ScrollOptions = {}): () => void {
-  const { mode = 'view', cssVar = '--progress' } = opts;
+  const { mode = 'view', cssVar = '--progress', immediate = true } = opts;
   let prev = -1;
-  let stopFrame: (() => void) | null = null;
+  let queued = 0;
   const measure = () => {
+    queued = 0;
     const r = el.getBoundingClientRect();
     const vh = window.innerHeight;
     const p = quantize(mode === 'sticky' ? stickyProgress(r.top, r.height, vh) : viewProgress(r.top, r.height, vh));
@@ -91,13 +94,20 @@ export function scrollProgress(el: HTMLElement, cb?: (p: number) => void, opts: 
     if (cssVar) el.style.setProperty(cssVar, String(p));
     cb?.(p);
   };
-  measure();
+  // Measure once in the frame after a scroll or resize: an idle page does no work at all.
+  const request = () => { queued ||= requestAnimationFrame(measure); };
+  const listen = (on: boolean) => {
+    for (const type of ['scroll', 'resize'] as const) {
+      if (on) window.addEventListener(type, request, { passive: true });
+      else window.removeEventListener(type, request);
+    }
+  };
+  if (immediate) measure();
   const stopNear = whenNear(el, (near) => {
-    stopFrame?.();
-    stopFrame = near ? onFrame(measure) : null;
-    if (!near) measure(); // settle at 0 or 1 when it leaves
+    listen(near);
+    request(); // near: catch up; leaving: settle at 0 or 1
   });
-  return () => { stopNear(); stopFrame?.(); };
+  return () => { stopNear(); listen(false); cancelAnimationFrame(queued); };
 }
 
 export interface ParallaxOptions {
@@ -149,16 +159,22 @@ export function pointerParallax(el: HTMLElement, cb?: (x: number, y: number) => 
 }
 
 /**
- * Adds `is-visible` to each element the first time it comes into view (for fade/slide-in reveals;
- * CSS decides how it looks, including in reduced-motion mode). Elements already on screen at load
- * are marked straight away.
+ * Fade/slide-in on scroll. Elements already on screen are left alone; elements still off screen are
+ * marked "reveal-pending" (hidden by CSS when motion is allowed) and get "is-visible" when they come
+ * into view. Only those elements are restyled, never the whole page.
  */
 export function reveal(els: Iterable<Element>, threshold = 0.15): () => void {
+  const seen = new WeakSet<Element>();
   const io = new IntersectionObserver((entries) => {
     for (const e of entries) {
-      if (!e.isIntersecting) continue;
-      e.target.classList.add('is-visible');
-      io.unobserve(e.target);
+      const first = !seen.has(e.target);
+      seen.add(e.target);
+      if (e.isIntersecting) {
+        e.target.classList.add('is-visible');
+        io.unobserve(e.target);
+      } else if (first) {
+        e.target.classList.add('reveal-pending');
+      }
     }
   }, { threshold });
   for (const el of els) io.observe(el);

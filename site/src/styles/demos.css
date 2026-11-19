@@ -18,7 +18,7 @@ main .feature { position: relative; padding: clamp(72px, 12vh, 136px) 0; overflo
 .feature-stack .feature-copy { max-width: 46rem; }
 .feature-copy .eyebrow { margin: 0 0 var(--space-3); color: var(--accent); font-size: var(--step--1); font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; }
 .feature-copy h2 { margin: 0 0 var(--space-4); font-size: var(--step-3); line-height: var(--leading-tight); letter-spacing: var(--tracking-display); text-wrap: balance; }
-.feature-copy p { margin: 0 0 var(--space-4); color: var(--text-muted); font-size: var(--step-1); line-height: 1.55; text-wrap: pretty; }
+.feature-copy p { margin: 0 0 var(--space-4); color: var(--text-muted); font-size: var(--step-1); line-height: 1.55; }
 .points { list-style: none; margin: var(--space-5) 0 0; padding: 0; display: grid; gap: var(--space-3); }
 .points li { position: relative; padding-left: 28px; color: var(--text); }
 .points li::before {
@@ -31,7 +31,8 @@ main .feature { position: relative; padding: clamp(72px, 12vh, 136px) 0; overflo
 }
 
 /* Reveal on scroll (only with JS and motion on; otherwise everything is simply there). */
-html.js[data-motion='full'] .reveal:not(.is-visible) { opacity: 0; transform: translateY(28px); }
+/* Only elements still off screen when the page settles are marked pending (src/motion/motion.ts reveal). */
+@media (prefers-reduced-motion: no-preference) { .reveal-pending:not(.is-visible) { opacity: 0; transform: translateY(28px); } }
 .reveal { transition: opacity var(--dur-reveal) var(--ease-out), transform var(--dur-reveal) var(--ease-out); }
 .feature-inner > .reveal:nth-child(2) { transition-delay: 120ms; }
 
@@ -113,7 +114,7 @@ button { font: inherit; color: inherit; }
 .card.is-open { border-color: var(--accent); }
 .card.hint { animation: nudge 1.6s var(--ease-in-out) 0.8s 2; }
 @keyframes nudge { 0%, 100% { transform: none; } 30% { transform: translateX(10px) rotate(1.5deg); } 60% { transform: translateX(-2px); } }
-html[data-motion='reduced'] .card.hint { animation: none; }
+@media (prefers-reduced-motion: reduce) { .card.hint { animation: none; } }
 .card-menu { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 6px 2px 0; font-size: 0.75rem; color: var(--text-muted); }
 .card-menu button { border: 1px solid var(--border); background: var(--bg-raised); border-radius: 999px; padding: 4px 10px; cursor: pointer; font-size: 0.75rem; font-weight: 600; color: var(--accent); }
 .card-menu button:hover { background: var(--accent-soft); }

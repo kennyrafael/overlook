@@ -49,17 +49,22 @@ export function initHero(hero: HTMLElement): void {
     set('--caption', f.caption.toFixed(4));
   };
 
+  // The tall, sticky layout comes from CSS (when motion is allowed), so starting needs a single layout
+  // read and no class change on the section. Very slow devices opt out with .is-still (rare).
+  const still = lowEnd();
+  if (still) hero.classList.add('is-still');
+
   const setAnimated = (on: boolean) => {
     stopScroll?.();
     stopScroll = null;
     progress = 0;
-    hero.classList.toggle('is-animated', on);
     measure();
     render(); // the still scene is rendered once too, so the lens is aimed
-    if (on) stopScroll = scrollProgress(hero, (p) => { progress = p; render(); }, { mode: 'sticky', cssVar: null });
+    // The scroll tracker's first measurement waits for the next frame: no second forced layout now.
+    if (on) stopScroll = scrollProgress(hero, (p) => { progress = p; render(); }, { mode: 'sticky', cssVar: null, immediate: false });
   };
 
   window.addEventListener('resize', () => { measure(); render(); }, { passive: true });
   pointerParallax(stage);
-  onReducedMotion((reduced) => setAnimated(!reduced && !lowEnd()));
+  onReducedMotion((reduced) => setAnimated(!reduced && !still));
 }

@@ -9,7 +9,7 @@ let dialog: HTMLDialogElement | null = null;
 
 const go = (id: string) => () => {
   const el = document.getElementById(id);
-  el?.scrollIntoView({ behavior: document.documentElement.dataset.motion === 'reduced' ? 'auto' : 'smooth', block: 'start' });
+  el?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   el?.querySelector<HTMLElement>('h2, h1')?.setAttribute('tabindex', '-1');
   setTimeout(() => el?.querySelector<HTMLElement>('h2, h1')?.focus({ preventScroll: true }), 400);
 };

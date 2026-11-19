@@ -98,7 +98,7 @@
 .heat:focus-visible { outline-offset: 4px; }
 .cell { aspect-ratio: 1; border-radius: 3px; opacity: 0; transform: scale(0.4); transition: opacity 0.4s var(--ease-out) var(--d), transform 0.5s var(--ease-out) var(--d), background 0.3s; }
 .heat.is-in .cell { opacity: 1; transform: none; }
-html[data-motion='reduced'] .cell { transition: none; }
+@media (prefers-reduced-motion: reduce) { .cell { transition: none; } }
 .cell.is-active { box-shadow: 0 0 0 2px var(--text); }
 .lv-0 { background: var(--border); }
 .lv-1 { background: #c7d2fe; }

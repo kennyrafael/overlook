@@ -6,6 +6,7 @@
 <title>Overlook by AgentHub</title>
 <meta name="description" content="A free, local-only project dashboard for Claude Code users: plan progress, a Kanban board that edits your plan files, git activity and usage. Windows and macOS.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<noscript><style>.hero { height: auto !important; } .hero-stage { position: relative !important; } .lens-caption { display: none !important; }</style></noscript>
 <link rel="preconnect" href="https://overlook-downloads.kennyrafael-cg.workers.dev" crossorigin>
 <link rel="canonical" href="https://overlook.agenthub.pt/">
 <meta name="theme-color" content="#312e81">
@@ -32,7 +33,7 @@
 
 <!--
   Hero: the view from the overlook. Without JavaScript, with reduced motion or on slow devices this is a
-  still scene (lens at rest over the horizon). src/hero/hero.ts adds .is-animated, which makes the section
+  still scene (lens at rest over the horizon). When motion is allowed, CSS makes the section
   tall and the stage sticky, and drives --p (scroll, 0..1) and --px/--py (pointer, -1..1).
 -->
 <section class="hero" id="top" aria-labelledby="hero-title">

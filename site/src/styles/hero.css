@@ -4,7 +4,8 @@
  * Still scene (default; no JS, reduced motion, slow devices): sky, contour lines, the mark's horizon
  * bands, and the lens resting over the horizon with the Overview page inside it.
  *
- * Animated (.hero.is-animated, set by src/hero/hero.ts): the section is tall and the stage sticks, so
+ * Animated (the default when motion is allowed; very slow devices get .is-still from src/hero/hero.ts, and
+ * a <noscript> style in index.html keeps the still scene without JavaScript): the section is tall and the stage sticks, so
  * scrolling grows the lens until the app fills the screen. hero.ts writes, on .hero-stage:
  *   --p        scroll progress 0..1          --px, --py  smoothed pointer -1..1
  *   --cx, --cy, --r   lens centre and radius (px)   --zoom  image scale inside the lens
@@ -56,12 +57,16 @@
   --caption: 0;
   position: relative;
   height: 100svh;
-  min-height: 600px;
+  --stage-min: 600px;
+  min-height: var(--stage-min);
   overflow: hidden;
   isolation: isolate;
 }
-.hero.is-animated { height: 270svh; }
-.hero.is-animated .hero-stage { position: sticky; top: 0; }
+/* Set in CSS, not by the script, so starting the page never re-lays it out. */
+@media (prefers-reduced-motion: no-preference) {
+  .hero:not(.is-still) { height: 270svh; }
+  .hero:not(.is-still) .hero-stage { position: sticky; top: 0; }
+}
 
 /* Sky */
 .sky {
@@ -129,7 +134,6 @@
   inset: 0;
   clip-path: circle(var(--r) at calc(var(--cx) + var(--lx)) calc(var(--cy) + var(--ly)));
   background: var(--bg);
-  container-type: size;
 }
 /* The image box covers the stage from its top-left corner (like object-fit: cover with
    object-position 0 0, but the box itself is the full image, which frame.ts relies on). */
@@ -137,15 +141,14 @@
   position: absolute;
   left: 0;
   top: 0;
-  width: max(100cqw, 160cqh); /* 1440 / 900 = 1.6 */
+  /* Covers the stage: as wide as it, or 1.6 × its height (1440 / 900), whichever is larger. The stage is
+     100svh tall but at least --stage-min (viewport units instead of a container query: one layout pass). */
+  width: max(100%, 160svh, calc(var(--stage-min) * 1.6));
   height: auto;
   aspect-ratio: 1440 / 900;
   max-width: none;
   transform-origin: var(--cx) var(--cy);
   transform: translate3d(var(--tx, 0px), var(--ty, 0px), 0) scale(var(--zoom));
-}
-@supports not (width: 1cqw) {
-  .lens-shot img { width: 100%; height: 100%; object-fit: cover; object-position: 0 0; }
 }
 /* Glass: a soft highlight top-left and a darker rim, fading as the lens opens up. */
 .lens-glass {
@@ -207,7 +210,6 @@
   font-size: var(--step-1);
   line-height: 1.5;
   color: rgb(238 242 255 / 0.9);
-  text-wrap: pretty;
   max-width: 33rem;
 }
 .cta { display: flex; align-items: center; gap: var(--space-5); flex-wrap: wrap; }
@@ -245,7 +247,8 @@
   transform: translate3d(-50%, calc((1 - var(--caption)) * 12px), 0);
   white-space: nowrap;
 }
-.hero:not(.is-animated) .lens-caption { display: none; }
+.hero.is-still .lens-caption { display: none; }
+@media (prefers-reduced-motion: reduce) { .lens-caption { display: none; } }
 
 .scroll-hint {
   position: absolute;
@@ -278,7 +281,8 @@
     --cx0: 50%;
     --r0: min(22vw, 11svh, 90px);
     --cy0: calc(100% - var(--r0) - 30px);
-    min-height: 740px; /* short phones: the lens sits just below the fold, the button stays above it */
+    --stage-min: 740px; /* short phones: the lens sits just below the fold, the button stays above it */
+    min-height: var(--stage-min);
   }
   .hero-copy {
     top: 92px;
