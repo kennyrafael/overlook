@@ -21,12 +21,13 @@ const TYPES: Record<string, string> = {
 };
 export const FEED = "version: 0.2.1\nfiles:\n  - url: Overlook-Setup-0.2.1-x64.exe\n    size: 104857600\npath: Overlook-Setup-0.2.1-x64.exe\nreleaseDate: '2026-11-19T09:00:00.000Z'\n";
 
-export type Engine = 'chrome' | 'msedge' | 'firefox' | 'webkit';
+export type Engine = 'chrome' | 'msedge' | 'chromium' | 'firefox' | 'webkit';
 
-/** Installed Chrome or Edge (as in the app's smoke tests), or Playwright's Firefox / WebKit. */
+/** Installed Chrome or Edge (as in the app's smoke tests), or Playwright's Chromium / Firefox / WebKit. */
 export function launch(engine: Engine = (process.env.BROWSER as Engine) || 'chrome'): Promise<Browser> {
   if (engine === 'firefox') return pw.firefox.launch();
   if (engine === 'webkit') return pw.webkit.launch();
+  if (engine === 'chromium') return pw.chromium.launch(); // Playwright's own build (e.g. in its Docker image)
   return pw.chromium.launch({ channel: engine });
 }
 

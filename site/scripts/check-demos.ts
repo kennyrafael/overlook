@@ -12,7 +12,15 @@ const out = process.argv[2] ?? join(here, '..', 'test-results', 'demos');
 const engine = (process.env.BROWSER as Engine) || 'chrome';
 
 const problems: string[] = [];
-const check = (ok: unknown, what: string) => { if (!ok) problems.push(what); console.log(`${ok ? '  ok ' : '  FAIL'} ${what}`); };
+// In GitHub Actions, failures also become annotations (shown on the commit and readable via the API).
+const annotate = (msg: string) => { if (process.env.GITHUB_ACTIONS) console.log(`::error title=check:demos::${msg.replace(/\s+/g, ' ')}`); };
+let context = '';
+const check = (ok: unknown, what: string) => {
+  console.log(`${ok ? '  ok ' : '  FAIL'} ${what}`);
+  if (ok) return;
+  problems.push(what);
+  annotate(`${context}: ${what}`);
+};
 
 async function main() {
   assertBuilt();
@@ -25,6 +33,7 @@ async function main() {
     ['light', { width: 1440, height: 900 }, 'reduce'],
   ] as const;
   for (const [scheme, size, motion] of runs) {
+    context = `${engine} ${scheme} ${size.width}x${size.height} motion=${motion}`;
     console.log(`\n${scheme}, ${size.width}×${size.height}, reduced motion: ${motion}`);
     const ctx = await browser.newContext({ viewport: size, colorScheme: scheme, deviceScaleFactor: 1, reducedMotion: motion });
     await routeSite(ctx);
@@ -142,6 +151,7 @@ async function main() {
     await ctx.close();
   }
   // Without JavaScript: the still hero, screenshots in place of demos, both install guides.
+  context = `${engine} JavaScript off`;
   console.log('\nlight, 1440×900, JavaScript off');
   const nojs = await browser.newContext({ viewport: { width: 1440, height: 900 }, javaScriptEnabled: false });
   await routeSite(nojs);
@@ -158,4 +168,4 @@ async function main() {
   console.log(problems.length ? `\n${problems.length} problem(s)` : '\nAll checks passed');
   process.exit(problems.length ? 1 : 0);
 }
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => { console.error(e); annotate(`${context}: crashed: ${String(e?.message ?? e).slice(0, 400)}`); process.exit(1); });

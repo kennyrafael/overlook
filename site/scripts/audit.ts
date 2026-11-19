@@ -17,7 +17,15 @@ const engine = (process.env.BROWSER as Engine) || 'chrome';
 const axeSource = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf8');
 
 const problems: string[] = [];
-const check = (ok: unknown, what: string) => { if (!ok) problems.push(what); console.log(`${ok ? '  ok ' : '  FAIL'} ${what}`); };
+// In GitHub Actions, failures also become annotations (shown on the commit and readable via the API).
+const annotate = (msg: string) => { if (process.env.GITHUB_ACTIONS) console.log(`::error title=audit::${msg.replace(/\s+/g, ' ')}`); };
+let context = '';
+const check = (ok: unknown, what: string) => {
+  console.log(`${ok ? '  ok ' : '  FAIL'} ${what}`);
+  if (ok) return;
+  problems.push(what);
+  annotate(`${context}: ${what}`);
+};
 
 /** Scrolls through the whole page so every lazy demo mounts, then back to the top. */
 async function visitAll(page: Page) {
@@ -39,6 +47,7 @@ async function main() {
 
   // ---- Widths ----
   for (const width of [320, 375, 768, 1024, 1440, 1920]) {
+    context = `${engine} width ${width}`;
     console.log(`\nwidth ${width}`);
     const ctx = await browser.newContext({ viewport: { width, height: width < 768 ? 760 : 900 } });
     await routeSite(ctx);
@@ -70,6 +79,7 @@ async function main() {
   }
 
   // ---- Touch phone ----
+  context = `${engine} touch phone`;
   console.log('\ntouch phone (375×812)');
   {
     const ctx = await browser.newContext({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: engine !== 'firefox' });
@@ -88,6 +98,7 @@ async function main() {
 
   // ---- Headings, keyboard and axe ----
   for (const scheme of ['light', 'dark'] as const) {
+    context = `${engine} accessibility ${scheme}`;
     console.log(`\naccessibility, ${scheme}`);
     // axe is injected as a script, which the page's CSP forbids; bypass it for this run only.
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: scheme, bypassCSP: true, reducedMotion: 'reduce' });
@@ -127,4 +138,4 @@ async function main() {
   console.log(problems.length ? `\n${problems.length} problem(s)` : '\nAll checks passed');
   process.exit(problems.length ? 1 : 0);
 }
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => { console.error(e); annotate(`${context}: crashed: ${String(e?.message ?? e).slice(0, 400)}`); process.exit(1); });

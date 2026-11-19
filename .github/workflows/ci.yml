@@ -46,6 +46,7 @@ jobs:
       - run: npm run build
       - run: npm run check:demos
       - run: npm run audit
+        if: success() || failure() # report both suites even when the first fails
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
