@@ -304,10 +304,19 @@ export const NETWORK_CALLS: NetworkCall[] = [
     what: 'Update check',
     destination: 'overlook-downloads.kennyrafael-cg.workers.dev (Overlook release feed and installer download)',
     when: 'At start-up and once a day, Windows desktop app only; off with Settings → Desktop app → Check for updates automatically',
-    sends: 'Nothing beyond a normal download request (IP address, user agent with the app version)',
+    sends: 'Nothing beyond a normal download request (IP address, user agent with the app version). The download server counts the request anonymously (platform, version, country); no IP address or user agent is stored',
+    active: true,
+  },
+  {
+    what: 'Feedback',
+    destination: 'overlook-feedback.kennyrafael-cg.workers.dev (AgentHub feedback inbox)',
+    when: 'Only when you press Send in the Feedback dialog; never automatically',
+    sends: 'Only the answers you give in the form, the app version and your email if you add one. No project data, paths or usage; the IP address is not stored',
     active: true,
   },
 ];
+
+export * from './feedback';
 
 export interface SystemInfo {
   dataDir: string;

@@ -6,9 +6,11 @@ import './styles/hero.css';
 import './styles/demos.css';
 import './styles/widgets.css';
 import './styles/closing.css';
+import './styles/feedback.css';
 import { initClosing } from './closing.ts';
 import { initDemos } from './demos/loader.ts';
 import { initDownloads } from './download.ts';
+import { initFeedback } from './feedback.ts';
 import { initHero } from './hero/hero.ts';
 import { initInstallTabs } from './install.ts';
 import { initMotion, reveal, whenIdle } from './motion/motion.ts';
@@ -26,5 +28,6 @@ requestAnimationFrame(() => setTimeout(() => {
     initDemos();
     initInstallTabs();
     initClosing();
+    initFeedback();
   });
 }, 0));

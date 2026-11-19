@@ -190,7 +190,7 @@
         <div class="feature-copy reveal">
           <p class="eyebrow">Local only</p>
           <h2 id="privacy-title">Nothing leaves your machine.</h2>
-          <p>No account, no telemetry, no cloud. Overlook reads your files where they are. The only network call it can make is the update check, and you can switch that off.</p>
+          <p>No account, no telemetry, no cloud. Overlook reads your files where they are. The only automatic network call is the update check, and you can switch that off. Feedback is sent only when you press Send.</p>
           <ul class="points">
             <li>Listens on 127.0.0.1 only, with a per-launch token</li>
             <li>Open source (MIT): read every line on GitHub</li>
@@ -200,6 +200,7 @@
           <div class="net-static">
             <p class="net-title">Settings → Network activity</p>
             <p><strong>Update check</strong>: overlook-downloads.kennyrafael-cg.workers.dev, at start-up and once a day. You can turn it off.</p>
+            <p><strong>Feedback</strong>: only when you fill in the Feedback form and press Send.</p>
             <p>Nothing else. Your code, plans, prompts and usage are never sent.</p>
           </div>
         </div>
@@ -367,7 +368,7 @@
       <div class="faq-list">
         <details>
           <summary>Does it send my code or plans anywhere?</summary>
-          <p>No. Everything is read and stored on your computer. The only outbound request is the update check to <code>overlook-downloads.kennyrafael-cg.workers.dev</code>, listed in Settings → Network activity, and you can switch it off.</p>
+          <p>No. Everything is read and stored on your computer. The only automatic request is the update check to <code>overlook-downloads.kennyrafael-cg.workers.dev</code>, and you can switch it off. The Feedback dialog sends your answers to <code>overlook-feedback.kennyrafael-cg.workers.dev</code> only when you press Send, with no project data attached. Both are listed in Settings → Network activity. Downloads and update checks are counted (platform, version, country) with no personal data. More in the <a href="/privacy">privacy note</a>.</p>
         </details>
         <details>
           <summary>How does it read my plans?</summary>
@@ -398,8 +399,117 @@
         </details>
         <details>
           <summary>Is it really free?</summary>
-          <p>Yes, MIT licensed. If there is demand, paid extras may come later; the current features stay free.</p>
+          <p>Yes, MIT licensed. If there is demand, paid extras may come later; the current features stay free. <a href="#feedback">Tell us whether you would pay, and for what</a>.</p>
         </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feedback: two short forms, sent by src/feedback.ts to the feedback Worker only when the visitor
+       presses the button. Choices: src/feedback-model.ts (kept equal to packages/shared/src/feedback.ts). -->
+  <section class="feedback" id="feedback" aria-labelledby="feedback-title">
+    <div class="feedback-inner">
+      <div class="feedback-head reveal">
+        <p class="eyebrow">Feedback</p>
+        <h2 id="feedback-title">Help decide what comes next.</h2>
+        <p>Overlook is free, and what it does today stays free. Paid extras may come later, if people want them. Two short forms: answers are anonymous unless you add your email. <a href="/privacy">How your answers are used</a>.</p>
+        <noscript><p class="fb-noscript">The forms need JavaScript. You can also <a href="https://github.com/kennyrafael/overlook/issues">suggest a feature on GitHub</a>.</p></noscript>
+      </div>
+      <div class="feedback-forms">
+        <form class="fb-form reveal" id="fb-pro" data-kind="pro" method="post" action="#feedback" novalidate aria-labelledby="fb-pro-title">
+          <h3 id="fb-pro-title">Would you pay for Overlook?</h3>
+          <fieldset data-group="pay" aria-describedby="fb-pro-pay-err">
+            <legend>Would you pay for Pro features? <span class="fb-req">(required)</span></legend>
+            <div class="fb-choices fb-inline">
+              <label><input type="radio" name="pay" value="yes"> Yes</label>
+              <label><input type="radio" name="pay" value="maybe"> Maybe</label>
+              <label><input type="radio" name="pay" value="no"> No</label>
+            </div>
+            <p class="fb-error" id="fb-pro-pay-err" data-error-for="pay" hidden></p>
+          </fieldset>
+          <fieldset>
+            <legend>Which features would make it worth paying for?</legend>
+            <div class="fb-choices">
+              <label><input type="checkbox" name="features" value="sync"> Sync between my computers (end-to-end encrypted)</label>
+              <label><input type="checkbox" name="features" value="team"> Share project status with a team</label>
+              <label><input type="checkbox" name="features" value="budgets"> Usage budgets and cost alerts</label>
+              <label><input type="checkbox" name="features" value="reports"> Reports and exports (PDF, CSV)</label>
+              <label><input type="checkbox" name="features" value="integrations"> Integrations (GitHub issues, Linear, Jira)</label>
+              <label><input type="checkbox" name="features" value="insights"> Deeper insights (trends, forecasts)</label>
+              <label><input type="checkbox" name="features" value="themes"> Themes and layout customisation</label>
+            </div>
+            <p class="fb-error" data-error-for="features" hidden></p>
+          </fieldset>
+          <div class="fb-field">
+            <label for="fb-pro-other">Anything else? <span class="fb-opt">(optional)</span></label>
+            <input id="fb-pro-other" name="other" type="text" maxlength="500" autocomplete="off" aria-describedby="fb-pro-other-err">
+            <p class="fb-error" id="fb-pro-other-err" data-error-for="other" hidden></p>
+          </div>
+          <div class="fb-field">
+            <label for="fb-pro-price">A fair price <span class="fb-opt">(optional)</span></label>
+            <select id="fb-pro-price" name="price" aria-describedby="fb-pro-price-err">
+              <option value="">Choose…</option>
+              <option value="free-only">Nothing, I would only use it free</option>
+              <option value="lt5">Under €5 a month</option>
+              <option value="5-10">€5 to €10 a month</option>
+              <option value="10-20">€10 to €20 a month</option>
+              <option value="gt20">More than €20 a month</option>
+              <option value="once">I would rather pay once</option>
+            </select>
+            <p class="fb-error" id="fb-pro-price-err" data-error-for="price" hidden></p>
+          </div>
+          <div class="fb-field">
+            <label for="fb-pro-email">Email, to hear when Pro exists <span class="fb-opt">(optional)</span></label>
+            <input id="fb-pro-email" name="email" type="email" maxlength="254" autocomplete="email" aria-describedby="fb-pro-email-err">
+            <p class="fb-error" id="fb-pro-email-err" data-error-for="email" hidden></p>
+          </div>
+          <div class="fb-consent">
+            <label><input type="checkbox" name="consent" value="yes" aria-describedby="fb-pro-consent-err"> Email me when Overlook Pro exists. I agree that AgentHub stores my email for this one purpose; I can ask for it to be deleted at any time.</label>
+            <p class="fb-error" id="fb-pro-consent-err" data-error-for="consent" hidden></p>
+          </div>
+          <div class="fb-hp" aria-hidden="true"><label>Website <input name="website" type="text" tabindex="-1" autocomplete="off"></label></div>
+          <div class="fb-actions">
+            <button class="btn primary" type="submit" disabled>Send answers</button>
+            <p class="fb-status" role="status"></p>
+          </div>
+        </form>
+
+        <form class="fb-form reveal" id="fb-idea" data-kind="idea" method="post" action="#feedback" novalidate aria-labelledby="fb-idea-title">
+          <h3 id="fb-idea-title">Suggest a feature</h3>
+          <div class="fb-field">
+            <label for="fb-idea-text">Your idea <span class="fb-req">(required)</span></label>
+            <textarea id="fb-idea-text" name="text" rows="6" maxlength="2000" aria-describedby="fb-idea-text-hint fb-idea-text-err"></textarea>
+            <p class="fb-hint" id="fb-idea-text-hint">What would you like Overlook to do? Please leave out anything private, like project names or paths.</p>
+            <p class="fb-error" id="fb-idea-text-err" data-error-for="text" hidden></p>
+          </div>
+          <div class="fb-field">
+            <label for="fb-idea-category">Area <span class="fb-opt">(optional)</span></label>
+            <select id="fb-idea-category" name="category" aria-describedby="fb-idea-category-err">
+              <option value="">Choose…</option>
+              <option value="projects">Projects and discovery</option>
+              <option value="board">Plans and the board</option>
+              <option value="usage">Claude Code usage</option>
+              <option value="git">Git activity</option>
+              <option value="platform">Install, updates and platforms</option>
+              <option value="other">Something else</option>
+            </select>
+            <p class="fb-error" id="fb-idea-category-err" data-error-for="category" hidden></p>
+          </div>
+          <div class="fb-field">
+            <label for="fb-idea-email">Email, if we may ask you about it <span class="fb-opt">(optional)</span></label>
+            <input id="fb-idea-email" name="email" type="email" maxlength="254" autocomplete="email" aria-describedby="fb-idea-email-err">
+            <p class="fb-error" id="fb-idea-email-err" data-error-for="email" hidden></p>
+          </div>
+          <div class="fb-consent">
+            <label><input type="checkbox" name="consent" value="yes" aria-describedby="fb-idea-consent-err"> You may email me about this suggestion. I agree that AgentHub stores my email for this one purpose; I can ask for it to be deleted at any time.</label>
+            <p class="fb-error" id="fb-idea-consent-err" data-error-for="consent" hidden></p>
+          </div>
+          <div class="fb-hp" aria-hidden="true"><label>Website <input name="website" type="text" tabindex="-1" autocomplete="off"></label></div>
+          <div class="fb-actions">
+            <button class="btn primary" type="submit" disabled>Send idea</button>
+            <p class="fb-status" role="status"></p>
+          </div>
+        </form>
       </div>
     </div>
   </section>
@@ -454,11 +564,11 @@
     <nav class="footer-nav" aria-label="Footer">
       <div>
         <p class="footer-h">Product</p>
-        <a href="#features">Features</a><a href="#install-guide">Install</a><a href="#faq">FAQ</a><a href="#download">Download</a>
+        <a href="#features">Features</a><a href="#install-guide">Install</a><a href="#faq">FAQ</a><a href="#feedback">Feedback</a><a href="#download">Download</a>
       </div>
       <div>
         <p class="footer-h">Open source</p>
-        <a href="https://github.com/kennyrafael/overlook">Source on GitHub</a><a href="https://github.com/kennyrafael/overlook/blob/main/LICENSE">MIT License</a><a href="/third-party-notices.txt">Third-party notices</a><a href="https://github.com/kennyrafael/overlook/issues">Report an issue</a>
+        <a href="https://github.com/kennyrafael/overlook">Source on GitHub</a><a href="https://github.com/kennyrafael/overlook/blob/main/LICENSE">MIT License</a><a href="/third-party-notices.txt">Third-party notices</a><a href="https://github.com/kennyrafael/overlook/issues">Report an issue</a><a href="/privacy">Privacy</a>
       </div>
     </nav>
     <div class="footer-legal">

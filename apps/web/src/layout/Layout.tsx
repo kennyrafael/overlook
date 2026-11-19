@@ -11,6 +11,7 @@ import { appToast } from '../toast';
 import CommandPalette from '../components/CommandPalette';
 import Onboarding from '../components/Onboarding';
 import AboutDialog, { OPEN_ABOUT } from '../components/AboutDialog';
+import FeedbackDialog, { openFeedback } from '../components/FeedbackDialog';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { useViews } from '../store/views';
 import type { MenuItem } from 'primereact/menuitem';
@@ -64,6 +65,9 @@ export default function Layout() {
   }));
   const current = NAV.find((n) => isActive(n.to))?.label ?? '';
   const menu: MenuItem[] = [...items, { separator: true }, {
+    label: 'Feedback', icon: 'pi pi-comments',
+    command: () => { setMenuOpen(false); openFeedback(); },
+  }, {
     label: 'About', icon: 'pi pi-info-circle',
     command: () => { setMenuOpen(false); window.dispatchEvent(new Event(OPEN_ABOUT)); },
   }];
@@ -112,6 +116,7 @@ export default function Layout() {
           <CommandPalette />
           <Onboarding />
           <AboutDialog />
+          <FeedbackDialog />
         </main>
       </div>
     </div>

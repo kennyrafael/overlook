@@ -1,0 +1,17 @@
+// Cloudflare Worker for the feedback forms (landing page and app). Deployed by Workers Builds (Git
+// integration) with root directory `workers/feedback`, on every push to main. Setup: README.md.
+{
+  "name": "overlook-feedback",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "d1_databases": [
+    // Created once in the Cloudflare dashboard (or `npx wrangler d1 create overlook-feedback`).
+    { "binding": "DB", "database_name": "overlook-feedback", "database_id": "00000000-0000-0000-0000-000000000000" }
+  ],
+  // Per-IP limit (the hashed IP is only the limiter's key; nothing about it is stored).
+  "ratelimits": [
+    { "name": "LIMITER", "namespace_id": "4801", "simple": { "limit": 5, "period": 60 } }
+  ],
+  "observability": { "enabled": false }
+}

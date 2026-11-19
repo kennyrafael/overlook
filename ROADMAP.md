@@ -124,7 +124,7 @@ Decision (2026-11-19): Linux, out of scope for 1.0, is now supported. AppImage f
 - [x] Landing page: macOS buttons (enabled once the release has the `.dmg`), Gatekeeper "Open Anyway" steps
 - [x] Landing page: rebuild it as an interactive, animated page with real screenshots (Phases 4b-1 to 4b-6 below; live 2026-11-19, follow-ups in 4b-6)
 - [ ] Docs from README sections (plan file format, safety, troubleshooting)
-- [ ] Optional waitlist / "tell me about Pro" email signup to measure paid interest
+- [~] Optional waitlist / "tell me about Pro" email signup to measure paid interest: "Would you pay?" (yes/maybe/no, features, fair price, optional email with consent) and "Suggest a feature" forms on the landing page (`#feedback`, command palette) and in the app (sidebar, Ctrl+K, Settings → Feedback; sent by the local API server, listed in Network activity). Stored in D1 by the `overlook-feedback` Worker (`workers/feedback/`: validation, 8 KB limit, per-IP rate limit without storing IPs, CORS for the site only); read with `node workers/feedback/scripts/responses.mjs`. Privacy note at `/privacy`. Left: create the D1 database and the Workers Builds project (README there), then check both forms live
 - [ ] Beta with 5–10 Claude Code users on all three platforms; fix top issues
 - [ ] Launch (GitHub, Claude Code communities)
 - [ ] Acceptance: a stranger installs from the landing page on Windows and macOS without help; a Windows install updates itself to the next release
@@ -212,7 +212,7 @@ Start only when there are real users asking for more (for example: steady downlo
 - [ ] Decide the paid model: open core (MIT base + paid Pro add-ons) or closed license for a new major version
 - [ ] Payments via a merchant of record (Lemon Squeezy or Paddle) so VAT is handled
 - [ ] Offline Ed25519-signed license keys for paid features; no DRM; never lock users out of their own plan files
-- [ ] EULA for paid features, refund policy, privacy policy; legal review before taking money
+- [ ] EULA for paid features, refund policy, privacy policy for paid accounts (the `/privacy` note covers the free app, site and feedback); legal review before taking money
 - [ ] Contributor agreement (CLA) in place before relicensing anything
 
 ## Risks to keep in view

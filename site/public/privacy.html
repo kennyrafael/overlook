@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy · Overlook by AgentHub</title>
+<meta name="description" content="What Overlook, its website and its feedback forms collect, why, and how to have your data deleted.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://overlook.agenthub.pt/privacy">
+<meta name="theme-color" content="#312e81">
+<style>
+  :root {
+    --bg: #f8fafc; --bg-raised: #fff; --text: #0f172a; --text-muted: #475569; --border: #e2e8f0;
+    --accent: #4f46e5; --accent-soft: #eef2ff; --focus: #6366f1;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) { --bg: #0b1020; --bg-raised: #121a2e; --text: #e2e8f0; --text-muted: #94a3b8; --border: #1e293b; --accent: #818cf8; --accent-soft: #1a2240; --focus: #a5b4fc; }
+  }
+  :root[data-theme='dark'] { --bg: #0b1020; --bg-raised: #121a2e; --text: #e2e8f0; --text-muted: #94a3b8; --border: #1e293b; --accent: #818cf8; --accent-soft: #1a2240; --focus: #a5b4fc; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 1.02rem/1.65 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+  header, main, footer { max-width: 46rem; margin: 0 auto; padding: 0 16px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 20px; padding-bottom: 20px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; color: var(--text); text-decoration: none; }
+  h1 { font-size: clamp(1.8rem, 1.4rem + 2vw, 2.6rem); line-height: 1.15; letter-spacing: -0.02em; margin: 24px 0 8px; }
+  h2 { font-size: 1.3rem; margin: 40px 0 8px; }
+  .lede { color: var(--text-muted); font-size: 1.12rem; margin: 0 0 8px; }
+  .muted { color: var(--text-muted); }
+  ul { padding-left: 1.2rem; }
+  li { margin: 4px 0; }
+  .box { margin: 24px 0; padding: 16px 20px; border-radius: 12px; background: var(--accent-soft); }
+  code { background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; font-size: 0.88em; overflow-wrap: anywhere; }
+  footer { margin-top: 56px; padding-top: 20px; padding-bottom: 40px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="/"><img src="/favicon.svg" alt="" width="28" height="28">Overlook</a>
+  <a href="/">Back to the home page</a>
+</header>
+<main>
+  <h1>Privacy</h1>
+  <p class="lede">Overlook is built to keep your work on your machine. This page says exactly what the app, this website and the feedback forms collect, and how to have it deleted.</p>
+  <p class="muted">Last updated 19 November 2026.</p>
+
+  <div class="box">
+    <strong>In short:</strong> the app never sends your code, plans, prompts, file paths or usage anywhere. The website sets no cookies and has no analytics or trackers. The feedback forms send only what you type, and your email only if you add it and tick the box.
+  </div>
+
+  <h2>Who we are</h2>
+  <p>Overlook is made by AgentHub, based in Portugal (EU). For anything about your data, write to <a href="mailto:contacto@agenthub.pt">contacto@agenthub.pt</a>.</p>
+
+  <h2>The app</h2>
+  <p>Overlook reads your projects, plan files, git history and Claude Code logs on your computer and stores its settings there. It listens on 127.0.0.1 only. It makes two kinds of network request, both listed in the app under <strong>Settings → Network activity</strong>:</p>
+  <ul>
+    <li><strong>Update check</strong> to <code>overlook-downloads.kennyrafael-cg.workers.dev</code>, at start-up and once a day. You can switch it off in Settings. It sends nothing beyond a normal download request, which is counted anonymously (see below).</li>
+    <li><strong>Feedback</strong> to <code>overlook-feedback.kennyrafael-cg.workers.dev</code>, only when you fill in the Feedback dialog and press Send. It carries your answers and the app version, never project data.</li>
+  </ul>
+
+  <h2>This website</h2>
+  <ul>
+    <li>No cookies, no analytics, no advertising and no third-party trackers. Fonts and images are served from this site.</li>
+    <li>The site is hosted by Vercel, and the installers and update files by Cloudflare. Like any web server they see your IP address to answer requests and may keep short-lived technical logs for security and operations.</li>
+    <li>We count downloads and update checks: one entry per installer downloaded, per app update and per daily update check by the app, holding only the kind, platform, architecture, version, file name, country and whether it came from the website or the app. No IP address, user agent, or anything that identifies a person or comes from your projects.</li>
+  </ul>
+
+  <h2>The feedback forms</h2>
+  <p>The “Would you pay?” and “Suggest a feature” forms, on this site and in the app, help us decide what to build and whether paid extras are worth making.</p>
+  <ul>
+    <li><strong>What is stored:</strong> your answers, whether they came from the site or the app, the app version and the time. Your email only if you add it and tick the consent box.</li>
+    <li><strong>What is not stored:</strong> your IP address, browser or device details, cookies, or anything about your projects. Your IP address is used only for a moment, hashed, to stop floods of automated answers.</li>
+    <li><strong>Your email</strong> is used only for what the box says: to tell you once when Overlook Pro exists, or to ask you about your suggestion. No newsletters, no sharing, no selling. The legal basis is your consent (GDPR article 6(1)(a)), which you can withdraw at any time.</li>
+    <li><strong>Where:</strong> a Cloudflare D1 database run for AgentHub. Cloudflare acts as our processor under its data processing terms.</li>
+    <li><strong>How long:</strong> emails are deleted once we have sent the message you asked for, when you ask, or after 24 months at the latest. Anonymous answers are kept while they help plan Overlook.</li>
+  </ul>
+
+  <h2>Your rights</h2>
+  <p>You can ask to see, correct or delete your data, or withdraw your consent, by writing to <a href="mailto:contacto@agenthub.pt">contacto@agenthub.pt</a> from the address you gave us. We answer within 30 days. You can also complain to the Portuguese data protection authority, the <a href="https://www.cnpd.pt/">CNPD</a>.</p>
+</main>
+<footer>
+  <p>© 2026 AgentHub. Overlook is free software under the MIT License. <a href="https://github.com/kennyrafael/overlook">Source on GitHub</a>.</p>
+</footer>
+</body>
+</html>

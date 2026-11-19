@@ -4,10 +4,28 @@
  * Writes the fixture paths to e2e/.fixture.json so tests can inspect files.
  */
 import { readFileSync, rmSync, writeFileSync } from 'fs';
+import { createServer } from 'http';
 import { join } from 'path';
 import { createFixture } from '../apps/api/test/fixture';
 
 const PORT = Number(process.env.SMOKE_PORT ?? 4399);
+/** Stand-in for the feedback Worker: records what the app forwards; GET /received lists it. */
+export const INBOX_PORT = PORT - 1;
+
+function startInbox() {
+  const received: unknown[] = [];
+  createServer((req, res) => {
+    if (req.method === 'GET' && req.url === '/received') { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(received)); return; }
+    let raw = '';
+    req.on('data', (c) => { raw += c; });
+    req.on('end', () => {
+      try { received.push(JSON.parse(raw)); } catch { /* ignore */ }
+      res.writeHead(201, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+    });
+  }).listen(INBOX_PORT, '127.0.0.1');
+  process.env.OVERLOOK_FEEDBACK_URL = `http://127.0.0.1:${INBOX_PORT}/feedback`;
+}
 
 async function main() {
   // On Windows the runner kills this process before the signal handlers run, so
@@ -16,6 +34,7 @@ async function main() {
     const prev = JSON.parse(readFileSync(join(__dirname, '.fixture.json'), 'utf8'));
     if (typeof prev.base === 'string' && /cpd-e2e-/.test(prev.base)) rmSync(prev.base, { recursive: true, force: true });
   } catch { /* first run */ }
+  startInbox();
   const fx = createFixture();
   process.env.CPD_DATA_DIR = fx.dataDir;
   process.env.CLAUDE_CONFIG_DIR = fx.claudeDir;

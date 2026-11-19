@@ -130,3 +130,39 @@ test('deep links work on the production server', async ({ page }) => {
   expect(res?.status()).toBe(200);
   await expect(page.getByText('Cost estimates')).toBeVisible();
 });
+
+test('feedback dialog: errors are shown, then only the answers are sent', async ({ page, request }) => {
+  await page.goto('/');
+  await page.getByRole('menuitem', { name: 'Feedback' }).first().click();
+  const dialog = page.getByTestId('feedback-dialog');
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Send answers' }).click();
+  await expect(dialog.getByText('Choose yes, maybe or no.')).toBeVisible();
+  await dialog.getByLabel('Maybe').check();
+  await dialog.getByLabel('Usage budgets and cost alerts').check();
+  await dialog.getByLabel('A fair price').selectOption('lt5');
+  await dialog.getByLabel('Email, to hear when Pro exists').fill('dev@example.com');
+  await dialog.getByRole('button', { name: 'Send answers' }).click();
+  await expect(dialog.getByText('Tick the box to agree, or leave the email empty.')).toBeVisible();
+  await dialog.getByLabel(/Email me when Overlook Pro exists/).check();
+  await dialog.getByRole('button', { name: 'Send answers' }).click();
+  await expect(dialog.getByTestId('feedback-status').first()).toHaveText(/Thank you/);
+
+  await dialog.getByRole('tab', { name: 'Suggest a feature' }).click();
+  await dialog.getByLabel('Your idea').fill('A timeline of milestones');
+  await dialog.getByRole('button', { name: 'Send idea' }).click();
+  await expect(dialog.getByText('Thank you! Your idea was sent.')).toBeVisible();
+
+  const got = await (await request.get('http://127.0.0.1:4398/received')).json();
+  const strip = ({ version, ...rest }: Record<string, unknown>) => rest;
+  expect(got.map(strip)).toEqual([
+    { kind: 'pro', source: 'app', pay: 'maybe', features: ['budgets'], price: 'lt5', email: 'dev@example.com', consent: true },
+    { kind: 'idea', source: 'app', text: 'A timeline of milestones' },
+  ]);
+
+  await page.keyboard.press('Escape');
+  await page.goto('/settings');
+  await expect(page.getByTestId('network-card')).toContainText('overlook-feedback');
+  await page.getByTestId('feedback-card').getByRole('button', { name: 'Suggest a feature' }).click();
+  await expect(page.getByTestId('feedback-dialog').getByLabel('Your idea')).toBeVisible();
+});

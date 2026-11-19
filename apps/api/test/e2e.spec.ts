@@ -237,3 +237,61 @@ describe('about', () => {
     assert.match(body.notices, /\S/);
   });
 });
+
+describe('feedback', () => {
+  /** A stand-in for the feedback Worker: records what the API forwards and answers with `status`. */
+  async function inbox(status = 201) {
+    const { createServer } = require('http') as typeof import('http');
+    const got: { body: any; headers: Record<string, unknown> }[] = [];
+    const server = createServer((req, res) => {
+      let raw = '';
+      req.on('data', (c) => { raw += c; });
+      req.on('end', () => {
+        got.push({ body: JSON.parse(raw), headers: req.headers });
+        res.writeHead(status, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(status < 300 ? { ok: true } : { ok: false, error: 'Inbox down' }));
+      });
+    });
+    await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+    process.env.OVERLOOK_FEEDBACK_URL = `http://127.0.0.1:${(server.address() as AddressInfo).port}/feedback`;
+    return { got, close: () => new Promise<void>((r) => server.close(() => r())) };
+  }
+
+  test('forwards only the validated answers, marked as from the app', async () => {
+    const box = await inbox();
+    try {
+      const r = await api('/feedback', { method: 'POST', body: JSON.stringify({ kind: 'pro', pay: 'yes', features: ['sync'], price: 'lt5', email: 'a@b.co', consent: true, source: 'site', path: 'C:/secret', extra: 1 }) });
+      assert.equal(r.status, 201);
+      assert.deepEqual(r.body, { ok: true });
+      assert.equal(box.got.length, 1);
+      const { version, ...rest } = box.got[0].body;
+      assert.match(version, /^\d+\.\d+\.\d+/);
+      assert.deepEqual(rest, { kind: 'pro', source: 'app', pay: 'yes', features: ['sync'], price: 'lt5', email: 'a@b.co', consent: true });
+      assert.equal(box.got[0].headers.cookie, undefined);
+    } finally { await box.close(); }
+  });
+
+  test('invalid answers are refused locally and never sent', async () => {
+    const box = await inbox();
+    try {
+      const r = await api('/feedback', { method: 'POST', body: JSON.stringify({ kind: 'idea', text: '', email: 'a@b.co' }) });
+      assert.equal(r.status, 400);
+      assert.deepEqual(Object.keys(r.body.errors).sort(), ['consent', 'text']);
+      assert.equal(box.got.length, 0);
+    } finally { await box.close(); }
+  });
+
+  test('an inbox error becomes a readable 502', async () => {
+    const box = await inbox(500);
+    try {
+      const r = await api('/feedback', { method: 'POST', body: JSON.stringify({ kind: 'idea', text: 'Hello' }) });
+      assert.equal(r.status, 502);
+      assert.equal(r.body.message, 'Inbox down');
+    } finally { await box.close(); delete process.env.OVERLOOK_FEEDBACK_URL; }
+  });
+
+  test('Network activity lists the feedback endpoint', async () => {
+    const r = await api('/system/info');
+    assert.ok(r.body.network.some((c: any) => c.what === 'Feedback' && c.destination.includes('overlook-feedback')));
+  });
+});

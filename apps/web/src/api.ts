@@ -1,7 +1,8 @@
-import type { ClaudeOverview, GitOverview, Project, ProjectAction, ProjectDetail, ProjectPatch, SavedView, Settings, TaskStatus, ViewFilters, SystemTools, SystemInfo, AppDataExport, AboutInfo } from '@overlook/shared';
+import type { ClaudeOverview, GitOverview, Project, ProjectAction, ProjectDetail, ProjectPatch, SavedView, Settings, TaskStatus, ViewFilters, SystemTools, SystemInfo, AppDataExport, AboutInfo, FeedbackInput } from '@overlook/shared';
 
 export class ApiError extends Error {
-  constructor(message: string, public status: number) { super(message); }
+  /** Field errors from a 400 answer (feedback form), keyed by field name. */
+  constructor(message: string, public status: number, public errors?: Record<string, string>) { super(message); }
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -12,7 +13,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    throw new ApiError(body?.message ?? `${res.status} ${res.statusText}`, res.status);
+    throw new ApiError(typeof body?.message === 'string' ? body.message : `${res.status} ${res.statusText}`, res.status, body?.errors);
   }
   return res.json() as Promise<T>;
 }
@@ -59,6 +60,8 @@ export const api = {
   importData: (data: unknown) =>
     request<{ settings: number; projectOverrides: number; views: number }>('/system/import', { method: 'POST', body: JSON.stringify(data) }),
   resetData: () => request<{ ok: true }>('/system/reset', { method: 'POST', body: JSON.stringify({ confirm: 'reset' }) }),
+  /** Sends one feedback form to AgentHub (through the local server; only when the user presses Send). */
+  sendFeedback: (body: FeedbackInput) => request<{ ok: true }>('/feedback', { method: 'POST', body: JSON.stringify(body) }),
   settings: () => request<Settings>('/settings'),
   saveSettings: (s: Partial<Settings>) =>
     request<Settings>('/settings', { method: 'PUT', body: JSON.stringify(s) }),

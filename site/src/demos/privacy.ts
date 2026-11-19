@@ -1,5 +1,6 @@
 // Privacy demo: as the section scrolls in, the lens ring closes around a laptop ("your machine"), and
-// a copy of Settings → Network activity lists the only call the app can make, with its switch.
+// a copy of Settings → Network activity lists the calls the app can make: the update check, with its
+// switch, and feedback, sent only when you press Send.
 import { range } from '../motion/math.ts';
 import { scrollProgress } from '../motion/motion.ts';
 import { drawContours } from '../textures/contours.ts';
@@ -28,15 +29,18 @@ export function mount(root: HTMLElement): void {
   const row = h('li', { class: 'net-row' },
     h('div', null, h('strong', null, 'Update check'), h('span', { class: 'net-host' }, 'overlook-downloads.kennyrafael-cg.workers.dev'), h('span', { class: 'net-when' }, 'At start-up and once a day. Sends nothing about you or your projects.')),
     sw);
+  const feedback = h('li', { class: 'net-row net-manual' },
+    h('div', null, h('strong', null, 'Feedback'), h('span', { class: 'net-host' }, 'overlook-feedback.kennyrafael-cg.workers.dev'), h('span', { class: 'net-when' }, 'Only when you fill in the Feedback form and press Send.')),
+    h('span', { class: 'net-tag' }, 'You send it'));
   const render = () => {
     sw.setAttribute('aria-checked', String(on));
     row.classList.toggle('is-off', !on);
-    state.textContent = on ? '1 network call possible' : 'Offline: no network calls at all';
+    state.textContent = on ? '1 automatic call' : 'Offline: no automatic network calls';
   };
   sw.addEventListener('click', () => {
     on = !on;
     render();
-    announce(on ? 'Update check on.' : 'Update check off. Overlook now makes no network calls.');
+    announce(on ? 'Update check on.' : 'Update check off. Overlook now makes no automatic network calls.');
   });
 
   root.append(
@@ -44,7 +48,7 @@ export function mount(root: HTMLElement): void {
       scene,
       h('div', { class: 'net-panel' },
         h('div', { class: 'net-head' }, h('span', null, 'Settings → Network activity'), state),
-        h('ul', { class: 'net-list' }, row),
+        h('ul', { class: 'net-list' }, row, feedback),
         h('p', { class: 'net-never' }, 'Never sent: your code, plan files, prompts, token usage, file paths.'))));
   render();
 

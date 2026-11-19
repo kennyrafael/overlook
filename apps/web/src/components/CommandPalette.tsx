@@ -11,6 +11,7 @@ import { actionAvailable, useTools } from '../store/tools';
 import { useTheme } from '../theme/ThemeContext';
 import { appToast } from '../toast';
 import { MOD } from '../platform';
+import { openFeedback } from './FeedbackDialog';
 
 interface Command {
   id: string;
@@ -98,6 +99,8 @@ export default function CommandPalette() {
       } },
       { id: 'cmd:theme', group: 'Commands', label: `Switch to ${mode === 'dark' ? 'light' : 'dark'} theme`, icon: mode === 'dark' ? 'pi pi-sun' : 'pi pi-moon', keywords: 'theme dark light mode', run: toggleTheme },
       { id: 'cmd:clear', group: 'Commands', label: 'Clear all filters', icon: 'pi pi-filter-slash', keywords: 'reset filters', run: () => useFilters.getState().clear() },
+      { id: 'cmd:feedback-pro', group: 'Commands', label: 'Feedback: would you pay for Overlook?', icon: 'pi pi-comments', keywords: 'feedback pro price pay survey', run: () => openFeedback('pro') },
+      { id: 'cmd:feedback-idea', group: 'Commands', label: 'Feedback: suggest a feature', icon: 'pi pi-lightbulb', keywords: 'feedback idea feature request suggestion', run: () => openFeedback('idea') },
       { id: 'cmd:about', group: 'Commands', label: 'About Overlook', icon: 'pi pi-info-circle', keywords: 'about version license notices', run: () => window.dispatchEvent(new Event('cpd:open-about')) },
     );
     return list;

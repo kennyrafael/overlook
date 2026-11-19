@@ -15,6 +15,7 @@ import { useTools } from '../store/tools';
 import { desktop, type DesktopPrefs } from '../desktop';
 import { ToolList } from '../components/ToolList';
 import { AppDataCards } from '../components/AppDataCards';
+import { openFeedback } from '../components/FeedbackDialog';
 
 type PriceRow = ModelPrice & { key: string };
 
@@ -172,7 +173,7 @@ export default function SettingsPage() {
             <div className="flex align-items-center justify-content-between gap-3 mt-3">
               <div>
                 <div>Check for updates automatically</div>
-                <small className="text-500">At start-up and once a day, Overlook checks overlook-downloads.kennyrafael-cg.workers.dev for a newer release and downloads it in the background. Nothing else is sent.</small>
+                <small className="text-500">At start-up and once a day, Overlook checks overlook-downloads.kennyrafael-cg.workers.dev for a newer release and downloads it in the background. Nothing else is sent; the server counts the check anonymously (platform, version, country).</small>
               </div>
               <InputSwitch checked={prefs.autoUpdate} onChange={(e) => void setPref({ autoUpdate: !!e.value })} aria-label="Check for updates automatically" />
             </div>
@@ -182,6 +183,13 @@ export default function SettingsPage() {
           <ToolList tools={tools} />
         </Card>
         <AppDataCards toast={toast} onChanged={() => { api.settings().then(setSettings); }} />
+        <Card title="Feedback" className="mt-3" data-testid="feedback-card">
+          <p className="mt-0">Would you pay for Overlook, and what should come next? Answers go to AgentHub only when you press Send, without any project data.</p>
+          <div className="flex flex-wrap gap-2">
+            <Button label="Would you pay?" icon="pi pi-comments" size="small" outlined onClick={() => openFeedback('pro')} />
+            <Button label="Suggest a feature" icon="pi pi-lightbulb" size="small" outlined onClick={() => openFeedback('idea')} />
+          </div>
+        </Card>
       </div>
       <div className="col-12">
         <Button label="Save & rescan" icon="pi pi-save" loading={saving} onClick={save} />

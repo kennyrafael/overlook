@@ -18,7 +18,8 @@
     "test:desktop": "playwright test -c playwright.desktop.config.ts",
     "dist": "npm run build && npm run dist -w @overlook/desktop",
     "start:open": "node scripts/start.mjs --open",
-    "test": "npm run build -w @overlook/shared && npm test -w @overlook/api && npm run test:e2e -w @overlook/api"
+    "test": "npm run build -w @overlook/shared && npm test -w @overlook/api && npm run test:e2e -w @overlook/api && npm run test:worker",
+    "test:worker": "node --import tsx --test workers/feedback/test/worker.test.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.1",

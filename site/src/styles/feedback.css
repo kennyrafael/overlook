@@ -1,0 +1,61 @@
+/* Feedback section (#feedback): two forms side by side, stacked on narrow screens. */
+.feedback { padding: clamp(64px, 10vh, 112px) 0; background: var(--accent-soft); }
+.feedback-inner { max-width: var(--content); margin: 0 auto; padding: 0 var(--gutter); }
+.feedback-head { max-width: 44rem; margin-bottom: var(--space-6); }
+.feedback-head .eyebrow { margin: 0 0 var(--space-3); color: var(--accent); font-size: var(--step--1); font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; }
+.feedback-head h2 { margin: 0 0 var(--space-4); font-size: var(--step-3); line-height: var(--leading-tight); letter-spacing: var(--tracking-display); }
+.feedback-head p { margin: 0; color: var(--text-muted); font-size: var(--step-1); line-height: 1.55; }
+.feedback-head .fb-noscript { margin-top: var(--space-4); font-size: var(--step-0); }
+.feedback-forms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5); align-items: start; }
+@media (max-width: 860px) { .feedback-forms { grid-template-columns: minmax(0, 1fr); } }
+.feedback-forms > .reveal:nth-child(2) { transition-delay: 120ms; }
+
+.fb-form {
+  position: relative; display: grid; gap: var(--space-5); padding: clamp(20px, 3vw, 32px); border-radius: var(--radius-l);
+  background: var(--bg-raised); border: 1px solid var(--border); box-shadow: var(--shadow-1); scroll-margin-top: 24px;
+}
+.fb-form h3 { margin: 0; font-size: var(--step-1); }
+.fb-form fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.fb-form legend, .fb-field > label { display: block; padding: 0; margin-bottom: var(--space-2); font-weight: 650; }
+.fb-req, .fb-opt { font-weight: 400; color: var(--text-muted); font-size: 0.85em; }
+.fb-choices { display: grid; gap: 6px; }
+.fb-inline { display: flex; flex-wrap: wrap; gap: 8px 12px; }
+.fb-choices label, .fb-consent label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; line-height: 1.45; }
+.fb-inline label { padding: 8px 16px 8px 12px; border: 1px solid var(--border); border-radius: 999px; align-items: center; }
+.fb-inline label:has(:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.fb-form input[type='radio'], .fb-form input[type='checkbox'] { flex: none; width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); }
+.fb-inline input[type='radio'] { margin: 0; }
+.fb-form input[type='text'], .fb-form input[type='email'], .fb-form select, .fb-form textarea {
+  display: block; width: 100%; padding: 10px 12px; border-radius: var(--radius-m); border: 1px solid color-mix(in srgb, var(--text-muted) 55%, transparent);
+  background: var(--bg); color: var(--text); font: inherit; font-size: 1rem;
+}
+.fb-form textarea { resize: vertical; min-height: 8rem; }
+.fb-form [aria-invalid='true'] { border-color: #dc2626; }
+.fb-form fieldset[aria-invalid='true'] .fb-inline label { border-color: #dc2626; }
+.fb-hint { margin: 6px 0 0; font-size: 0.85rem; color: var(--text-muted); }
+.fb-error { margin: 6px 0 0; font-size: 0.88rem; font-weight: 600; color: #b91c1c; }
+.fb-error::before { content: '! '; }
+.fb-consent { font-size: 0.9rem; color: var(--text-muted); }
+.fb-consent .fb-error { margin-left: 28px; }
+.fb-hp { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.fb-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.fb-actions .btn { font: inherit; font-weight: 650; cursor: pointer; }
+.fb-actions .btn:disabled { opacity: 0.6; cursor: default; transform: none; }
+.fb-status { margin: 0; font-size: 0.92rem; font-weight: 600; }
+.fb-status[data-tone='ok'] { color: #15803d; }
+.fb-status[data-tone='error'] { color: #b91c1c; }
+.fb-status[data-tone='busy'] { color: var(--text-muted); }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .fb-error, :root:not([data-theme='light']) .fb-status[data-tone='error'] { color: #fca5a5; }
+  :root:not([data-theme='light']) .fb-status[data-tone='ok'] { color: #86efac; }
+  :root:not([data-theme='light']) .fb-form [aria-invalid='true'] { border-color: #f87171; }
+}
+:root[data-theme='dark'] .fb-error, :root[data-theme='dark'] .fb-status[data-tone='error'] { color: #fca5a5; }
+:root[data-theme='dark'] .fb-status[data-tone='ok'] { color: #86efac; }
+
+/* In the privacy demo: the feedback row has a tag instead of a switch. */
+.net-row + .net-row { border-top: 1px solid rgb(255 255 255 / 0.08); }
+.net-tag { flex: none; padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 650; color: #e0e7ff; background: rgb(255 255 255 / 0.1); }
+
+main .feedback { content-visibility: auto; contain-intrinsic-size: auto 1100px; }

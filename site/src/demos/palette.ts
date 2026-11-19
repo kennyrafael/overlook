@@ -14,6 +14,12 @@ const go = (id: string) => () => {
   setTimeout(() => el?.querySelector<HTMLElement>('h2, h1')?.focus({ preventScroll: true }), 400);
 };
 const explain = (text: string) => () => showNote(text);
+/** Scrolls to a feedback form and puts the cursor in its first field. */
+const focusForm = (id: string) => () => {
+  const form = document.getElementById(id);
+  form?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  setTimeout(() => form?.querySelector<HTMLElement>('input:not([type="hidden"]), textarea')?.focus({ preventScroll: true }), 400);
+};
 
 const ITEMS: Item[] = [
   { group: 'Go to', label: 'Projects found for you', run: go('discover') },
@@ -25,6 +31,8 @@ const ITEMS: Item[] = [
   { group: 'Go to', label: 'Install on Windows', run: go('install') },
   { group: 'Go to', label: 'Install on macOS', run: go('install-mac') },
   { group: 'Go to', label: 'FAQ', run: go('faq') },
+  { group: 'Feedback', label: 'Would you pay for Overlook?', run: focusForm('fb-pro') },
+  { group: 'Feedback', label: 'Suggest a feature', run: focusForm('fb-idea') },
   { group: 'Action', label: 'Download Overlook', run: () => document.getElementById('dl-main')?.click() },
   { group: 'trailmap', label: 'Start Claude Code', run: explain('In the app, this opens a terminal in ~/code/trailmap and starts Claude Code there.') },
   { group: 'trailmap', label: 'Open in VS Code', run: explain('In the app, this opens ~/code/trailmap in VS Code.') },

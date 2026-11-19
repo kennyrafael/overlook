@@ -131,6 +131,17 @@ async function main() {
       console.log(`       ${v.impact} ${v.id} ×${v.count}: ${v.help}`);
       for (const w of v.where) console.log(`         - ${w}`);
     }
+
+    // The privacy note (/privacy): its own page, same rules.
+    await page.goto(SITE + 'privacy');
+    await page.addScriptTag({ content: axeSource });
+    const privacy = await page.evaluate(async () => {
+      const axe = (window as unknown as { axe: { run: (ctx: Document, opts: object) => Promise<{ violations: { id: string; nodes: unknown[] }[] }> } }).axe;
+      return (await axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] } })).violations.map((v) => `${v.id} ×${v.nodes.length}`);
+    });
+    check(privacy.length === 0, `privacy page: no WCAG 2.1 A/AA violations${privacy.length ? `: ${privacy.join(', ')}` : ''}`);
+    const sticksOut = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    check(!sticksOut, 'privacy page: no sideways scroll');
     await ctx.close();
   }
 

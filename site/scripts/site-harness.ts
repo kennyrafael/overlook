@@ -1,6 +1,7 @@
 // Shared by check-demos.ts and audit.ts: serves the built site (dist/) to a Playwright browser without
 // any local server. Requests to https://overlook.test are answered from disk with the headers Vercel
-// sends (vercel.json, including the CSP), and the download feed is faked.
+// sends (vercel.json, including the CSP and clean URLs), the download feed is faked, and so is the
+// feedback Worker (answers are recorded in `feedbackPosts`, never sent).
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, extname, join, normalize } from 'node:path';
@@ -39,7 +40,8 @@ export function assertBuilt(): void {
 export async function routeSite(ctx: BrowserContext): Promise<void> {
   await ctx.route(`${SITE}**`, (route) => {
     const path = decodeURIComponent(new URL(route.request().url()).pathname);
-    const file = normalize(join(dist, path === '/' ? 'index.html' : path));
+    let file = normalize(join(dist, path === '/' ? 'index.html' : path));
+    if (!extname(file) && existsSync(`${file}.html`)) file = `${file}.html`; // cleanUrls: /privacy → privacy.html
     if (!file.startsWith(dist) || !existsSync(file)) return route.fulfill({ status: 404, body: 'not found' });
     return route.fulfill({ status: 200, body: readFileSync(file), headers: { ...HEADERS, 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' } });
   });
@@ -47,4 +49,18 @@ export async function routeSite(ctx: BrowserContext): Promise<void> {
     route.request().url().endsWith('.yml')
       ? route.fulfill({ status: 200, body: FEED, headers: { 'access-control-allow-origin': 'https://overlook.test' } })
       : route.fulfill({ status: 404, headers: { 'access-control-allow-origin': 'https://overlook.test' } }));
+  await ctx.route(FEEDBACK, (route) => {
+    const req = route.request();
+    const cors = { 'access-control-allow-origin': 'https://overlook.test', 'access-control-allow-methods': 'POST', 'access-control-allow-headers': 'Content-Type' };
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+    const body = req.postDataJSON() as Record<string, unknown>;
+    feedbackPosts.push(body);
+    // The real Worker rejects an idea without text; the fake answers like it so error paths can be checked.
+    if (body.kind === 'idea' && body.text === 'SERVER-ERROR') return route.fulfill({ status: 500, contentType: 'application/json', headers: cors, body: JSON.stringify({ ok: false, error: 'Could not save your response. Try again later.' }) });
+    return route.fulfill({ status: 201, contentType: 'application/json', headers: cors, body: JSON.stringify({ ok: true }) });
+  });
 }
+
+export const FEEDBACK = 'https://overlook-feedback.kennyrafael-cg.workers.dev/feedback';
+/** Bodies the page sent to the (faked) feedback Worker, in order. */
+export const feedbackPosts: Record<string, unknown>[] = [];

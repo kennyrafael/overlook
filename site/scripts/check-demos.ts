@@ -5,7 +5,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { assertBuilt, launch, routeSite, SITE, type Engine } from './site-harness.ts';
+import { assertBuilt, feedbackPosts, launch, routeSite, SITE, type Engine } from './site-harness.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = process.argv[2] ?? join(here, '..', 'test-results', 'demos');
@@ -39,8 +39,9 @@ async function main() {
     await routeSite(ctx);
     const page = await ctx.newPage();
     const errors: string[] = [];
-    // The fake feed has no .dmg, so the macOS probes 404 by design; anything else counts.
-    page.on('console', (m) => { if (m.type() === 'error' && !m.location().url.endsWith('.dmg')) errors.push(`${m.text()} ${m.location().url}`); });
+    // The fake feed has no .dmg, so the macOS probes 404 by design, and the feedback check provokes one
+    // server error on purpose; anything else counts.
+    page.on('console', (m) => { if (m.type() === 'error' && !m.location().url.endsWith('.dmg') && !m.location().url.endsWith('/feedback')) errors.push(`${m.text()} ${m.location().url}`); });
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.goto(SITE);
     await page.waitForLoadState('networkidle');
@@ -133,6 +134,53 @@ async function main() {
     await page.locator('#faq summary', { hasText: 'How does it read my plans?' }).click();
     check(await page.locator('#faq .plan-sample').isVisible(), 'faq: the plan format example opens');
     await page.locator('#faq').screenshot({ path: join(out, `faq-${scheme}.png`) });
+    // Feedback forms (the Worker is faked in site-harness.ts and records what the page sends)
+    await page.locator('#feedback').scrollIntoViewIfNeeded();
+    await page.locator('#fb-pro').scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    const pro = page.locator('#fb-pro');
+    const sent = feedbackPosts.length;
+    check(await pro.locator('button[type="submit"]').isEnabled(), 'feedback: the send buttons are enabled once the script runs');
+    await pro.locator('button[type="submit"]').click();
+    check(await pro.locator('[data-error-for="pay"]').isVisible(), 'feedback: sending without an answer shows the error next to the question');
+    check(await page.evaluate(() => (document.activeElement as HTMLInputElement | null)?.name === 'pay'), 'feedback: the first wrong field takes focus');
+    check(await pro.locator('fieldset[data-group="pay"]').getAttribute('aria-invalid') === 'true', 'feedback: the question is marked invalid for screen readers');
+    await pro.getByLabel('Maybe').check();
+    check(await pro.locator('[data-error-for="pay"]').isHidden(), 'feedback: the error clears once answered');
+    await pro.getByLabel('Sync between my computers').check();
+    await pro.getByLabel('Usage budgets and cost alerts').check();
+    await pro.getByLabel('A fair price').selectOption('5-10');
+    await pro.getByLabel('Email, to hear when Pro exists').fill('dev@example.com');
+    await pro.locator('button[type="submit"]').click();
+    check(await pro.locator('[data-error-for="consent"]').isVisible() && feedbackPosts.length === sent, 'feedback: an email without the consent box is not sent');
+    await pro.locator('input[name="consent"]').check();
+    await pro.locator('button[type="submit"]').click();
+    await pro.locator('.fb-status[data-tone="ok"]').waitFor({ timeout: 3000 }).catch(() => {});
+    check((await pro.locator('.fb-status').textContent())?.startsWith('Thank you'), 'feedback: Pro answers sent, thanks shown');
+    check(JSON.stringify(feedbackPosts.at(-1)) === JSON.stringify({ kind: 'pro', pay: 'maybe', features: ['sync', 'budgets'], price: '5-10', email: 'dev@example.com', consent: true }),
+      `feedback: Pro form sends only its answers (${JSON.stringify(feedbackPosts.at(-1))})`);
+    check(await pro.getByLabel('Maybe').isChecked() === false, 'feedback: the form is cleared after sending');
+    await page.locator('#feedback').screenshot({ path: join(out, `feedback-${scheme}.png`) });
+
+    const idea = page.locator('#fb-idea');
+    await idea.getByLabel('Your idea').fill('SERVER-ERROR');
+    await idea.locator('button[type="submit"]').click();
+    await idea.locator('.fb-status[data-tone="error"]').waitFor({ timeout: 3000 }).catch(() => {});
+    check((await idea.locator('.fb-status').textContent())?.includes('Try again later'), 'feedback: a server error is explained in the status line');
+    await idea.getByLabel('Your idea').fill('A timeline view of milestones');
+    await idea.getByLabel('Area').selectOption('board');
+    await idea.locator('button[type="submit"]').click();
+    await idea.locator('.fb-status[data-tone="ok"]').waitFor({ timeout: 3000 }).catch(() => {});
+    check(JSON.stringify(feedbackPosts.at(-1)) === JSON.stringify({ kind: 'idea', text: 'A timeline view of milestones', category: 'board' }), 'feedback: idea sent without email');
+
+    // Palette entry: "Suggest a feature" puts the cursor in the idea box
+    await page.keyboard.press('Control+K');
+    await page.locator('dialog.palette[open]').waitFor({ timeout: 3000 }).catch(() => {});
+    await page.keyboard.type('suggest');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(700);
+    check(await page.evaluate(() => document.activeElement?.id === 'fb-idea-text'), 'palette: "Suggest a feature" focuses the idea form');
+
     check((await page.locator('#dl-release').textContent()) === 'v0.2.1 · 19 Nov 2026', 'download: trust strip shows version and release date');
     await page.locator('#download').scrollIntoViewIfNeeded();
     await page.waitForTimeout(200);
@@ -146,6 +194,13 @@ async function main() {
     await page.waitForTimeout(600);
     const macTop = await page.evaluate(() => document.getElementById('install-mac')!.getBoundingClientRect().top);
     check(macTop >= 0 && macTop < 260, `a link to #install-mac lands on the macOS guide (top ${Math.round(macTop)}px)`);
+
+    // Privacy note: served at /privacy (clean URL) under the same CSP, linked from the footer
+    check(await page.locator('.site-footer a[href="/privacy"]').count() === 1, 'footer links to the privacy note');
+    await page.goto(SITE + 'privacy');
+    check((await page.locator('h1').textContent()) === 'Privacy' && await page.locator('a[href^="mailto:"]').first().isVisible(), 'privacy: the page loads with a contact address');
+    await page.screenshot({ path: join(out, `privacy-${scheme}.png`), fullPage: true });
+    await page.goto(SITE);
 
     // Layout: no sideways scroll
     check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no horizontal scroll');
@@ -163,6 +218,7 @@ async function main() {
   check(await p2.locator('.demo-fallback img').count() === 4 && await p2.locator('.net-static').isVisible(), 'no JS: demos show their screenshots (privacy: its text panel)');
   check(await p2.locator('#install').isVisible() && await p2.locator('#install-mac').isVisible(), 'no JS: both install guides visible');
   check(await p2.locator('.install [role="tablist"]').isHidden(), 'no JS: no tab buttons');
+  check(await p2.locator('.fb-form button[type="submit"]:disabled').count() === 2, 'no JS: feedback forms cannot be sent (nothing posted without the script)');
   check(await p2.locator('.feature-copy').first().isVisible(), 'no JS: feature text visible (no reveal hiding)');
   await nojs.close();
 

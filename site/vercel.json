@@ -11,7 +11,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'; connect-src 'self' https://overlook-downloads.kennyrafael-cg.workers.dev; base-uri 'none'; frame-ancestors 'none'"
+          "value": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'; connect-src 'self' https://overlook-downloads.kennyrafael-cg.workers.dev https://overlook-feedback.kennyrafael-cg.workers.dev; base-uri 'none'; frame-ancestors 'none'"
         },
         {
           "key": "X-Content-Type-Options",
