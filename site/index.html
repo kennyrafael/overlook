@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Overlook by AgentHub</title>
-<meta name="description" content="A free, local-only project dashboard for Claude Code users: plan progress, a Kanban board that edits your plan files, git activity and usage. Windows and macOS.">
+<meta name="description" content="A free, local-only project dashboard for Claude Code users: plan progress, a Kanban board that edits your plan files, git activity and usage. Windows, macOS and Linux.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <noscript><style>.hero { height: auto !important; } .hero-stage { position: relative !important; } .lens-caption { display: none !important; }</style></noscript>
 <link rel="preconnect" href="https://overlook-downloads.kennyrafael-cg.workers.dev" crossorigin>
@@ -14,14 +14,14 @@
 <meta property="og:site_name" content="Overlook by AgentHub">
 <meta property="og:url" content="https://overlook.agenthub.pt/">
 <meta property="og:title" content="Overlook: all your Claude Code projects, in one view">
-<meta property="og:description" content="A free, local-only desktop dashboard: plan progress, a board that edits your plan files, git activity and estimated Claude Code usage. Windows and macOS.">
+<meta property="og:description" content="A free, local-only desktop dashboard: plan progress, a board that edits your plan files, git activity and estimated Claude Code usage. Windows, macOS and Linux.">
 <meta property="og:image" content="https://overlook.agenthub.pt/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Overlook: a lens over a horizon showing the project dashboard, with the headline All your Claude Code projects, in one view">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Overlook: all your Claude Code projects, in one view">
-<meta name="twitter:description" content="A free, local-only desktop dashboard for Claude Code users. Windows and macOS.">
+<meta name="twitter:description" content="A free, local-only desktop dashboard for Claude Code users. Windows, macOS and Linux.">
 <meta name="twitter:image" content="https://overlook.agenthub.pt/og.jpg">
 </head>
 <body>
@@ -60,7 +60,7 @@
     </div>
 
     <div class="hero-copy">
-      <p class="eyebrow">Free desktop app for Windows and macOS</p>
+      <p class="eyebrow">Free desktop app for Windows, macOS and Linux</p>
       <h1 id="hero-title">All your Claude Code projects, in one view</h1>
       <p class="lede">Overlook turns the plan files, git repos and Claude Code history on your computer into progress, a board that edits your plans, and a clear view of where your time goes. No account. Nothing uploaded.</p>
       <div class="cta">
@@ -208,17 +208,18 @@
   </div>
 
   <!-- Install guide: tabs once JavaScript runs (src/install.ts picks the visitor's system); without it,
-       both guides are shown one after the other. -->
+       the guides are shown one after the other. -->
   <section class="install" id="install-guide" aria-labelledby="install-title">
     <div class="install-inner">
       <div class="install-head reveal">
         <p class="eyebrow">Install</p>
         <h2 id="install-title">Up and running in a minute.</h2>
-        <p>Overlook isn’t code-signed yet (certificates cost money every year, and the app is free), so your system asks you to confirm it the first time. Here is exactly what you’ll see.</p>
+        <p>Overlook isn’t code-signed yet (certificates cost money every year, and the app is free), so Windows and macOS ask you to confirm it the first time. Here is exactly what you’ll see.</p>
       </div>
       <div class="tabs" role="tablist" aria-label="Your system" hidden>
         <button type="button" role="tab" id="tab-win" aria-controls="install" aria-selected="true">Windows</button>
         <button type="button" role="tab" id="tab-mac" aria-controls="install-mac" aria-selected="false" tabindex="-1">macOS</button>
+        <button type="button" role="tab" id="tab-linux" aria-controls="install-linux" aria-selected="false" tabindex="-1">Linux</button>
       </div>
 
       <div class="tab-panel" id="install" role="tabpanel" aria-labelledby="tab-win">
@@ -324,6 +325,35 @@
         </ol>
         <p class="after">Overlook tells you when a new version is out: download it and drag it to Applications again. Your settings are kept.</p>
       </div>
+
+      <div class="tab-panel" id="install-linux" role="tabpanel" aria-labelledby="tab-linux">
+        <h3 class="panel-title">On 64-bit Linux</h3>
+        <ol class="steps-visual">
+          <li>
+            <span class="step-n" aria-hidden="true">1</span>
+            <div class="step-body">
+              <h4>Download the AppImage, or the .deb on Ubuntu and Debian</h4>
+              <p>The AppImage runs on any recent distribution and updates itself. The .deb installs through apt and adds Overlook to your applications. Both come for x86_64 and arm64.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-n" aria-hidden="true">2</span>
+            <div class="step-body">
+              <h4>Install or run it</h4>
+              <p>.deb: <code>sudo apt install ./Overlook-…-amd64.deb</code>, then open Overlook from your applications.</p>
+              <p>AppImage: <code>chmod +x Overlook-…-x86_64.AppImage</code>, then run <code>./Overlook-…-x86_64.AppImage</code> (or allow “Run as a program” in its file properties and double-click it).</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-n" aria-hidden="true">3</span>
+            <div class="step-body">
+              <h4>Pick the folders that hold your projects</h4>
+              <p>Overlook shows which tools it found (git, VS Code, Claude Code, your terminal) and scans the folders you choose.</p>
+            </div>
+          </li>
+        </ol>
+        <p class="after">The AppImage updates itself and asks before restarting. With the .deb, Overlook tells you when a new version is out: install the new .deb the same way. Your settings are kept.</p>
+      </div>
     </div>
   </section>
 
@@ -364,7 +394,7 @@
         </details>
         <details>
           <summary>Linux or iOS?</summary>
-          <p>Not planned for now. Linux users can run it from source (<code>npm install &amp;&amp; npm start</code>, then open it in a browser). iOS cannot read your local files, so a phone app would not be useful.</p>
+          <p>Linux, yes: an AppImage for any recent 64-bit distribution and a .deb for Ubuntu and Debian, for x86_64 and arm64 (see <a href="#install-linux">Install</a>). iOS, no: it cannot read your local files, so a phone app would not be useful.</p>
         </details>
         <details>
           <summary>Is it really free?</summary>
@@ -401,13 +431,15 @@
         <a class="btn" id="dl-arm64" href="#install">Windows on Arm<small id="dl-arm64-sub">arm64</small></a>
         <a class="btn" id="dl-mac-arm64" aria-disabled="true" href="#install-mac">Mac with Apple silicon<small id="dl-mac-arm64-sub">M1 and later</small></a>
         <a class="btn" id="dl-mac-x64" aria-disabled="true" href="#install-mac">Mac with Intel<small id="dl-mac-x64-sub">x64</small></a>
+        <a class="btn" id="dl-linux-appimage" aria-disabled="true" href="#install-linux">Linux AppImage<small id="dl-linux-appimage-sub">x86_64 · any distribution</small></a>
+        <a class="btn" id="dl-linux-deb" aria-disabled="true" href="#install-linux">Linux .deb<small id="dl-linux-deb-sub">amd64 · Debian, Ubuntu</small></a>
       </div>
-      <p class="note">Windows 10 and 11, macOS 12 and later. <span id="dl-version"></span> <a href="#install-guide">How to install</a></p>
+      <p class="note">Windows 10 and 11, macOS 12 and later, 64-bit Linux. <span id="dl-linux-arm64" hidden>Linux on Arm: <a id="dl-linux-arm64-appimage" aria-disabled="true" href="#install-linux">arm64 AppImage</a> · <a id="dl-linux-arm64-deb" aria-disabled="true" href="#install-linux">arm64 .deb</a>.</span> <span id="dl-version"></span> <a href="#install-guide">How to install</a></p>
       <ul class="trust">
         <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7 3 12l5 5M16 7l5 5-5 5"/></svg><span><strong>Open source</strong>MIT license</span></li>
         <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span><strong>Local only</strong>Nothing leaves your machine</span></li>
         <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><span><strong>No account</strong>No sign-up, no telemetry</span></li>
-        <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8L3 12Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span><strong>Latest release</strong><span id="dl-release">Windows and macOS</span></span></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8L3 12Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span><strong>Latest release</strong><span id="dl-release">Windows, macOS and Linux</span></span></li>
       </ul>
     </div>
   </section>

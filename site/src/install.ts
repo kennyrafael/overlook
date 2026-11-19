@@ -1,9 +1,9 @@
-// Install guide tabs (ARIA tabs pattern). Without JavaScript both guides show one after the other;
+// Install guide tabs (ARIA tabs pattern). Without JavaScript the guides show one after the other;
 // with it, the visitor's system is selected first, ← → / Home / End move between tabs, and a link to
-// #install or #install-mac (the download buttons' fallback) opens the matching tab.
-import { isMac } from './download.ts';
+// #install, #install-mac or #install-linux (the download buttons' fallback) opens the matching tab.
+import { isLinux, isMac, type NavLike } from './download.ts';
 
-export function initInstallTabs(root: ParentNode = document, nav: Parameters<typeof isMac>[0] = navigator as Parameters<typeof isMac>[0]): void {
+export function initInstallTabs(root: ParentNode = document, nav: NavLike = navigator as NavLike): void {
   const list = root.querySelector<HTMLElement>('.install [role="tablist"]');
   if (!list) return;
   const tabs = [...list.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
@@ -43,7 +43,10 @@ export function initInstallTabs(root: ParentNode = document, nav: Parameters<typ
     }
     return i >= 0;
   };
-  if (!fromHash()) select(isMac(nav) ? 1 : 0);
+  if (!fromHash()) {
+    const own = isMac(nav) ? 'tab-mac' : isLinux(nav) ? 'tab-linux' : 'tab-win';
+    select(Math.max(0, tabs.findIndex((t) => t.id === own)));
+  }
   window.addEventListener('hashchange', fromHash);
   // Clicking a link to the current hash does not fire hashchange; catch those too.
   document.addEventListener('click', (e) => {
