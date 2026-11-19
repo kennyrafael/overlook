@@ -111,7 +111,7 @@ This file is written in the dashboard's own plan format, so the dashboard tracks
 - [x] Landing page in `site/` (static, for a Vercel project with root directory `site`): download buttons read the R2 feeds, SmartScreen install steps, FAQ (Linux, iOS, macOS), not-affiliated footer
 - [x] Deploy `site/` on Vercel and attach `overlook.agenthub.pt`
 - [x] Landing page: macOS buttons (enabled once the release has the `.dmg`), Gatekeeper "Open Anyway" steps
-- [ ] Landing page: rebuild it as an interactive, animated page with real screenshots (Phases 4b-1 to 4b-6 below)
+- [x] Landing page: rebuild it as an interactive, animated page with real screenshots (Phases 4b-1 to 4b-6 below; live 2026-11-19, follow-ups in 4b-6)
 - [ ] Docs from README sections (plan file format, safety, troubleshooting)
 - [ ] Optional waitlist / "tell me about Pro" email signup to measure paid interest
 - [ ] Beta with 5–10 Claude Code users on both platforms; fix top issues
@@ -190,9 +190,9 @@ projects at once.**
 - [x] Browser checks for the site in CI (`site` job: `check:demos` + `audit` in the runner's Chrome, screenshots uploaded on failure): no console errors, download buttons point at the feed, the board demo ticks a checkbox, reduced motion and JavaScript-off render
 
 ## Phase 4b-6: Ship
-- [ ] Preview deploy on Vercel; review on a real Windows PC, Mac and phone
-- [ ] Deploy to `overlook.agenthub.pt`; check the CSP header and the download buttons against the live feed
-- [ ] Acceptance: a first-time visitor understands what Overlook does from the hero and one demo, finds the right download without scrolling, and the page meets the performance and accessibility budget
+- [ ] Review on a real Windows PC, Mac and phone (the preview step was skipped by choice: shipped straight to production after the checks in four browser engines)
+- [x] Deploy to `overlook.agenthub.pt` (2026-11-19; the Vercel build had failed since 4b-1 because `site/tsconfig.json` extended a file outside the Root Directory); checked live: CSP and security headers, Brotli, immutable asset caching, robots/sitemap/og, the real feed (CORS), all four installers, Windows and Mac visitors get the right main button, all demos load in Chrome, Firefox and WebKit with no console errors
+- [ ] Acceptance: a first-time visitor understands what Overlook does from the hero and one demo, finds the right download without scrolling, and the page meets the performance and accessibility budget (live, from this laptop: accessibility, best practices and SEO 100 on mobile and desktop, desktop performance 98; mobile performance 81–86 with LCP 3.0 s, under the 95 / 2 s budget: confirm with PageSpeed Insights and do a mobile performance pass if it agrees; first-visitor test still to do)
 
 ## Later: if there is demand
 Start only when there are real users asking for more (for example: steady downloads, waitlist signups, feature requests).
