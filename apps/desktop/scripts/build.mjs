@@ -3,6 +3,7 @@
 // Linux: an AppImage and a .deb per arch + linux-unpacked/, linux-arm64-unpacked/).
 // The staged app lives outside the repo, so all paths here are absolute.
 import { execFileSync } from 'node:child_process';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +14,19 @@ const { Arch, build, Platform } = require('electron-builder');
 const desktop = join(dirname(fileURLToPath(import.meta.url)), '..');
 const electronVersion = require('../package.json').devDependencies.electron;
 const downloadUrl = (process.env.OVERLOOK_DOWNLOAD_URL || 'https://overlook-downloads.kennyrafael-cg.workers.dev/overlook').replace(/\/+$/, '');
+
+const IS_MAC = process.platform === 'darwin';
+const IS_LINUX = process.platform === 'linux';
+// macOS Developer ID signing + notarization, only when both are configured (CI secrets, see release.yml):
+// CSC_LINK / CSC_KEY_PASSWORD (the .p12 certificate) and an App Store Connect API key
+// (APPLE_API_KEY = path to the .p8, APPLE_API_KEY_ID, APPLE_API_ISSUER). A signed build also gets a .zip
+// per arch and latest-mac.yml, and the app updates itself (updater.ts reads overlookMacAutoUpdate);
+// without them the build stays ad-hoc signed and the app keeps the "new version available" notice.
+const MAC_SIGNED = IS_MAC && !!process.env.CSC_LINK
+  && !!process.env.APPLE_API_KEY && !!process.env.APPLE_API_KEY_ID && !!process.env.APPLE_API_ISSUER;
+if (IS_MAC && !!process.env.CSC_LINK && !MAC_SIGNED) {
+  throw new Error('CSC_LINK is set but the notarization key is not (APPLE_API_KEY, APPLE_API_KEY_ID, APPLE_API_ISSUER).');
+}
 
 /** @type {import('electron-builder').Configuration} */
 const config = {
@@ -73,13 +87,24 @@ const config = {
   mac: {
     icon: join(desktop, 'resources', 'icon.png'),
     category: 'public.app-category.developer-tools',
-    target: ['dmg'],
-    // Ad-hoc signature ("-"): required to run on Apple silicon; no Apple Developer certificate yet, so
-    // users approve the first launch in System Settings → Privacy & Security → Open Anyway.
-    identity: '-',
-    hardenedRuntime: false,
+    target: MAC_SIGNED ? ['dmg', 'zip'] : ['dmg'],
+    ...(MAC_SIGNED
+      ? {
+          // Developer ID (from CSC_LINK) with the hardened runtime, notarized: Gatekeeper opens it without a
+          // warning, and Squirrel.Mac (electron-updater) can verify an update against the running app's signature.
+          hardenedRuntime: true,
+          entitlements: join(desktop, 'resources', 'entitlements.mac.plist'),
+          entitlementsInherit: join(desktop, 'resources', 'entitlements.mac.plist'),
+          notarize: true,
+        }
+      : {
+          // Ad-hoc signature ("-"): required to run on Apple silicon; no Apple Developer certificate yet, so
+          // users approve the first launch in System Settings → Privacy & Security → Open Anyway.
+          identity: '-',
+          hardenedRuntime: false,
+          notarize: false,
+        }),
     gatekeeperAssess: false,
-    notarize: false,
     minimumSystemVersion: '12.0',
     extendInfo: {
       // Shown when "Start Claude Code" asks to control Terminal or iTerm (AppleScript) for the first time.
@@ -90,6 +115,13 @@ const config = {
     artifactName: 'Overlook-${version}-${arch}.${ext}',
     title: 'Overlook ${version}',
   },
+  // Signed builds only: the update payload electron-updater downloads on macOS (it cannot install a .dmg).
+  // "arm64" in the name is how electron-updater picks the right file for the Mac's arch.
+  zip: {
+    artifactName: 'Overlook-${version}-${arch}-mac.${ext}',
+  },
+  // Read at runtime by updater.ts: turns on macOS auto-update for signed builds only.
+  extraMetadata: { overlookMacAutoUpdate: MAC_SIGNED },
   linux: {
     icon: join(desktop, 'resources', 'icon.png'), // electron-builder renders the hicolor icon sizes from it
     category: 'Development',
@@ -121,8 +153,21 @@ const config = {
   },
 };
 
-const IS_MAC = process.platform === 'darwin';
-const IS_LINUX = process.platform === 'linux';
+/**
+ * Each mac arch is built separately and electron-builder rewrites latest-mac.yml every time, so the
+ * files of all archs are collected here and written back as one feed (electron-updater picks by arch).
+ */
+const macFeed = { info: null, files: [] };
+function collectMacFeed() {
+  const yaml = require(require.resolve('js-yaml', { paths: [require.resolve('app-builder-lib')] }));
+  const path = join(config.directories.output, 'latest-mac.yml');
+  const info = yaml.load(readFileSync(path, 'utf8'));
+  macFeed.info ??= info;
+  for (const f of info.files ?? []) if (!macFeed.files.some((g) => g.url === f.url)) macFeed.files.push(f);
+  // The legacy top-level path/sha512 point at the x64 zip (old electron-updater versions read only these).
+  const x64 = macFeed.files.find((f) => f.url.endsWith('.zip') && !f.url.includes('arm64')) ?? macFeed.files[0];
+  writeFileSync(path, yaml.dump({ ...macFeed.info, files: macFeed.files, path: x64.url, sha512: x64.sha512 }, { lineWidth: -1 }));
+}
 
 /** Downloads the prebuilt better-sqlite3 binary for this Electron version and arch into the staged app. */
 function fetchSqlite(arch, platform) {
@@ -143,15 +188,18 @@ const archs = (process.env.OVERLOOK_ARCHS || 'x64,arm64').split(',').map((a) => 
 const built = [];
 for (const arch of archs) {
   fetchSqlite(arch, platform);
-  const targets = IS_MAC ? Platform.MAC.createTarget('dmg', Arch[arch])
+  const targets = IS_MAC ? Platform.MAC.createTarget(MAC_SIGNED ? ['dmg', 'zip'] : 'dmg', Arch[arch])
     : IS_LINUX ? Platform.LINUX.createTarget(['AppImage', 'deb'], Arch[arch])
     : Platform.WINDOWS.createTarget('nsis', Arch[arch]);
   // electron-builder mutates the config it is given, so each build gets a fresh copy.
   const archConfig = structuredClone(config);
-  // Windows feeds are named by channel (latest.yml, latest-arm64.yml); on Linux electron-builder and
-  // electron-updater add the platform and arch themselves (latest-linux.yml, latest-linux-arm64.yml).
-  archConfig.publish = { ...config.publish, channel: arch === 'arm64' && !IS_LINUX ? 'latest-arm64' : 'latest' };
+  // Windows feeds are named by channel (latest.yml, latest-arm64.yml); on Linux and macOS electron-builder and
+  // electron-updater add the platform themselves (latest-linux.yml, latest-linux-arm64.yml, latest-mac.yml;
+  // macOS lists both archs in one feed, merged by collectMacFeed).
+  archConfig.publish = { ...config.publish, channel: arch === 'arm64' && !IS_LINUX && !IS_MAC ? 'latest-arm64' : 'latest' };
   // Uploading happens in CI (gh release upload), never from a local build.
   built.push(...await build({ projectDir: appDir, targets, config: archConfig, publish: 'never' }));
+  if (MAC_SIGNED) collectMacFeed();
 }
-console.log('\nBuilt:\n' + built.filter((f) => /\.(exe|dmg|AppImage|deb)$/.test(f)).map((f) => '  ' + f).join('\n'));
+console.log(`\nmacOS: ${IS_MAC ? (MAC_SIGNED ? 'Developer ID signed + notarized, auto-update on' : 'ad-hoc signed, update notice only') : 'n/a'}`);
+console.log('\nBuilt:\n' + built.filter((f) => /\.(exe|dmg|zip|AppImage|deb)$/.test(f)).map((f) => '  ' + f).join('\n'));

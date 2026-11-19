@@ -28,6 +28,8 @@ test('the app fetching an installer is an update download, not a new one', () =>
   const c = get('Overlook-Setup-0.2.1-x64.exe', { userAgent: APP });
   assert.equal(c.kind, 'update-download');
   assert.equal(c.source, 'app');
+  const zip = get('Overlook-0.4.0-arm64-mac.zip', { userAgent: APP });
+  assert.deepEqual([zip.kind, zip.platform, zip.arch, zip.version], ['update-download', 'macos', 'arm64', '0.4.0']);
 });
 
 test('only whole downloads count: resumes, partial blocks, HEAD probes and other files do not', () => {

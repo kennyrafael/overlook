@@ -1,5 +1,5 @@
 /**
- * Windows and Linux AppImage auto-update (electron-updater, generic provider) from the release feed on Cloudflare R2
+ * Windows, Linux AppImage and signed macOS auto-update (electron-updater, generic provider) from the release feed on Cloudflare R2
  * (URL set at build time in scripts/build.mjs, stored in resources/app-update.yml).
  *
  * The only outbound call Overlook makes: it reads the release feed at start-up and once
@@ -10,9 +10,13 @@
  * Linux AppImage: the same updater, from latest-linux.yml (latest-linux-arm64.yml on arm64); it replaces
  * the AppImage file in place.
  *
- * macOS and the Linux .deb: unsigned macOS apps cannot update themselves, and a .deb is installed with
- * apt (root), so the release feed (latest.yml, latest-linux.yml) is only compared with the running
- * version, and a newer release shows a "Download" prompt that opens the download page.
+ * macOS, signed builds (Developer ID + notarized; build.mjs sets overlookMacAutoUpdate in package.json):
+ * the same updater, from latest-mac.yml (both archs listed; it picks the zip for this Mac's arch) through
+ * Squirrel.Mac, which checks that the update is signed by the same team as the running app.
+ *
+ * macOS ad-hoc signed builds and the Linux .deb: an ad-hoc signed app cannot update itself, and a .deb
+ * is installed with apt (root), so the release feed (latest.yml, latest-linux.yml) is only compared with
+ * the running version, and a newer release shows a "Download" prompt that opens the download page.
  */
 import { app, dialog, net, shell, type BrowserWindow } from 'electron';
 import { autoUpdater } from 'electron-updater';
@@ -24,8 +28,16 @@ const IS_MAC = process.platform === 'darwin';
 const IS_LINUX = process.platform === 'linux';
 /** Running from an AppImage (its runtime sets APPIMAGE to the file's path); a .deb install does not. */
 const IS_APPIMAGE = IS_LINUX && !!process.env.APPIMAGE;
+/** A Developer ID signed macOS build (flag baked into the packaged package.json by scripts/build.mjs). */
+const IS_MAC_SIGNED = IS_MAC && (() => {
+  try {
+    return JSON.parse(readFileSync(join(app.getAppPath(), 'package.json'), 'utf8')).overlookMacAutoUpdate === true;
+  } catch {
+    return false;
+  }
+})();
 /** The platforms that only get a "new version available" prompt. */
-const NOTICE_ONLY = IS_MAC || (IS_LINUX && !IS_APPIMAGE);
+const NOTICE_ONLY = (IS_MAC && !IS_MAC_SIGNED) || (IS_LINUX && !IS_APPIMAGE);
 const DOWNLOAD_PAGE = 'https://overlook.agenthub.pt';
 const DEFAULT_FEED = 'https://overlook-downloads.kennyrafael-cg.workers.dev/overlook';
 const supported = () => app.isPackaged && (IS_WIN || IS_MAC || IS_LINUX);
@@ -92,14 +104,15 @@ let prompted = false;
 
 export function initUpdater(getWindow: () => BrowserWindow | null, log: (msg: string) => void) {
   getWin = getWindow;
-  if (!app.isPackaged || !(IS_WIN || IS_APPIMAGE)) return;
+  if (!app.isPackaged || !(IS_WIN || IS_APPIMAGE || IS_MAC_SIGNED)) return;
   // The updater config is written here instead of relying on resources/app-update.yml: installers
   // built with `publish: 'never'` shipped without that file (0.1.0), and electron-updater then fails
   // every check with ENOENT. It also reads the cache folder name from this file.
   // Windows x64 and arm64 installers are published as separate feeds (latest.yml, latest-arm64.yml).
-  // On Linux electron-updater adds "-linux" and the arch itself (latest-linux.yml, latest-linux-arm64.yml).
+  // On Linux electron-updater adds "-linux" and the arch itself (latest-linux.yml, latest-linux-arm64.yml);
+  // on macOS it adds "-mac" (latest-mac.yml, one feed listing both archs).
   const channel = IS_WIN && process.arch === 'arm64' ? 'latest-arm64' : 'latest';
-  const feedFile = IS_LINUX ? `latest-linux${process.arch === 'arm64' ? '-arm64' : ''}.yml` : `${channel}.yml`;
+  const feedFile = IS_LINUX ? `latest-linux${process.arch === 'arm64' ? '-arm64' : ''}.yml` : IS_MAC ? 'latest-mac.yml' : `${channel}.yml`;
   try {
     const configPath = join(app.getPath('userData'), 'app-update.yml');
     writeFileSync(configPath, `provider: generic\nurl: ${feedUrl()}\nchannel: ${channel}\nupdaterCacheDirName: overlook-updater\n`);

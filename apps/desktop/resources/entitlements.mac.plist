@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Hardened-runtime entitlements for signed macOS builds (scripts/build.mjs, MAC_SIGNED only). -->
+<plist version="1.0">
+<dict>
+  <!-- V8's JIT. -->
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <!-- "Start Claude Code" drives Terminal / iTerm with AppleScript (NSAppleEventsUsageDescription in Info.plist). -->
+  <key>com.apple.security.automation.apple-events</key>
+  <true/>
+</dict>
+</plist>

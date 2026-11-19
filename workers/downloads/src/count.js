@@ -16,6 +16,8 @@ const INSTALLERS = [
   { re: /^Overlook-Setup-(\d[\w.-]*?)-(x64|arm64)\.exe$/, platform: 'windows' },
   // Overlook-0.2.1-arm64.dmg
   { re: /^Overlook-(\d[\w.-]*?)-(x64|arm64)\.dmg$/, platform: 'macos' },
+  // Overlook-0.4.0-arm64-mac.zip: the macOS update payload (signed builds), fetched by the app
+  { re: /^Overlook-(\d[\w.-]*?)-(x64|arm64)-mac\.zip$/, platform: 'macos' },
   // Linux (electron-builder names): Overlook-0.3.0-x86_64.AppImage, Overlook-0.3.0-amd64.deb, …-arm64 / aarch64
   { re: /^Overlook-(\d[\w.-]*?)-(x86_64|amd64|arm64|aarch64)\.(?:AppImage|deb)$/, platform: 'linux' },
 ];

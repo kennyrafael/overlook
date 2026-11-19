@@ -8,7 +8,11 @@
 #      a file that is not uploaded yet. latest.yml's version also drives the macOS "new version available"
 #      prompt and the landing page's macOS buttons; latest-linux.yml drives the .deb prompt and Linux buttons.
 #   2. A GitHub Release with the same files.
+#      Signed macOS builds also upload a .zip per arch (+ blockmaps) and then latest-mac.yml, the macOS auto-update feed.
 # Repository secrets: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET.
+# Optional macOS signing secrets (all five, or none: the build stays ad-hoc signed with the update notice):
+#   MAC_CSC_LINK (base64 of the Developer ID Application .p12), MAC_CSC_KEY_PASSWORD,
+#   APPLE_API_KEY_P8 (contents of the App Store Connect API key AuthKey_XXXX.p8), APPLE_API_KEY_ID, APPLE_API_ISSUER.
 # Repository variable (optional): OVERLOOK_DOWNLOAD_URL, the public URL of the R2 folder; it is baked
 # into the app as the update feed (default in apps/desktop/scripts/build.mjs).
 name: Release
@@ -35,6 +39,9 @@ jobs:
             files: |
               apps/desktop/release/Overlook-*.dmg
               apps/desktop/release/Overlook-*.dmg.blockmap
+              apps/desktop/release/Overlook-*-mac.zip
+              apps/desktop/release/Overlook-*-mac.zip.blockmap
+              apps/desktop/release/latest-mac.yml
           - os: ubuntu-latest
             files: |
               apps/desktop/release/Overlook-*.AppImage
@@ -57,10 +64,25 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run test:smoke
+      - name: Write the notarization key (macOS, when signing secrets are set)
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+        run: |
+          [ -n "$APPLE_API_KEY_P8" ] || { echo "No signing secrets: ad-hoc signed build"; exit 0; }
+          key="$RUNNER_TEMP/AuthKey.p8"
+          printf '%s' "$APPLE_API_KEY_P8" > "$key"
+          echo "APPLE_API_KEY=$key" >> "$GITHUB_ENV"
       - run: npm run dist
         env:
           OVERLOOK_DOWNLOAD_URL: ${{ vars.OVERLOOK_DOWNLOAD_URL }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          # macOS only, so the Windows build never picks up the Apple certificate. Empty → ad-hoc signed build.
+          CSC_LINK: ${{ runner.os == 'macOS' && secrets.MAC_CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ runner.os == 'macOS' && secrets.MAC_CSC_KEY_PASSWORD || '' }}
+          APPLE_API_KEY_ID: ${{ runner.os == 'macOS' && secrets.APPLE_API_KEY_ID || '' }}
+          APPLE_API_ISSUER: ${{ runner.os == 'macOS' && secrets.APPLE_API_ISSUER || '' }}
       - name: Smoke-test the packaged app (this runner's arch)
         if: runner.os != 'Linux'
         run: npm run test:desktop
@@ -102,15 +124,21 @@ jobs:
           cd release
           ls -la
           put() { aws s3 cp "$1" "s3://$BUCKET/$PREFIX/$1" --endpoint-url "$ENDPOINT" --only-show-errors --cache-control "$2"; }
-          for f in Overlook-*.exe Overlook-*.dmg Overlook-*.AppImage Overlook-*.deb *.blockmap; do put "$f" "public, max-age=31536000, immutable"; done
-          for f in latest.yml latest-arm64.yml latest-linux.yml latest-linux-arm64.yml; do put "$f" "no-cache"; done
+          for f in Overlook-*.exe Overlook-*.dmg Overlook-*-mac.zip Overlook-*.AppImage Overlook-*.deb *.blockmap; do
+            [ -e "$f" ] || continue # the mac zips exist only in signed builds
+            put "$f" "public, max-age=31536000, immutable"
+          done
+          for f in latest.yml latest-arm64.yml latest-linux.yml latest-linux-arm64.yml latest-mac.yml; do
+            [ -e "$f" ] || continue
+            put "$f" "no-cache"
+          done
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           cd release
-          files=$(ls Overlook-* latest.yml latest-arm64.yml latest-linux.yml latest-linux-arm64.yml)
+          files=$(ls Overlook-* latest.yml latest-arm64.yml latest-linux.yml latest-linux-arm64.yml $(ls latest-mac.yml 2>/dev/null))
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" $files --clobber
           else
