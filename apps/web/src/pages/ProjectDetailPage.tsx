@@ -27,6 +27,9 @@ import { api } from '../api';
 import { relativeTime, sourceLabel, statusSeverity } from '../format';
 import { baseOptions, chartTokens } from '../chartTheme';
 import { useTheme } from '../theme/ThemeContext';
+import PlanHealthPanel from '../plans/PlanHealthPanel';
+import { CreatePlanButton } from '../plans/CreatePlanDialog';
+import { dueInfo } from '../plans/planTrust';
 
 type MilestoneFilter = 'all' | 'open' | 'reached';
 
@@ -73,6 +76,7 @@ function Stat({ label, value, sub }: { label: string; value: string | number; su
 
 function MilestoneHeader({ m }: { m: Milestone }) {
   const pct = m.tasksTotal ? Math.round((m.tasksDone / m.tasksTotal) * 100) : m.reached ? 100 : 0;
+  const due = dueInfo(m);
   return (
     <div className="flex align-items-center gap-3 w-full">
       <i className={m.reached ? 'pi pi-flag-fill text-green-500' : 'pi pi-flag text-500'} />
@@ -83,6 +87,7 @@ function MilestoneHeader({ m }: { m: Milestone }) {
       <div style={{ width: '8rem' }} className="hidden md:block">
         <ProgressBar value={pct} showValue={false} style={{ height: '0.4rem' }} />
       </div>
+      {due && <Tag value={due.label} icon="pi pi-calendar" severity={due.overdue ? 'danger' : 'secondary'} className="milestone-due white-space-nowrap" />}
       <Tag value={m.tasksTotal ? `${m.tasksDone}/${m.tasksTotal}` : m.reached ? 'done' : 'open'}
         severity={m.reached ? 'success' : m.tasksInProgress ? 'warning' : 'secondary'} />
     </div>
@@ -215,11 +220,16 @@ export default function ProjectDetailPage() {
         </div>
       </Card>
 
+      <PlanHealthPanel warnings={p.planWarnings ?? []} />
+
       <TabView>
         <TabPanel header="Milestones" leftIcon="pi pi-flag mr-2">
           {!p.milestonesTotal ? (
-            <Message severity="info" className="w-full justify-content-start"
-              text={`No milestones found. Add checklists under headings in one of: ${['PLAN.md', 'ROADMAP.md', 'TODO.md'].join(', ')}.`} />
+            <div className="flex flex-column align-items-start gap-3">
+              <Message severity="info" className="w-full justify-content-start"
+                text={`No milestones found. Add checklists under headings in one of: ${['PLAN.md', 'ROADMAP.md', 'TODO.md'].join(', ')}, or start from a template.`} />
+              <CreatePlanButton project={p} onCreated={setProject} />
+            </div>
           ) : (
             <div className="grid">
               <div className="col-12">

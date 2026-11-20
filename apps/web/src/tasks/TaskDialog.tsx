@@ -13,7 +13,7 @@ import { relativeTime } from '../format';
 const STATUS_OPTIONS = (['todo', 'in_progress', 'done'] as TaskStatus[]).map((s) => ({ label: TASK_STATUS_LABEL[s], value: s }));
 
 export type TaskDialogState =
-  | { mode: 'edit'; projectId: string; task: Task; milestoneTitle: string; relFile: string }
+  | { mode: 'edit'; projectId: string; task: Task; milestoneTitle: string; relFile: string; milestoneId?: string }
   | { mode: 'add'; status: TaskStatus; projectId?: string; milestoneId?: string }
   | null;
 
@@ -44,6 +44,7 @@ export default function TaskDialog({ state, projects, onHide, onSave, onDelete, 
     if (state.mode === 'edit') {
       setText(state.task.text);
       setStatus(state.task.status);
+      setTarget(state.milestoneId ? `${state.projectId}|${state.milestoneId}` : null);
     } else {
       setText('');
       setStatus(state.status);
@@ -66,7 +67,9 @@ export default function TaskDialog({ state, projects, onHide, onSave, onDelete, 
     try {
       let ok: boolean;
       if (state.mode === 'edit') {
-        ok = await onSave({ projectId: state.projectId, task: state.task, text, status });
+        // A different milestone moves the task (only within its own project).
+        const moveTo = target && state.milestoneId && target !== `${state.projectId}|${state.milestoneId}` ? target.split('|')[1] : undefined;
+        ok = await onSave({ projectId: state.projectId, task: state.task, text, status, milestoneId: moveTo });
       } else {
         if (!target) return;
         const [projectId, milestoneId] = target.split('|');
@@ -116,7 +119,18 @@ export default function TaskDialog({ state, projects, onHide, onSave, onDelete, 
     >
       <div className="flex flex-column gap-3">
         {state?.mode === 'edit' ? (
-          <small className="text-500">{state.milestoneTitle} · {state.relFile}:{state.task.line}</small>
+          <>
+            <small className="text-500">{state.milestoneTitle} · {state.relFile}:{state.task.line}</small>
+            {state.milestoneId && (
+              <label className="flex flex-column gap-2">
+                <span>Milestone</span>
+                <Dropdown value={target} inputId="task-milestone" aria-label="Milestone"
+                  options={milestoneOptions.filter((g) => g.items.some((i) => i.value.startsWith(`${state.projectId}|`)))}
+                  optionGroupLabel="label" optionGroupChildren="items" onChange={(e) => setTarget(e.value)} filter />
+                <small className="text-500">Another milestone moves the task with its sub-tasks to the end of it (also into another plan file).</small>
+              </label>
+            )}
+          </>
         ) : (
           <label className="flex flex-column gap-2">
             <span>Milestone</span>
