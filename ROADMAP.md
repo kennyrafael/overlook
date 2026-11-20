@@ -246,43 +246,57 @@ waiting) and the board together, so the dashboard is where you start and follow 
   past session, on Windows, macOS and Linux
 
 ## Phase 6: Plans you can trust
-- [ ] Plan health panel on the project page: tasks outside any milestone, duplicate task text
-  (which makes edits ambiguous), headings that look like milestones but parse as nothing, files
-  over a size limit. Each warning says what to change in the file
-- [ ] Stale work: tasks in progress for more than N days (from the plan file's git history),
-  shown on Overview and as a board filter
-- [ ] Create a plan file for a project that has none: preview of a starter `PLAN.md` (milestones
-  from a template), written only after confirmation, backed up like every other write
-- [ ] Move a task to another milestone (drag across milestone groups on the project board),
-  keeping indent, bullet and sub-tasks
-- [ ] Optional target dates on milestones (`## Phase 2: API (due 2026-12-15)`): shown on the
-  milestone, overdue highlighted; files without dates parse exactly as before
-- [ ] Acceptance: the fixture project with known plan mistakes gets every warning; existing plan
-  files of the dashboard's own repos parse identically before and after
+- [x] Plan health panel on the project page (`plans/plan-lint.ts`, `ProjectDetail.planWarnings`):
+  tasks before the first heading, duplicate task text, checkboxes and headings the parser does not
+  read (`-[ ]`, `- []`, `* [X ]`, a bare `[x]`, `##Title`, `✓`/`(done)`, a bad `(due …)`), files over
+  512 KB (warning) or 2 MB (not read). Each warning says what to change; nothing shows when clean
+- [x] Stale work: in-progress tasks get `inProgressSince` from `git blame --porcelain -L` (cached by
+  mtime and size; uncommitted lines are never stale). Settings → `staleTaskDays` (default 7);
+  "Stale in progress" card on Overview (`GET /api/plans/stale`), "Stale only" toggle on the board
+- [x] Create a plan file: `basic` or `phases` template, read-only preview, written (exclusively,
+  never over a file) only on "Write PLAN.md". Refused when the project already has milestones or
+  the file exists, not when any plan-file name exists (CLAUDE.md would block most projects)
+- [x] Move a task to another milestone, also into another plan file, with its sub-tasks, keeping
+  the target's bullet and indent; both files checked and backed up. From the task dialog's
+  Milestone field (dragging across milestone groups was left out)
+- [x] Optional target dates on milestones (`## Phase 2: API (due 2026-12-15)`): `Milestone.due`,
+  title without the suffix, shown on the project page and board tags, red when overdue
+- [x] Acceptance: fixture projects `messy` and `fresh` (a second root the tests add) get every
+  warning; this repo's ROADMAP.md and PLAN.md parse identically before and after, and parser tests
+  pin the existing milestone ids
 
 ## Phase 7: Know where the time and tokens go
-- [ ] Session detail page: prompts in order, tool calls by type, files Claude edited, tokens and
-  estimated cost per turn, duration; opened from the Claude page and project Claude tab
-- [ ] Tool breakdown: most-used tools and tool error rate, per project and overall
-- [ ] Search across prompts and session titles (SQLite FTS5 index, built from the parse cache,
-  kept local); results open the session detail or resume it
-- [ ] Rolling usage window: tokens and estimated cost in the last 5 hours and 7 days, so you can
-  see a heavy stretch coming (an estimate from local logs, labelled as such; not your plan's limit)
-- [ ] Cost per reached milestone: estimated Claude cost between a milestone's first task moving
-  and its completion (from burnup history), on the project page
-- [ ] Acceptance: on the fixture logs, session detail and tool counts match a hand count; search
-  returns in under 200 ms on 1,000 sessions
+- [x] Session detail page `/claude/sessions/:id` (from the session table and search): prompts in
+  order, tools, files Claude edited (failed edits left out), tokens and cost per prompt (all of
+  Claude's work until the next prompt), duration, models, subagents. Parsed on demand
+- [x] Tool breakdown: calls and error rate per tool (`PARSER_VERSION` 4, per day so the date range
+  applies), for the selected projects and overall, in a Tools card on the Claude page
+- [x] Search across prompts and session titles: SQLite FTS5 (`claude_search`, migration
+  1763700000000) kept in step with the parse cache; quoted terms, so input is never FTS syntax;
+  snippets with highlights; results open the session or resume it
+- [x] Rolling usage window: last 5 hours and 7 days per model, from hour buckets kept for each log's
+  last 8 days; labelled "estimate from local logs, not your plan's limit"
+- [x] Cost per milestone: estimated cost of the sessions matched to each milestone's tasks (Phase 5
+  links), on the Milestones tab, with unmatched sessions apart (`GET /api/insights/milestone-costs`).
+  Not "between first move and completion" as first planned: matched sessions say more. The e2e
+  test covers only the unmatched case so far
+- [x] Acceptance: fixture logs with known tools, errors and edits match a hand count; search over
+  1,000 generated sessions (21,000 rows) answers in 0.1–20 ms, worst case 79 ms for a one-letter prefix
 
 ## Phase 8: Daily overview
-- [ ] **Since you were away** card on Overview: tasks completed, commits, sessions and cost since
-  the last visit (per device, stored in the app's database), with "mark as seen"
-- [ ] Weekly summary page (pick a week): per project, what moved on the board, commits, Claude
-  time and cost; **Copy as Markdown** for a standup or a note
-- [ ] Git: branches ahead/behind their upstream, stale local branches, and worktrees listed per
-  repo (read-only, same `GIT_OPTIONAL_LOCKS=0` rules)
-- [ ] Tray / menu-bar menu: live sessions (click to open), recent projects, "Start Claude in…"
+- [x] **Since you were away** card on Overview: tasks completed, commits, sessions and cost since
+  this device last pressed "Mark as seen" (random device id in localStorage, `devices` table). Task
+  history: every plan read is diffed against the last task list per project (`task_states`) into
+  `task_events` (source dashboard or file; nothing on a project's first read). Migration 1763800000000
+- [x] Weekly summary page `/summary` (ISO week picker, nav and Ctrl+K): per project net task moves,
+  commits (newest 10), sessions, time and cost, totals on top; **Copy as Markdown** (falls back to
+  selectable text). `GET /api/insights/summary?from&to`, at most 31 days
+- [x] Git: per repo, loaded when a row on the Git page is expanded: local branches with
+  ahead/behind, upstream gone, stale (30 days), merged; worktrees (`GET /api/insights/git/branches`)
+- [x] Tray / menu-bar menu (`apps/desktop/src/tray-menu.ts`): live sessions and 5 recent projects
+  (open the project), "Start Claude in…" (top 5); rebuilt every 60 s and on changes; on macOS too
 - [ ] Acceptance: after a day of work, the away card and Markdown summary match what happened in
-  `git log` and the board
+  `git log` and the board (tests check both against the fixture; a real day is still to do)
 
 ## Later: if there is demand
 Start only when there are real users asking for more (for example: steady downloads, waitlist signups, feature requests).

@@ -29,7 +29,8 @@ the browser. `npm start` rebuilds only when the sources changed.
 | **Project** | Progress dial, burnup, milestones with tasks (tick to complete, add inline), Board, Git and Claude tabs |
 | **Board** | Kanban across one or all projects; drag cards between To do / In progress / Done |
 | **Claude** | Sessions, prompts, tokens, estimated cost per day by model and per project, session list |
-| **Git** | Uncommitted files, unpushed commits, 90-day commit heatmap, per-repo table |
+| **Git** | Uncommitted files, unpushed commits, 90-day commit heatmap, per-repo table; expand a repo for branches (ahead/behind, stale, merged) and worktrees |
+| **Summary** | One week per project: tasks moved, commits, Claude sessions, time and cost; Copy as Markdown |
 | **Settings** | Root folders, ignore list, plan file names, Claude history options, model prices |
 
 Across all pages: one filter bar with removable chips and **saved views**, **Ctrl+K** command
@@ -117,6 +118,37 @@ history the first day the dashboard sees them.
   and the session table shows the task. It is a guess; nothing is written.
 - **"Claude is waiting"**: the desktop app shows a notification when a session finishes its turn
   (Settings → Desktop app, with a list of projects to leave out); a browser tab marks its title.
+
+## Plan health, stale work and dates
+
+- **Plan health**: the project page lists what in a plan file the dashboard cannot read or edit safely
+  (tasks before the first heading, the same task text twice, `-[ ]` and other near-checkboxes,
+  headings like `##Title`, very large files), each with what to change.
+- **Stale in progress**: a task marked in progress longer than Settings → "Task stale after" days (7 by
+  default; the date comes from `git blame` of its line) shows on Overview and under **Stale only** on
+  the board. Uncommitted changes are never stale.
+- **Due dates**: end a milestone heading with `(due 2026-12-15)`; it shows on the milestone and turns
+  red when overdue. Headings without one parse as before.
+- **Move a task** to another milestone (also in another plan file) from the task dialog; sub-tasks
+  move with it.
+- **Create PLAN.md** for a project without milestones: pick a template, read the preview, confirm.
+  It never overwrites a file.
+
+## Claude sessions in depth
+
+- **Session page** (click a session): prompts in order, Claude's tokens and cost per prompt, tools
+  used, files it edited.
+- **Search** prompts and session titles on the Claude page (a local SQLite full-text index).
+- **Tools** card: most-used tools and how often they failed. **Recent usage**: the last 5 hours and
+  7 days, an estimate from local logs, not your plan's limit.
+- **Cost per milestone** on the Milestones tab: the estimated cost of sessions matched to its tasks.
+
+## Daily overview
+
+- **Since you were away** on Overview: tasks completed, commits, sessions and cost since you last
+  pressed "Mark as seen" on this device. Task changes are recorded in the app's database each time a
+  plan file is read (`~/.claude-projects-dashboard`), never in your projects.
+- The desktop app's **tray menu** lists live Claude sessions, recent projects and "Start Claude in…".
 
 ## Quick actions and shortcuts
 
