@@ -17,6 +17,12 @@ const downloadUrl = (process.env.OVERLOOK_DOWNLOAD_URL || 'https://overlook-down
 
 const IS_MAC = process.platform === 'darwin';
 const IS_LINUX = process.platform === 'linux';
+// release.yml passes the signing variables as '' when the secrets are not set (and on every non-macOS runner).
+// electron-builder reads an empty CSC_LINK as a path, resolves it to the project folder and fails ("… not a
+// file"), so empty means unset.
+for (const k of ['CSC_LINK', 'CSC_KEY_PASSWORD', 'APPLE_API_KEY', 'APPLE_API_KEY_ID', 'APPLE_API_ISSUER']) {
+  if (process.env[k] !== undefined && !process.env[k].trim()) delete process.env[k];
+}
 // macOS Developer ID signing + notarization, only when both are configured (CI secrets, see release.yml):
 // CSC_LINK / CSC_KEY_PASSWORD (the .p12 certificate) and an App Store Connect API key
 // (APPLE_API_KEY = path to the .p8, APPLE_API_KEY_ID, APPLE_API_ISSUER). A signed build also gets a .zip
