@@ -35,6 +35,46 @@ export class PlanFileService {
   }
 
   /**
+   * Applies `edit` to two files together (moving a task between plan files). Both are locked
+   * (in a fixed order, so two moves cannot deadlock) and read before anything is written, so a
+   * conflict in either leaves both untouched. Both are backed up. If the second write fails, the
+   * first file is put back.
+   */
+  async editPair(a: string, b: string, edit: (ca: string, cb: string) => [string, string]): Promise<boolean> {
+    const [first, second] = [a, b].sort((x, y) => x.toLowerCase().localeCompare(y.toLowerCase()));
+    return this.withLock(first, () => this.withLock(second, async () => {
+      const [beforeA, beforeB] = await Promise.all([readFile(a, 'utf8'), readFile(b, 'utf8')]);
+      const [afterA, afterB] = edit(beforeA, beforeB);
+      if (afterA === beforeA && afterB === beforeB) return false;
+      await this.backup(a, beforeA);
+      await this.backup(b, beforeB);
+      // The file that gains the task first: a failure then never loses it.
+      this.events.markOwnWrite(b, afterB);
+      await this.replace(b, afterB);
+      try {
+        this.events.markOwnWrite(a, afterA);
+        await this.replace(a, afterA);
+      } catch (e) {
+        this.events.markOwnWrite(b, beforeB);
+        await this.replace(b, beforeB).catch(() => undefined);
+        throw e;
+      }
+      return true;
+    }));
+  }
+
+  /**
+   * Creates a new file with `content`. Fails with EEXIST when the file is already there, so an
+   * existing plan is never overwritten.
+   */
+  async create(file: string, content: string): Promise<void> {
+    await this.withLock(file, async () => {
+      this.events.markOwnWrite(file, content);
+      await writeFile(file, content, { encoding: 'utf8', flag: 'wx' });
+    });
+  }
+
+  /**
    * Atomic replace via temp file + rename. On Windows the rename fails with
    * EPERM/EBUSY/EACCES while another process (a file watcher, antivirus, an
    * editor) briefly has the file open, so retry with backoff and, as a last

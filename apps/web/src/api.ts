@@ -1,4 +1,5 @@
 import type { ActionResult, ClaudeActionBody, TaskSessionRef, LiveSession,ClaudeOverview, GitOverview, Project, ProjectAction, ProjectDetail, ProjectPatch, SavedView, Settings, TaskStatus, ViewFilters, SystemTools, SystemInfo, AppDataExport, AboutInfo, FeedbackInput } from '@overlook/shared';
+import type { PlanTemplate, PlanTemplateId, StaleTask } from '@overlook/shared';
 
 export class ApiError extends Error {
   /** Field errors from a 400 answer (feedback form), keyed by field name. */
@@ -69,4 +70,13 @@ export const api = {
   settings: () => request<Settings>('/settings'),
   saveSettings: (s: Partial<Settings>) =>
     request<Settings>('/settings', { method: 'PUT', body: JSON.stringify(s) }),
+  // Phase 6: plans you can trust
+  /** Moves a task (with its sub-tasks) to the end of another milestone of the project; status/text may change in the same write. */
+  moveTask: (projectId: string, taskId: string, patch: { milestoneId: string; status?: TaskStatus; text?: string }) =>
+    request<ProjectDetail>(`/projects/${projectId}/tasks/${taskId}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+  staleTasks: () => request<StaleTask[]>('/plans/stale'),
+  planTemplates: (projectId: string) => request<PlanTemplate[]>(`/projects/${projectId}/plan-templates`),
+  /** Writes the chosen starter plan into the project folder; only after the user confirms the preview. */
+  createPlanFile: (projectId: string, template: PlanTemplateId) =>
+    request<ProjectDetail>(`/projects/${projectId}/plan-file`, { method: 'POST', body: JSON.stringify({ template }) }),
 };

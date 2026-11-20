@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { existsSync } from 'fs';
 import { stat } from 'fs/promises';
 import { basename, join } from 'path';
-import { Milestone, ProjectSource, Settings } from '@overlook/shared';
+import { Milestone, PlanWarning, ProjectSource, Settings } from '@overlook/shared';
 import { PlansService } from '../plans/plans.service';
 import { ClaudeHistoryReader } from './claude-history.reader';
 import { RootScanner, projectMarkers } from './root-scanner';
@@ -19,6 +19,7 @@ export interface DiscoveredProject {
   lastActivityAt: Date | null;
   milestones: Milestone[];
   planFiles: string[];
+  planWarnings: PlanWarning[];
   /** Claude session folders (absolute paths, local or WSL) that belong to this project. */
   claudeDirs: string[];
 }
@@ -44,6 +45,7 @@ export class DiscoveryService {
         lastActivityAt: null,
         milestones: [],
         planFiles: [],
+        planWarnings: [],
         claudeDirs: [],
       });
     }
@@ -78,6 +80,7 @@ export class DiscoveryService {
           lastActivityAt: e.lastActivityAt,
           milestones: [],
           planFiles: [],
+          planWarnings: [],
           claudeDirs: [e.dir],
         });
       }
@@ -103,6 +106,7 @@ export class DiscoveryService {
     const plan = await this.plans.milestonesFor(p.path, p.subpaths, settings.planFiles);
     p.milestones = plan.milestones;
     p.planFiles = plan.files;
+    p.planWarnings = plan.warnings;
     if (!p.markers.length) {
       p.markers = projectMarkers(settings.planFiles).filter((m) => existsSync(join(p.path, m)));
     }

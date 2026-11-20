@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parsePlan } from './plan-parser';
-import { PlanConflictError, PlanEditError, addTask, deleteTask, setTaskStatus, setTaskText } from './plan-writer';
+import { PlanConflictError, PlanEditError, addTask, deleteTask, moveTask, setTaskStatus, setTaskText } from './plan-writer';
 
 const F = '/p/PLAN.md';
 const R = 'PLAN.md';
@@ -89,6 +89,84 @@ test('preserves CRLF line endings', () => {
   const t = ms(crlf)[0].tasks[0];
   const out = setTaskStatus(crlf, F, R, t.id, 'done');
   assert.equal(out, crlf.replace('- [ ] write parser', '- [x] write parser'));
+});
+
+const MOVE = `# Plan
+
+## Phase 1
+- [ ] write parser
+  with a wrapped line
+  - [x] lexer
+  - [ ] grammar
+    notes on the grammar
+- [x] scaffold
+
+## Phase 2
+    * [ ] deploy
+    * [ ] monitor
+
+## [ ] Launch
+Notes.
+`;
+
+test('moveTask (same file, down): whole block to the end of the target, in its indent and bullet', () => {
+  const [p1, p2] = ms(MOVE);
+  const out = moveTask({ content: MOVE, file: F, relFile: R }, p1.tasks[0].id, null, p2.id);
+  assert.equal(out.target, null);
+  assert.equal(out.source, `# Plan
+
+## Phase 1
+- [x] scaffold
+
+## Phase 2
+    * [ ] deploy
+    * [ ] monitor
+    * [ ] write parser
+      with a wrapped line
+      * [x] lexer
+      * [ ] grammar
+        notes on the grammar
+
+## [ ] Launch
+Notes.
+`);
+  const after = ms(out.source);
+  assert.deepEqual(after[1].tasks.map((t) => [t.text, t.depth]), [
+    ['deploy', 2], ['monitor', 2], ['write parser with a wrapped line', 2], ['lexer', 3], ['grammar notes on the grammar', 3],
+  ]);
+});
+
+test('moveTask (same file, up) and into a heading-only milestone', () => {
+  const [p1, p2, launch] = ms(MOVE);
+  const up = moveTask({ content: MOVE, file: F, relFile: R }, p2.tasks[1].id, null, p1.id).source;
+  assert.match(up, /- \[x\] scaffold\n- \[ \] monitor\n\n## Phase 2\n    \* \[ \] deploy\n\n## \[ \] Launch/);
+  const toLaunch = moveTask({ content: MOVE, file: F, relFile: R }, p1.tasks[3].id, null, launch.id).source;
+  assert.match(toLaunch, /## \[ \] Launch\n\n- \[x\] scaffold\n\nNotes\.\n$/);
+  assert.equal(ms(toLaunch)[2].tasks.length, 1);
+  assert.throws(() => moveTask({ content: MOVE, file: F, relFile: R }, p1.tasks[0].id, null, p1.id), PlanEditError);
+});
+
+test('moveTask across files keeps both files\' line endings and refuses stale ids', () => {
+  const other = '## Backlog\r\n+ [ ] idea\r\n';
+  const OF = '/p/TODO.md';
+  const [p1] = ms(MOVE);
+  const [backlog] = parsePlan(other, OF, 'TODO.md');
+  const out = moveTask({ content: MOVE, file: F, relFile: R }, p1.tasks[1].id, { content: other, file: OF, relFile: 'TODO.md' }, backlog.id);
+  // The sub-task leaves the source; it lands as a top-level "+" item in the CRLF target.
+  assert.doesNotMatch(out.source, /lexer/);
+  assert.equal(out.target, '## Backlog\r\n+ [ ] idea\r\n+ [x] lexer\r\n');
+  assert.throws(() => moveTask({ content: MOVE.replace('lexer', 'lexer v2'), file: F, relFile: R }, p1.tasks[1].id,
+    { content: other, file: OF, relFile: 'TODO.md' }, backlog.id), PlanConflictError);
+  assert.throws(() => moveTask({ content: MOVE, file: F, relFile: R }, p1.tasks[1].id,
+    { content: other.replace('Backlog', 'Later'), file: OF, relFile: 'TODO.md' }, backlog.id), PlanConflictError);
+});
+
+test('moveTask in a CRLF file', () => {
+  const crlf = MOVE.replace(/\n/g, '\r\n');
+  const [p1, p2] = ms(crlf);
+  const out = moveTask({ content: crlf, file: F, relFile: R }, p1.tasks[3].id, null, p2.id).source;
+  assert.equal(out, crlf.replace('- [x] scaffold\r\n', '').replace('    * [ ] monitor\r\n', '    * [ ] monitor\r\n    * [x] scaffold\r\n'));
+  assert.doesNotMatch(out.replace(/\r\n/g, ''), /\n/);
 });
 
 test('rejects empty text', () => {

@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { PROJECT_STATUSES, Project, ProjectDetail, ProjectPatch, ProjectStatus, Settings } from '@overlook/shared';
 import { PlanSummary, summarize } from '../plans/plan-parser';
 import { PlansService } from '../plans/plans.service';
+import { PlanAgeService } from '../plans/plan-age.service';
 import { SettingsService } from '../config/settings.service';
 import { DiscoveredProject, DiscoveryService } from '../discovery/discovery.service';
 import { projectId } from '../discovery/path-utils';
@@ -36,17 +37,19 @@ export class ProjectsService implements OnApplicationBootstrap {
     private plans: PlansService,
     private events: EventsService,
     private snapshots: SnapshotsService,
+    private ages: PlanAgeService,
     @InjectRepository(ProjectOverrideEntity) private overrides: Repository<ProjectOverrideEntity>,
   ) {}
 
   async list(): Promise<Project[]> {
-    return (await this.listDetailed()).map(({ milestones: _m, ...p }) => p);
+    return (await this.listDetailed()).map(({ milestones: _m, planWarnings: _w, ...p }) => p);
   }
 
+  /** One project with its milestones; in-progress tasks carry `inProgressSince` (from git blame, cached). */
   async get(id: string): Promise<ProjectDetail> {
     const p = (await this.listDetailed()).find((x) => x.id === id);
     if (!p) throw new NotFoundException(`Project ${id} not found`);
-    return p;
+    return this.ages.annotate(p);
   }
 
   /** Every project with its milestones and tasks (one discovery pass, from the cache when fresh). */
@@ -82,6 +85,7 @@ export class ProjectsService implements OnApplicationBootstrap {
     const plan = await this.plans.milestonesFor(d.path, d.subpaths, settings.planFiles);
     d.milestones = plan.milestones;
     d.planFiles = plan.files;
+    d.planWarnings = plan.warnings;
     d.lastActivityAt = new Date();
     this.snapshots.record([{ projectId: id, path: d.path, milestones: d.milestones, planFiles: d.planFiles }])
       .catch((e) => this.log.warn(`Snapshot failed: ${e}`));
@@ -170,6 +174,7 @@ export class ProjectsService implements OnApplicationBootstrap {
       ...plan,
       planFiles: d.planFiles,
       milestones: d.milestones,
+      planWarnings: d.planWarnings,
       lastActivityAt: d.lastActivityAt?.toISOString() ?? null,
       source: d.source,
       pinned: o?.pinned ?? false,
