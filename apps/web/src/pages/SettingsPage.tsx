@@ -194,6 +194,13 @@ export default function SettingsPage() {
               </div>
               <InputSwitch checked={prefs.autoUpdate} onChange={(e) => void setPref({ autoUpdate: !!e.value })} aria-label="Check for updates automatically" />
             </div>
+            {desktop.checkUpdates && (
+              <div className="flex align-items-center justify-content-between gap-3 mt-3">
+                <small className="text-500">Check the release feed now, whatever the setting above (also in the tray menu). The answer opens in a window.</small>
+                <Button label="Check for updates" icon="pi pi-refresh" size="small" outlined className="white-space-nowrap"
+                  onClick={() => { void desktop?.checkUpdates?.(); }} />
+              </div>
+            )}
             {prefs.notifyWaiting !== undefined && (
               <>
                 <div className="flex align-items-center justify-content-between gap-3 mt-3">

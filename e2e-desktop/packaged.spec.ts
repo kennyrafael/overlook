@@ -123,6 +123,13 @@ test('an edit made outside the app shows up live', async () => {
   writeFileSync(fx.plan, before);
 });
 
+// Not clicked: it opens a native dialog and reads the release feed over the network.
+test('Settings offers a manual update check', async () => {
+  await page.goto(`${origin}/settings`);
+  await expect(page.getByRole('button', { name: 'Check for updates' })).toBeVisible();
+  await page.goto(`${origin}/`);
+});
+
 test('a second launch does not start another copy', async () => {
   const second = spawn(EXE, [], { env: { ...process.env, CPD_DATA_DIR: fx.dataDir, CLAUDE_CONFIG_DIR: fx.claudeDir }, stdio: 'ignore' });
   const code = await new Promise<number | null>((resolve) => {

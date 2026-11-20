@@ -22,6 +22,8 @@ contextBridge.exposeInMainWorld('overlook', Object.freeze({
   },
   /** Shows a native notification ("Claude is waiting"); resolves to whether it was shown. */
   notify: (n: { title: string; body: string; projectId: string }): Promise<boolean> => ipcRenderer.invoke('overlook:notify', n),
+  /** Checks the release feed now; the result appears in a native dialog. */
+  checkUpdates: (): Promise<boolean> => ipcRenderer.invoke('overlook:check-updates'),
   /** A notification was clicked: the window is shown and the page should open this project. */
   onOpenProject: (cb: (projectId: string) => void): void => {
     ipcRenderer.on('overlook:open-project', (_event, id: unknown) => {

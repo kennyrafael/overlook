@@ -249,6 +249,13 @@ function registerIpc() {
     return { ...prefs };
   });
 
+  // Settings → "Check now": the same check as the tray item; the result is shown in a native dialog.
+  ipcMain.handle('overlook:check-updates', (event) => {
+    if (!fromApp(event)) return false;
+    checkNow();
+    return true;
+  });
+
   // "Claude is waiting" notifications. Text is plain and bounded; the project id is checked, and a click only
   // shows the window and tells the page which project to open.
   ipcMain.handle('overlook:notify', (event, n: unknown) => {

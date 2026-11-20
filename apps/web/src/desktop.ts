@@ -10,6 +10,8 @@ export interface DesktopBridge {
   /** Native notification; clicking it shows the window and calls onOpenProject. Older builds do not have it. */
   notify?(n: { title: string; body: string; projectId: string }): Promise<boolean>;
   onOpenProject?(cb: (projectId: string) => void): void;
+  /** Checks for a new version now (tray → Check for updates); the result appears in a native dialog. Older builds do not have it. */
+  checkUpdates?(): Promise<boolean>;
 }
 
 export interface DesktopPrefs {

@@ -170,7 +170,7 @@ export function setAutoCheck(enabled: boolean) {
   timer.unref();
 }
 
-/** Tray → "Check for updates": reports the result even when nothing is new. */
+/** Tray → "Check for updates" and Settings → "Check now": reports the result even when nothing is new. */
 export function checkNow() {
   if (!supported()) {
     void dialog.showMessageBox({ type: 'info', title: 'Overlook', message: 'Updates are only available in the installed app.' });
