@@ -3,10 +3,8 @@ import './styles/tokens.css';
 import './styles/page.css';
 import './styles/textures.css';
 import './styles/hero.css';
-import './styles/demos.css';
-import './styles/widgets.css';
-import './styles/closing.css';
-import './styles/feedback.css';
+// Below-the-fold styles load without blocking the first paint (see styles/below-fold.ts).
+void import('./styles/below-fold.ts');
 import { initClosing } from './closing.ts';
 import { initDemos } from './demos/loader.ts';
 import { initDownloads } from './download.ts';
