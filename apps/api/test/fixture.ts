@@ -25,6 +25,9 @@ export const PLAN = `# Alpha
 
 const day = () => new Date().toISOString().slice(0, 10);
 
+/** Id (log file name) of the fixture's one Claude session. */
+export const SESSION_ID = '0b5e7f2a-6c1d-4e8b-9a3f-2d4c6e8f0a1b';
+
 /**
  * Builds an isolated world: two projects under a root folder, a Claude history
  * folder with one session for "alpha", and an empty data dir. Nothing outside
@@ -51,13 +54,15 @@ export function createFixture(): Fixture {
   const lines = [
     { type: 'user', timestamp: ts(9), sessionId: 's1', cwd: alpha, message: { role: 'user', content: 'build the parser' } },
     // Same message id twice (one line per content block): counted once.
-    { type: 'assistant', timestamp: ts(9), sessionId: 's1', cwd: alpha, message: { id: 'm1', model: 'claude-opus-5-5', usage } },
-    { type: 'assistant', timestamp: ts(9), sessionId: 's1', cwd: alpha, message: { id: 'm1', model: 'claude-opus-5-5', usage } },
+    { type: 'assistant', timestamp: ts(9), sessionId: 's1', cwd: alpha, message: { id: 'm1', model: 'claude-opus-5-5', usage, content: [{ type: 'text', text: 'On it.' }] } },
+    { type: 'assistant', timestamp: ts(9), sessionId: 's1', cwd: alpha, message: { id: 'm1', model: 'claude-opus-5-5', usage, content: [{ type: 'tool_use', id: 't1', name: 'Edit', input: { file_path: join(alpha, 'src', 'parser.ts') } }] } },
     { type: 'user', timestamp: ts(10), sessionId: 's1', cwd: alpha, message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 't1', content: 'ok' }] } },
-    { type: 'assistant', timestamp: ts(10), sessionId: 's1', cwd: alpha, message: { id: 'm2', model: 'claude-haiku-5-5', usage: { input_tokens: 100, output_tokens: 100 } } },
+    { type: 'assistant', timestamp: ts(10), sessionId: 's1', cwd: alpha, message: { id: 'm2', model: 'claude-haiku-5-5', usage: { input_tokens: 100, output_tokens: 100 }, content: [{ type: 'tool_use', id: 't2', name: 'Bash', input: { command: 'npm test' } }] } },
+    { type: 'user', timestamp: ts(10), sessionId: 's1', cwd: alpha, message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 't2', is_error: true, content: 'failed' }] } },
     { type: 'custom-title', customTitle: 'Parser work', sessionId: 's1' },
   ];
-  writeFileSync(join(sessionDir, 's1.jsonl'), lines.map((l) => JSON.stringify(l)).join('\n') + '\n');
+  // Claude Code names logs by session UUID (the session detail API accepts nothing else).
+  writeFileSync(join(sessionDir, `${SESSION_ID}.jsonl`), lines.map((l) => JSON.stringify(l)).join('\n') + '\n');
 
   return { base, root, dataDir, claudeDir, alpha, beta, plan };
 }

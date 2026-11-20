@@ -320,3 +320,78 @@ describe('feedback', () => {
     assert.ok(r.body.network.some((c: any) => c.what === 'Feedback' && c.destination.includes('overlook-feedback')));
   });
 });
+
+describe('phase 7: time and tokens', () => {
+  const sessionId = async () => (await api('/insights/claude')).body.sessions[0].id as string;
+
+  test('session detail: prompts, tools, edited files and cost per prompt', async () => {
+    const overview = (await api('/insights/claude')).body;
+    const s = overview.sessions[0];
+    const { status, body } = await api(`/insights/sessions/${s.id}`);
+    assert.equal(status, 200);
+    assert.equal(body.title, 'Parser work');
+    assert.equal(body.projectName, 'alpha');
+    assert.deepEqual(body.prompts.map((p: any) => p.text), ['build the parser']);
+    assert.deepEqual(body.tools, [{ tool: 'Bash', calls: 1, errors: 1 }, { tool: 'Edit', calls: 1, errors: 0 }]);
+    assert.deepEqual(body.edited, [{ path: 'src/parser.ts', edits: 1 }]);
+    assert.equal(body.totals.turns, 2);
+    assert.ok(Math.abs(body.totals.costUsd - s.costUsd) < 1e-9);
+    assert.equal(body.perPrompt.length, 1);
+    assert.equal(body.perPrompt[0].turns, 2);
+    assert.ok(Math.abs(body.perPrompt[0].costUsd - s.costUsd) < 1e-9);
+    assert.equal(body.durationMs, 3_600_000);
+  });
+
+  test('session ids must be UUIDs; unknown ones are 404', async () => {
+    assert.equal((await api('/insights/sessions/s1')).status, 400);
+    assert.equal((await api(`/insights/sessions/${encodeURIComponent('../../etc/passwd')}`)).status, 400);
+    assert.equal((await api('/insights/sessions/3f2b9c1e-8a4d-4e2f-9b6a-1c2d3e4f5a6b')).status, 404);
+  });
+
+  test('overview has tool counts and the rolling usage windows', async () => {
+    const { body } = await api('/insights/claude');
+    assert.deepEqual(body.byTool, [{ tool: 'Bash', calls: 1, errors: 1 }, { tool: 'Edit', calls: 1, errors: 0 }]);
+    assert.deepEqual(body.toolsOverall, { calls: 2, errors: 1 });
+    assert.deepEqual(body.rolling.map((w: any) => [w.key, w.hours]), [['5h', 5], ['7d', 168]]);
+    const beta = await project('beta');
+    const other = (await api(`/insights/claude?projects=${beta.id}`)).body;
+    assert.deepEqual(other.byTool, []);
+    assert.deepEqual(other.toolsOverall, { calls: 2, errors: 1 });
+  });
+
+  test('search finds prompts and titles, highlights them, and never fails on odd input', async () => {
+    const id = await sessionId();
+    const hits = (await api('/insights/search?q=parser')).body;
+    assert.equal(hits.length, 1);
+    assert.equal(hits[0].id, id);
+    assert.equal(hits[0].title, 'Parser work');
+    assert.equal(hits[0].projectName, 'alpha');
+    assert.ok(hits[0].snippet.includes('\u0002parser\u0003'), hits[0].snippet);
+    const title = (await api('/insights/search?q=work')).body;
+    assert.equal(title[0]?.matchedIn, 'title');
+    assert.equal((await api('/insights/search?q=bui')).body.length, 1);
+    for (const q of ['"build', 'build"the', 'NOT OR AND (', 'title:parser', "'; DROP TABLE claude_prompts; --", '*', 'NEAR(build parser)', '\u0000']) {
+      const r = await api(`/insights/search?q=${encodeURIComponent(q)}`);
+      assert.equal(r.status, 200, q);
+      assert.ok(Array.isArray(r.body), q);
+    }
+    assert.equal((await api(`/insights/search?q=${encodeURIComponent('"build" parser')}`)).body.length, 1);
+    assert.deepEqual((await api('/insights/search?q=')).body, []);
+    const beta = await project('beta');
+    assert.deepEqual((await api(`/insights/search?q=parser&projects=${beta.id}`)).body, []);
+    const alpha = await project('alpha');
+    assert.equal((await api(`/insights/search?q=parser&projects=${alpha.id}`)).body.length, 1);
+  });
+
+  test('milestone costs: a session that matches no task is reported apart', async () => {
+    const alpha = await project('alpha');
+    assert.equal((await api('/insights/milestone-costs')).status, 400);
+    const { body } = await api(`/insights/milestone-costs?project=${alpha.id}`);
+    const s = (await api('/insights/claude')).body.sessions[0];
+    // "build the parser" shares one word with the task "parser"; the matcher needs two, so nothing is claimed.
+    assert.equal(s.task, null);
+    assert.deepEqual(body.milestones, []);
+    assert.equal(body.unmatched.sessions, 1);
+    assert.ok(Math.abs(body.unmatched.costUsd - s.costUsd) < 1e-9);
+  });
+});
