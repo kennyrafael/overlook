@@ -10,6 +10,7 @@ import { projectId } from '../discovery/path-utils';
 import { ProjectOverrideEntity } from './project-override.entity';
 import { EventsService } from '../events/events.service';
 import { SnapshotsService } from './snapshots.service';
+import { TaskEventsService } from './task-events.service';
 
 export interface ProjectRef {
   id: string;
@@ -36,6 +37,7 @@ export class ProjectsService implements OnApplicationBootstrap {
     private plans: PlansService,
     private events: EventsService,
     private snapshots: SnapshotsService,
+    private taskEvents: TaskEventsService,
     @InjectRepository(ProjectOverrideEntity) private overrides: Repository<ProjectOverrideEntity>,
   ) {}
 
@@ -85,6 +87,7 @@ export class ProjectsService implements OnApplicationBootstrap {
     d.lastActivityAt = new Date();
     this.snapshots.record([{ projectId: id, path: d.path, milestones: d.milestones, planFiles: d.planFiles }])
       .catch((e) => this.log.warn(`Snapshot failed: ${e}`));
+    void this.taskEvents.observe([{ projectId: id, milestones: d.milestones }]);
     return this.get(id);
   }
 
@@ -114,7 +117,8 @@ export class ProjectsService implements OnApplicationBootstrap {
   private afterDiscovery(data: DiscoveredProject[]) {
     this.snapshots.record(data.map((d) => ({ projectId: projectId(d.path), path: d.path, milestones: d.milestones, planFiles: d.planFiles })))
       .catch((e) => this.log.warn(`Snapshot failed: ${e}`));
-    const ids = data.map((d) => projectId(d.path)).sort().join(',');
+    void this.taskEvents.observe(data.map((d) => ({ projectId: projectId(d.path), milestones: d.milestones })));
+    const ids =data.map((d) => projectId(d.path)).sort().join(',');
     if (this.lastIds && ids !== this.lastIds) this.events.emit({ type: 'projects:rescanned' });
     this.lastIds = ids;
   }

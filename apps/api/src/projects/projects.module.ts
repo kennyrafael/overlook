@@ -9,11 +9,13 @@ import { ProjectsService } from './projects.service';
 import { TasksService } from './tasks.service';
 import { SnapshotEntity } from './snapshot.entity';
 import { SnapshotsService } from './snapshots.service';
+import { TaskEventEntity, TaskStateEntity } from './task-event.entity';
+import { TaskEventsService } from './task-events.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ProjectOverrideEntity, SnapshotEntity]), SettingsModule, DiscoveryModule],
+  imports: [TypeOrmModule.forFeature([ProjectOverrideEntity, SnapshotEntity, TaskEventEntity, TaskStateEntity]), SettingsModule, DiscoveryModule],
   controllers: [ProjectsController],
-  providers: [ProjectsService, TasksService, PlanFileService, SnapshotsService],
-  exports: [ProjectsService, SnapshotsService],
+  providers: [ProjectsService, TasksService, PlanFileService, SnapshotsService, TaskEventsService],
+  exports: [ProjectsService, SnapshotsService, TaskEventsService],
 })
 export class ProjectsModule {}

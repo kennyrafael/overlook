@@ -3,6 +3,7 @@ import type { Milestone, ProjectDetail, Task, TaskStatus } from '@overlook/share
 import { PlanFileService } from '../plans/plan-file.service';
 import { PlanConflictError, PlanEditError, addTask, deleteTask, setTaskStatus, setTaskText } from '../plans/plan-writer';
 import { ProjectsService } from './projects.service';
+import { TaskEventsService } from './task-events.service';
 import { EventsService } from '../events/events.service';
 
 const STATUSES: TaskStatus[] = ['todo', 'in_progress', 'done'];
@@ -15,7 +16,7 @@ export interface TaskPatch {
 /** Task edits written back to the project's plan files. */
 @Injectable()
 export class TasksService {
-  constructor(private projects: ProjectsService, private files: PlanFileService, private events: EventsService) {}
+  constructor(private projects: ProjectsService, private files: PlanFileService, private events: EventsService, private taskEvents: TaskEventsService) {}
 
   async update(projectId: string, taskId: string, patch: TaskPatch): Promise<ProjectDetail> {
     if (patch.status !== undefined && !STATUSES.includes(patch.status)) {
@@ -67,7 +68,8 @@ export class TasksService {
       if ((e as NodeJS.ErrnoException).code === 'ENOENT') throw new NotFoundException('Plan file no longer exists');
       throw e;
     }
-    const updated = await this.projects.refreshPlans(projectId);
+    // Task history records this read as a dashboard change.
+    const updated = await this.taskEvents.asDashboardWrite(projectId, () => this.projects.refreshPlans(projectId));
     this.events.emit({ type: 'project:updated', projectId, file: milestone.relFile, source: 'dashboard' });
     return updated;
   }

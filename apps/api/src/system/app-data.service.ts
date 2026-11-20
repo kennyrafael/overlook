@@ -7,13 +7,16 @@ import { ParseCacheEntity } from '../insights/parse-cache.entity';
 import { ProjectOverrideEntity } from '../projects/project-override.entity';
 import { ProjectsService } from '../projects/projects.service';
 import { SnapshotEntity } from '../projects/snapshot.entity';
+import { TaskEventEntity, TaskStateEntity } from '../projects/task-event.entity';
+import { TaskEventsService } from '../projects/task-events.service';
+import { DeviceEntity } from '../insights/device.entity';
 import { cleanFilters } from '../views/views.service';
 import { ViewEntity } from '../views/view.entity';
 
 /** Export, import and reset of everything Overlook stores about the user's setup. */
 @Injectable()
 export class AppDataService {
-  constructor(private db: DataSource, private settings: SettingsService, private projects: ProjectsService) {}
+  constructor(private db: DataSource, private settings: SettingsService, private projects: ProjectsService, private taskEvents: TaskEventsService) {}
 
   async export(): Promise<AppDataExport> {
     const [settings, overrides, views] = await Promise.all([
@@ -69,8 +72,9 @@ export class AppDataService {
   /** Deletes everything in the database. Plan files and Claude logs are not touched. */
   async reset(): Promise<void> {
     await this.db.transaction(async (m) => {
-      for (const e of [SettingEntity, ProjectOverrideEntity, SnapshotEntity, ViewEntity, ParseCacheEntity]) await m.clear(e);
+      for (const e of [SettingEntity, ProjectOverrideEntity, SnapshotEntity, ViewEntity, ParseCacheEntity, TaskEventEntity, TaskStateEntity, DeviceEntity]) await m.clear(e);
     });
+    this.taskEvents.forget();
     await this.projects.rescan();
   }
 }
