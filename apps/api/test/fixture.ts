@@ -10,7 +10,48 @@ export interface Fixture {
   alpha: string;
   beta: string;
   plan: string;
+  /**
+   * Phase 6: a second root, not in the default settings (so the main tests keep seeing two
+   * projects). Tests that need it add it to Settings → roots and remove it afterwards.
+   */
+  extraRoot: string;
+  /** Project whose plan files hold one of each plan mistake (MESSY_PLAN, plus a large TODO.md). */
+  messy: string;
+  /** Project with no plan file yet (only a .claude folder), for "Create PLAN.md". */
+  fresh: string;
 }
+
+/**
+ * One of each mistake the plan health panel reports. Lines matter: tests check them.
+ * Phase 4 is overdue and holds an in-progress task (stale once committed with an old date).
+ */
+export const MESSY_PLAN = `- [ ] loose task before any heading
+
+# Messy
+
+##Phase 1
+- [ ] under a heading without a space
+
+## Phase 2 ✓
+- [x] done thing
+
+## Phase 3 (due 2026-02-30)
+-[ ] no space after bullet
+- [] empty brackets
+* [X ] extra space
+[x] no bullet
+1. [ ] numbered
+- [?] unknown mark
+- [x]no space after
+- [ ] same text
+- [ ] same text
+
+## Phase 4 (due 2020-01-15)
+- [~] overdue work
+`;
+
+/** Over the 512 KB warning size (not the 2 MB limit), with one milestone so moves across files can be tested. */
+export const MESSY_TODO = `## Backlog\n- [ ] someday\n\nNotes:\n${'lorem ipsum '.repeat(48_000)}\n`;
 
 export const PLAN = `# Alpha
 
@@ -59,5 +100,13 @@ export function createFixture(): Fixture {
   ];
   writeFileSync(join(sessionDir, 's1.jsonl'), lines.map((l) => JSON.stringify(l)).join('\n') + '\n');
 
-  return { base, root, dataDir, claudeDir, alpha, beta, plan };
+  const extraRoot = join(base, 'extra');
+  const messy = join(extraRoot, 'messy');
+  const fresh = join(extraRoot, 'fresh');
+  mkdirSync(messy, { recursive: true });
+  mkdirSync(join(fresh, '.claude'), { recursive: true });
+  writeFileSync(join(messy, 'PLAN.md'), MESSY_PLAN);
+  writeFileSync(join(messy, 'TODO.md'), MESSY_TODO);
+
+  return { base, root, dataDir, claudeDir, alpha, beta, plan, extraRoot, messy, fresh };
 }
