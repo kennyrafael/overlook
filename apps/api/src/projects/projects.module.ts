@@ -10,12 +10,12 @@ import { ProjectsService } from './projects.service';
 import { TasksService } from './tasks.service';
 import { SnapshotEntity } from './snapshot.entity';
 import { SnapshotsService } from './snapshots.service';
-import { PlanToolsController } from './plan-tools.controller';
+import { PlanFileController, PlansController } from './plan-tools.controller';
 import { PlanToolsService } from './plan-tools.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([ProjectOverrideEntity, SnapshotEntity]), SettingsModule, DiscoveryModule],
-  controllers: [ProjectsController, PlanToolsController],
+  controllers: [ProjectsController, PlansController, PlanFileController],
   providers: [ProjectsService, TasksService, PlanFileService, SnapshotsService, PlanAgeService, PlanToolsService],
   exports: [ProjectsService, SnapshotsService],
 })
