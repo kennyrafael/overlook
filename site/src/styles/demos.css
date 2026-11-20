@@ -60,7 +60,6 @@ main .feature { position: relative; padding: clamp(72px, 12vh, 136px) 0; overflo
 .chip { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; line-height: 1.5; white-space: nowrap; }
 .chip-project { background: var(--ol-indigo-600); color: #fff; }
 .chip-ms { background: var(--accent-soft); color: var(--accent); }
-button { font: inherit; color: inherit; }
 
 /* ---- Board demo ---- */
 .board-demo { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.6fr); gap: var(--space-5); align-items: stretch; }
