@@ -3,9 +3,9 @@
  * history, database in a temp folder) for the Playwright smoke tests.
  * Writes the fixture paths to e2e/.fixture.json so tests can inspect files.
  */
-import { readFileSync, rmSync, writeFileSync } from 'fs';
+import { cpSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { createServer } from 'http';
-import { join } from 'path';
+import { join, resolve, sep } from 'path';
 import { createFixture } from '../apps/api/test/fixture';
 
 const PORT = Number(process.env.SMOKE_PORT ?? 4399);
@@ -38,6 +38,13 @@ async function main() {
   const fx = createFixture();
   process.env.CPD_DATA_DIR = fx.dataDir;
   process.env.CLAUDE_CONFIG_DIR = fx.claudeDir;
+  // Express will not sendFile() from a path with a dot folder in it (a checkout under .claude/worktrees/), so
+  // deep links would 404 there: serve a copy of the built UI from the fixture folder instead.
+  const webDist = resolve(__dirname, '..', 'apps', 'web', 'dist');
+  if (webDist.split(sep).some((s) => s.startsWith('.') && s.length > 1)) {
+    cpSync(webDist, join(fx.base, 'web-dist'), { recursive: true });
+    process.env.CPD_WEB_DIST = join(fx.base, 'web-dist');
+  }
   require('reflect-metadata');
   const { NestFactory } = require('@nestjs/core');
   const { AppModule } = require('../apps/api/dist/app.module');

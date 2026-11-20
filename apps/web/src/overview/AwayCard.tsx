@@ -64,8 +64,11 @@ export default function AwayCard() {
     if (!device) return;
     setMarking(true);
     try {
-      await api.markSeen(device);
-      await load();
+      const { lastSeenAt } = await api.markSeen(device);
+      // Everything shown is now seen; the card comes back with the next change.
+      setData({ since: lastSeenAt, until: lastSeenAt, tasksCompleted: 0, completed: [], commits: 0, sessions: 0, costUsd: 0, projects: [] });
+    } catch {
+      /* keep the card; the button can be pressed again */
     } finally {
       setMarking(false);
     }
