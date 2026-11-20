@@ -16,6 +16,9 @@ import { initInstallTabs } from './install.ts';
 import { initMotion, reveal, whenIdle } from './motion/motion.ts';
 import { initNav } from './nav.ts';
 import { initTheme } from './theme.ts';
+import { inject } from '@vercel/analytics';
+
+inject();
 
 // Before anything else, so the screenshots load in the chosen theme and the toggle shows the right icon.
 initTheme();
