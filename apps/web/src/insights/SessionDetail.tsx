@@ -14,7 +14,7 @@ import { baseOptions, chartTokens } from '../chartTheme';
 import { formatCompact, formatDuration, formatUsd } from '../format';
 import { useTheme } from '../theme/ThemeContext';
 import { categorical, modelLabel, modelSlot } from './palette';
-import { resumeSession, useClaudeAvailable } from '../actions/projectActions';
+import { resumeInDesktopApp, resumeSession, useClaudeAvailable } from '../actions/projectActions';
 
 /** At most this many prompts are drawn at first; the rest open on request (long sessions stay quick to show). */
 const PROMPTS_SHOWN = 100;
@@ -145,6 +145,10 @@ export default function SessionDetail() {
           {claudeOk && data.projectId && data.resumable && (
             <Button label="Resume" icon="pi pi-replay" outlined title="Resume in a terminal (claude --resume)"
               onClick={() => { void resumeSession(data.projectId!, data.id, data.title); }} />
+          )}
+          {data.projectId && data.resumable && (
+            <Button label="Open in Claude app" icon="pi pi-external-link" text title="Start a new session in the Claude desktop app that picks up from this one's transcript"
+              onClick={() => { void resumeInDesktopApp(data.projectId!, data.id); }} />
           )}
         </div>
       </Card>

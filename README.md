@@ -113,6 +113,11 @@ history the first day the dashboard sees them.
   prompt is copied to your clipboard. Only To do tasks offer it; in-progress and done tasks hide it.
 - **Resume**: idle live sessions and the Claude session table have **Resume**
   (`claude --resume <id>` in the folder the session ran in). Sessions from WSL resume inside WSL only.
+- **Open in Claude app**: idle live sessions and the session page can also start a new session in the
+  Claude desktop app (`claude://code/new`) in that folder, with a prompt that points Claude at the old
+  transcript. The desktop app cannot resume a terminal session by id, so this is a fresh session; the app
+  asks you to confirm the folder and the prompt is filled in, not sent.
+- **Dismiss**: the × on an idle live session hides it from the board until Claude works in it again.
 - **Sessions on a task**: each session is matched to the plan task it most likely worked on, from its
   title and a few of its prompts. Cards show how many recent sessions did, the task dialog lists them,
   and the session table shows the task. It is a guess; nothing is written.

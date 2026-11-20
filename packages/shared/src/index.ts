@@ -336,6 +336,8 @@ export const PROJECT_ACTIONS: ProjectAction[] = ['vscode', 'terminal', 'explorer
 export interface ClaudeActionBody {
   taskId?: string;
   resume?: string;
+  /** With `resume`: open a new session in the Claude desktop app (claude://code/new) pointed at the old transcript, instead of `claude --resume` in a terminal. */
+  desktop?: boolean;
 }
 
 export interface ActionResult {

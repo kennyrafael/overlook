@@ -55,3 +55,17 @@ export async function sessionCwd(logFile: string): Promise<string | null> {
     await fh?.close().catch(() => undefined);
   }
 }
+
+/**
+ * First prompt for "Open in Claude app": the desktop app cannot resume a CLI session by id (its claude://code/new
+ * link only starts a new session), so the new session is pointed at the old one's transcript instead.
+ */
+export function desktopResumePrompt(transcript: string): string {
+  return `Pick up an earlier Claude Code session. Its transcript is ${transcript} (JSON lines). `
+    + 'Read the end of it to see what was being worked on and where it stopped, sum that up in a few lines, then ask me how to continue.';
+}
+
+/** Claude desktop's deep link for a new Code session in `folder` with a prefilled prompt (the app asks to confirm the folder). */
+export function desktopNewSessionUrl(folder: string, prompt: string): string {
+  return `claude://code/new?folder=${encodeURIComponent(folder)}&q=${encodeURIComponent(prompt)}`;
+}

@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { DEFAULT_CLAUDE_TASK_PROMPT } from '@overlook/shared';
-import { isBatchFile, MAX_PROMPT_CHARS, SESSION_ID_RE, sessionCwd, taskPrompt, windowsTerminalText } from './claude-launch';
+import { desktopNewSessionUrl, desktopResumePrompt, isBatchFile, MAX_PROMPT_CHARS, SESSION_ID_RE, sessionCwd, taskPrompt, windowsTerminalText } from './claude-launch';
 
 test('task prompt fills the template on one line', () => {
   const p = taskPrompt(DEFAULT_CLAUDE_TASK_PROMPT, { task: 'Add the\nlogin page', milestone: 'Phase 2: Web', file: 'PLAN.md' });
@@ -41,4 +41,11 @@ test('session cwd is read from the first record that has one', async () => {
   writeFileSync(file, ['{"type":"summary","summary":"x"}', '{"type":"user","cwd":"/home/me/proj","message":{}}', '{"cwd":"/other"}'].join('\n'));
   assert.equal(await sessionCwd(file), '/home/me/proj');
   assert.equal(await sessionCwd(join(dir, 'missing.jsonl')), null);
+});
+
+test('desktop link: folder and prompt are URL-encoded; the prompt points at the transcript', () => {
+  const p = desktopResumePrompt('/home/me/.claude/projects/x/a.jsonl');
+  assert.ok(p.includes('/home/me/.claude/projects/x/a.jsonl'));
+  const url = desktopNewSessionUrl('C:/code/my app', 'a&b=c #d');
+  assert.equal(url, 'claude://code/new?folder=C%3A%2Fcode%2Fmy%20app&q=a%26b%3Dc%20%23d');
 });

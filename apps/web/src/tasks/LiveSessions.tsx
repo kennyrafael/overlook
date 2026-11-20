@@ -2,15 +2,31 @@ import { useState } from 'react';
 import { Button } from 'primereact/button';
 import type { LiveSession } from '@overlook/shared';
 import { relativeTime } from '../format';
-import { resumeSession, useClaudeAvailable } from '../actions/projectActions';
+import { resumeInDesktopApp, resumeSession, useClaudeAvailable } from '../actions/projectActions';
 
 /**
  * "Claude is working" strip above the board: one row per session with recent activity, with the
  * step Claude marked in progress. Read from the session log; it never claims a plan task by itself.
  */
-export default function LiveSessions({ sessions, projectName }: { sessions: LiveSession[]; projectName?: (id: string) => string | undefined }) {
+const DISMISSED_KEY = 'overlook.dismissedIdleSessions';
+
+/** Dismissed idle sessions, as session id → the lastActivityAt it was dismissed at (new activity brings it back). */
+function loadDismissed(): Record<string, string> {
+  try { return JSON.parse(localStorage.getItem(DISMISSED_KEY) ?? '{}') ?? {}; } catch { return {}; }
+}
+
+export default function LiveSessions({ sessions: all, projectName }: { sessions: LiveSession[]; projectName?: (id: string) => string | undefined }) {
   const [open, setOpen] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState<Record<string, string>>(loadDismissed);
   const claudeOk = useClaudeAvailable();
+  const sessions = all.filter((s) => !(s.state === 'idle' && dismissed[s.id] === s.lastActivityAt));
+  const dismiss = (s: LiveSession) => {
+    // Keep only entries for sessions still listed, so the stored map does not grow forever.
+    const next = Object.fromEntries(Object.entries(dismissed).filter(([id]) => all.some((x) => x.id === id)));
+    next[s.id] = s.lastActivityAt;
+    setDismissed(next);
+    try { localStorage.setItem(DISMISSED_KEY, JSON.stringify(next)); } catch { /* not persisted */ }
+  };
   if (!sessions.length) return null;
   return (
     <div className="flex flex-column gap-2" aria-label="Live Claude sessions">
@@ -32,10 +48,20 @@ export default function LiveSessions({ sessions, projectName }: { sessions: Live
                   title="Continue this session in a new terminal (claude --resume)"
                   onClick={() => { void resumeSession(s.projectId, s.id, s.title); }} />
               )}
+              {s.state === 'idle' && (
+                <Button text size="small" className="p-1" icon="pi pi-external-link" label="Claude app"
+                  title="Start a new session in the Claude desktop app that picks up from this one's transcript"
+                  onClick={() => { void resumeInDesktopApp(s.projectId, s.id); }} />
+              )}
               {s.steps.length > 0 && (
                 <Button text size="small" className="p-1" icon={expanded ? 'pi pi-chevron-up' : 'pi pi-chevron-down'}
                   label={`${done}/${s.steps.length} steps`} aria-expanded={expanded}
                   onClick={() => setOpen(expanded ? null : s.id)} />
+              )}
+              {s.state === 'idle' && (
+                <Button text rounded size="small" className="p-1" icon="pi pi-times" aria-label="Dismiss"
+                  title="Hide this idle session (it comes back if Claude works in it again)"
+                  onClick={() => dismiss(s)} />
               )}
             </div>
             {s.current && !expanded && (

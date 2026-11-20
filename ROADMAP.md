@@ -239,6 +239,9 @@ waiting) and the board together, so the dashboard is where you start and follow 
 - [x] **Resume session**: `claude --resume <uuid>` in the folder the session ran in (the log's
   `cwd`, when inside the project), from the Claude session table and idle live sessions; WSL
   sessions are refused
+- [x] **Open in Claude app**: a new desktop-app session (`claude://code/new?folder=&q=`) in the
+  session's folder, prompted to read the old transcript (the app has no resume-by-id link)
+- [x] Dismiss idle live sessions on the board (per browser; they return on new activity)
 - [x] Link sessions to tasks: sessions are matched to a plan task from their title and sampled
   prompts (`taskMatcher`, parse cache v3); cards show a session count, the task dialog lists them
   with Resume, the session table shows the likely task. Loaded for boards of up to 8 projects

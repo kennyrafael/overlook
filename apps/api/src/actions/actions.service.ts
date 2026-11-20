@@ -9,7 +9,7 @@ import { PROJECT_ACTIONS } from '@overlook/shared';
 import { SettingsService } from '../config/settings.service';
 import { claudeRoots } from '../discovery/claude-roots';
 import { ProjectsService, type ProjectRef } from '../projects/projects.service';
-import { isBatchFile, SESSION_ID_RE, sessionCwd, taskPrompt, windowsTerminalText } from './claude-launch';
+import { desktopNewSessionUrl, desktopResumePrompt, isBatchFile, SESSION_ID_RE, sessionCwd, taskPrompt, windowsTerminalText } from './claude-launch';
 import { LINUX_TERMINAL_LABEL, linuxTerminalArgs, linuxTerminalOrder, passesTextArgs, terminalBehind, type LinuxTerminal } from './linux-terminal';
 
 const IS_WIN = process.platform === 'win32';
@@ -166,6 +166,8 @@ export class ActionsService {
     const a = action as ProjectAction;
     const taskId = typeof body?.taskId === 'string' && body.taskId ? body.taskId : null;
     const resume = typeof body?.resume === 'string' && body.resume ? body.resume : null;
+    const desktop = body?.desktop === true;
+    if (desktop && !resume) throw new BadRequestException('desktop only applies to resuming a session');
     if (a !== 'claude' && (taskId || resume)) throw new BadRequestException(`${a} takes no task or session`);
     if (taskId && resume) throw new BadRequestException('Give a task or a session to resume, not both');
 
@@ -175,10 +177,14 @@ export class ActionsService {
       if (a === 'explorer') await this.openFolder(ref.path);
       else if (a === 'vscode') await this.openVsCode(ref.path);
       else if (a === 'terminal') await this.openTerminal(ref.path, null);
-      else if (a === 'claude') {
+      else if (a === 'claude' && desktop && resume) {
+        const { folder, transcript } = await this.resumeFolder(ref, resume);
+        where = folder;
+        await this.openUrl(desktopNewSessionUrl(folder, desktopResumePrompt(transcript)));
+      } else if (a === 'claude') {
         const claude = await this.require('claude', 'Claude Code (claude)');
         if (resume) {
-          where = await this.resumeFolder(ref, resume);
+          where = (await this.resumeFolder(ref, resume)).folder;
           await this.openTerminal(where, { program: claude, args: ['--resume', resume], prompt: null });
         } else if (taskId) {
           const prompt = await this.promptFor(ref.id, taskId);
@@ -193,7 +199,7 @@ export class ActionsService {
       this.log.warn(`${a} failed for ${where}: ${e}`);
       throw new ServiceUnavailableException(`Could not start ${a}: ${e instanceof Error ? e.message : e}`);
     }
-    this.log.log(`${a}${resume ? ' --resume' : taskId ? ' (task)' : ''} → ${where}`);
+    this.log.log(`${a}${resume ? (desktop ? ' (desktop app)' : ' --resume') : taskId ? ' (task)' : ''} → ${where}`);
     return result;
   }
 
@@ -211,14 +217,15 @@ export class ActionsService {
    * The folder to resume a session in: where it ran (its log's cwd), when that is still there and inside the
    * project; otherwise the project folder. Only sessions logged on this machine can be resumed.
    */
-  private async resumeFolder(ref: ProjectRef, sessionId: string): Promise<string> {
+  private async resumeFolder(ref: ProjectRef, sessionId: string): Promise<{ folder: string; transcript: string }> {
     if (!SESSION_ID_RE.test(sessionId)) throw new BadRequestException('Not a session id');
     const dir = ref.claudeDirs.find((d) => existsSync(join(d, `${sessionId}.jsonl`)));
     if (!dir) throw new NotFoundException('That session is not one of this project\'s');
     if (IS_WIN && dir.startsWith('\\\\')) throw new BadRequestException('Sessions from WSL can only be resumed inside WSL');
-    const cwd = await sessionCwd(join(dir, `${sessionId}.jsonl`));
+    const transcript = join(dir, `${sessionId}.jsonl`);
+    const cwd = await sessionCwd(transcript);
     const inProject = cwd && [ref.path, ...ref.subpaths].some((p) => isInside(resolvePath(cwd), p));
-    return cwd && inProject && existsSync(cwd) ? cwd : ref.path;
+    return { folder: cwd && inProject && existsSync(cwd) ? cwd : ref.path, transcript };
   }
 
   private async resolve(cmd: string): Promise<string | null> {
@@ -230,6 +237,14 @@ export class ActionsService {
     const found = await this.resolve(cmd);
     if (!found) throw new ServiceUnavailableException(`${label} was not found on PATH`);
     return found;
+  }
+
+  /** Hands a URL (here only claude:// links built above) to the OS, which passes it to the registered app. */
+  private async openUrl(url: string) {
+    const home = homedir();
+    if (IS_WIN) return launch('rundll32.exe', ['url.dll,FileProtocolHandler', url], home);
+    if (IS_MAC) return launch('open', [url], home);
+    return launch(await this.require('xdg-open', 'xdg-open (xdg-utils)'), [url], home);
   }
 
   async openFolder(path: string) {

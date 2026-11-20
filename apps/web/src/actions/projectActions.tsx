@@ -71,6 +71,19 @@ export async function resumeSession(projectId: string, sessionId: string, label?
   }
 }
 
+/**
+ * "Open in Claude app": the desktop app cannot resume a CLI session by id, so this starts a new desktop session in
+ * the folder the session ran in, with a prompt pointing at the old transcript. The app asks to confirm the folder.
+ */
+export async function resumeInDesktopApp(projectId: string, sessionId: string) {
+  try {
+    await api.runAction(projectId, 'claude', { resume: sessionId, desktop: true });
+    appToast.current?.show({ severity: 'info', summary: 'Opening the Claude app', detail: 'Confirm the folder there; the prompt is filled in, not sent.', life: 5000 });
+  } catch (e) {
+    failed('Could not open the Claude app', e);
+  }
+}
+
 /** Claude Code and a terminal are installed (or not known yet), so the Claude actions can be offered. */
 export function useClaudeAvailable(): boolean {
   const tools = useTools((s) => s.tools);
