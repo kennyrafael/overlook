@@ -153,7 +153,7 @@ test('feedback dialog: errors are shown, then only the answers are sent', async 
   await dialog.getByRole('button', { name: 'Send idea' }).click();
   await expect(dialog.getByText('Thank you! Your idea was sent.')).toBeVisible();
 
-  const got = await (await request.get('http://127.0.0.1:4398/received')).json();
+  const got = await (await request.get(`http://127.0.0.1:${Number(process.env.SMOKE_PORT ?? 4399) - 1}/received`)).json();
   const strip = ({ version, ...rest }: Record<string, unknown>) => rest;
   expect(got.map(strip)).toEqual([
     { kind: 'pro', source: 'app', pay: 'maybe', features: ['budgets'], price: 'lt5', email: 'dev@example.com', consent: true },
