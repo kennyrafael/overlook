@@ -1,6 +1,6 @@
 {
   "name": "@overlook/api",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -17,7 +17,7 @@
     "@nestjs/platform-express": "^11.0.0",
     "@nestjs/serve-static": "^5.0.0",
     "@nestjs/typeorm": "^11.0.0",
-    "@overlook/shared": "0.3.0",
+    "@overlook/shared": "0.4.0",
     "better-sqlite3": "^12.11.1",
     "chokidar": "^4.0.3",
     "reflect-metadata": "^0.2.2",

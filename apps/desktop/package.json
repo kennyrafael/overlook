@@ -1,6 +1,6 @@
 {
   "name": "@overlook/desktop",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Overlook desktop app (Electron shell around the local server and UI)",
   "author": "AgentHub",
