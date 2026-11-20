@@ -105,7 +105,7 @@ export default function TaskDialog({ state, projects, onHide, onSave, onDelete, 
         <div className="task-dialog-footer flex flex-wrap justify-content-between gap-2">
           <div className="flex gap-2">
             {state?.mode === 'edit' && <Button label="Delete" icon="pi pi-trash" severity="danger" text onClick={remove} />}
-            {state?.mode === 'edit' && onStartClaude && state.task.status !== 'done' && (
+            {state?.mode === 'edit' && onStartClaude && state.task.status === 'todo' && (
               <Button label="Start Claude" icon="pi pi-play" outlined title="Open Claude Code at the project with this task as the first prompt"
                 onClick={() => { onStartClaude(state.projectId, state.task); onHide(); }} />
             )}

@@ -175,11 +175,7 @@ export default function TaskBoard({ projects, onProjectChanged, onConflict }: Pr
   const move = async (card: Card, to: TaskStatus) => {
     if (statusOf(card) === to) return;
     setPending((p) => ({ ...p, [card.key]: to })); // optimistic
-    // Moving work to In progress offers to start Claude on it (never starts it by itself).
-    const offer = to === 'in_progress' && claudeOk && card.project.exists
-      ? { label: 'Start Claude', icon: 'pi pi-play', onClick: () => { void startOn(card); } }
-      : undefined;
-    await actions.setStatus(card.project.id, card.task, to, offer);
+    await actions.setStatus(card.project.id, card.task, to);
     setPending((p) => { const { [card.key]: _drop, ...rest } = p; return rest; });
   };
 
@@ -242,7 +238,7 @@ export default function TaskBoard({ projects, onProjectChanged, onConflict }: Pr
                 {colCards.map((c) => (
                   <TaskCard key={c.key} card={c} showProject={multi} onOpen={() => openEdit(c)} suggestion={suggestionFor(c)}
                     sessions={linked.get(c.key)?.length ?? 0} staleDays={staleDaysOf(c)}
-                    onStartClaude={claudeOk && c.project.exists && statusOf(c) !== 'done' ? () => { void startOn(c); } : undefined} />
+                    onStartClaude={claudeOk && c.project.exists && statusOf(c) === 'todo' ? () => { void startOn(c); } : undefined} />
                 ))}
                 {!colCards.length && <div className="text-500 text-sm p-3 text-center">Drop tasks here</div>}
               </Column>

@@ -235,14 +235,14 @@ waiting) and the board together, so the dashboard is where you start and follow 
   where that is safe (Windows Terminal with claude.exe, macOS `quoted form of`, Linux terminals);
   copied to the clipboard instead with a claude.cmd wrapper, the cmd.exe fallback or a generic
   x-terminal-emulator
-- [x] Moving a card to In progress offers "Start Claude" in the Moved toast (never automatic)
+- [x] Start Claude shows only on To do tasks (not on in-progress cards, the dialog or the Moved toast)
 - [x] **Resume session**: `claude --resume <uuid>` in the folder the session ran in (the log's
   `cwd`, when inside the project), from the Claude session table and idle live sessions; WSL
   sessions are refused
 - [x] Link sessions to tasks: sessions are matched to a plan task from their title and sampled
   prompts (`taskMatcher`, parse cache v3); cards show a session count, the task dialog lists them
   with Resume, the session table shows the likely task. Loaded for boards of up to 8 projects
-- [ ] Acceptance: from the board, start Claude on a task, get notified when it waits, resume a
+- [~] Acceptance: from the board, start Claude on a task, get notified when it waits, resume a
   past session, on Windows, macOS and Linux
 
 ## Phase 6: Plans you can trust

@@ -110,7 +110,7 @@ history the first day the dashboard sees them.
   Code at the project with the task as its first prompt. The prompt is built from the plan file using
   Settings → "Start Claude on this task" prompt (`{task}`, `{milestone}`, `{file}`). Where a terminal
   or a `claude.cmd` wrapper would re-read the text through a shell, Claude starts without it and the
-  prompt is copied to your clipboard. Moving a card to **In progress** offers the same in its toast.
+  prompt is copied to your clipboard. Only To do tasks offer it; in-progress and done tasks hide it.
 - **Resume**: idle live sessions and the Claude session table have **Resume**
   (`claude --resume <id>` in the folder the session ran in). Sessions from WSL resume inside WSL only.
 - **Sessions on a task**: each session is matched to the plan task it most likely worked on, from its
