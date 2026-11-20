@@ -166,3 +166,58 @@ test('feedback dialog: errors are shown, then only the answers are sent', async 
   await page.getByTestId('feedback-card').getByRole('button', { name: 'Suggest a feature' }).click();
   await expect(page.getByTestId('feedback-dialog').getByLabel('Your idea')).toBeVisible();
 });
+
+// Phase 8: daily overview
+
+test('weekly summary shows the current week and copies it as Markdown', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/summary');
+  await expect(page.getByTestId('summary-week')).toContainText(/Week \d+, \d{4}/);
+  await expect(page.locator('.p-card', { hasText: 'Claude sessions' }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Copy as Markdown' }).click();
+  await expect(page.getByText('Copied as Markdown')).toBeVisible();
+  const md = await page.evaluate(() => navigator.clipboard.readText());
+  expect(md).toMatch(/^## Week \d+, \d{4} \(\d{4}-\d{2}-\d{2} to \d{4}-\d{2}-\d{2}\)/);
+  expect(md).toContain('Costs are estimates');
+  await page.getByRole('button', { name: 'Previous week' }).click();
+  await expect(page.getByRole('button', { name: 'This week' })).toBeVisible();
+});
+
+test('away card: nothing on the first visit, then what changed, until marked as seen', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.p-card', { hasText: 'Projects' }).first()).toBeVisible();
+  await expect(page.getByTestId('away-card')).toHaveCount(0);
+  // While "away", a task is completed through the API.
+  const headers = { 'Content-Type': 'application/json', 'x-cpd-client': '1' };
+  const projects = await (await page.request.get('/api/projects')).json();
+  const alpha = projects.find((p: { name: string }) => p.name === 'alpha');
+  const detail = await (await page.request.get(`/api/projects/${alpha.id}`)).json();
+  type T = { id: string; status: string; text: string };
+  const task: T = detail.milestones.flatMap((m: { tasks: T[] }) => m.tasks).find((t: T) => t.status !== 'done');
+  expect(task).toBeTruthy();
+  expect((await page.request.patch(`/api/projects/${alpha.id}/tasks/${task.id}`, { headers, data: { status: 'done' } })).ok()).toBe(true);
+  await page.reload();
+  const card = page.getByTestId('away-card');
+  await expect(card).toContainText('Since you were away');
+  await expect(card).toContainText(task.text);
+  await card.getByRole('button', { name: 'Mark as seen' }).click();
+  await expect(card).toHaveCount(0);
+});
+
+test('a git row expands to its branches and worktrees', async ({ page }) => {
+  const { execFileSync } = await import('child_process');
+  const git = (args: string[]) => execFileSync('git', ['-c', 'user.name=Smoke', '-c', 'user.email=smoke@example.invalid', '-c', 'commit.gpgsign=false', ...args], { cwd: fx().beta, stdio: 'ignore' });
+  git(['init', '-q']);
+  git(['symbolic-ref', 'HEAD', 'refs/heads/main']);
+  git(['add', '-A']);
+  git(['commit', '-q', '-m', 'First']);
+  git(['branch', 'spike']);
+  await page.request.get('/api/insights/git?refresh=1'); // the overview caches for 60 s
+  await page.goto('/git');
+  const row = page.locator('tr', { hasText: 'beta' });
+  await row.locator('.p-row-toggler').click();
+  const detail = page.getByTestId('repo-branches');
+  await expect(detail).toContainText('Local branches (2)');
+  await expect(detail).toContainText('spike');
+  await expect(detail).toContainText('Worktrees (1)');
+});
