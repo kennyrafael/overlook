@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { existsSync } from 'fs';
-import { join } from 'path';
 import { databaseOptions } from './database/database.config';
 import { HealthController } from './health.controller';
 import { SettingsModule } from './config/settings.module';
@@ -14,15 +13,15 @@ import { ViewsModule } from './views/views.module';
 import { SystemModule } from './system/system.module';
 import { FeedbackModule } from './feedback/feedback.module';
 
-// Built UI. The desktop app can point elsewhere with CPD_WEB_DIST.
-const webDist = process.env.CPD_WEB_DIST ?? join(__dirname, '..', '..', 'web', 'dist');
+import { webDist } from './common/web-dist';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot(databaseOptions),
     // In production the API serves the built UI; in dev Vite serves it.
     ...(existsSync(webDist)
-      ? [ServeStaticModule.forRoot({ rootPath: webDist, exclude: ['/api/{*path}'] })]
+      // Static files only; page routes get index.html from spaFallback (configure.ts), which works under dot-folders.
+      ? [ServeStaticModule.forRoot({ rootPath: webDist, exclude: ['/api/{*path}'], renderPath: '/__overlook_no_render__' })]
       : []),
     EventsModule,
     SettingsModule,
