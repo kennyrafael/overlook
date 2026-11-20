@@ -23,6 +23,8 @@ import { useLive } from '../store/live';
 import { useOnChange } from '../store/useOnChange';
 import { Button } from 'primereact/button';
 import { resumeSession, useClaudeAvailable } from '../actions/projectActions';
+import PromptSearch from './PromptSearch';
+import { ToolTable } from './SessionDetail';
 
 type Preset = '7' | '30' | '90' | 'all' | 'custom';
 
@@ -273,7 +275,8 @@ export default function ClaudeInsights({ projectIds, single }: Props) {
                 emptyMessage="No sessions match.">
                 <Column field="title" header="Session" sortable body={(s: ClaudeSession) => (
                   <div className="flex flex-column" style={{ maxWidth: '20rem' }}>
-                    <span className="white-space-nowrap overflow-hidden text-overflow-ellipsis" title={s.title ?? s.id}>{s.title ?? <em className="text-500">untitled</em>}</span>
+                    <Link to={`/claude/sessions/${s.id}`} className="white-space-nowrap overflow-hidden text-overflow-ellipsis no-underline text-color hover:text-primary"
+                      title={`Open session details: ${s.title ?? s.id}`}>{s.title ?? <em className="text-500">untitled</em>}</Link>
                     {s.task && (
                       <small className="text-500 white-space-nowrap overflow-hidden text-overflow-ellipsis" title={`Likely plan task: ${s.task.text}`}>
                         <i className="pi pi-check-square text-xs mr-1" />{s.task.text}
@@ -307,8 +310,63 @@ export default function ClaudeInsights({ projectIds, single }: Props) {
               </DataTable>
             </Card>
           </div>
+
+          <div className={single ? 'col-12' : 'col-12 lg:col-5'}>
+            <ToolsCard data={data} filtered={!!projectIds?.length && !single} />
+          </div>
+          {!single && (
+            <div className="col-12 lg:col-7">
+              <RollingCard windows={data.rolling} mode={mode} />
+            </div>
+          )}
         </div>
       )}
+      <PromptSearch projectIds={projectIds} single={single} />
     </div>
+  );
+}
+
+/** Most-used tools and how often their results came back as errors, in the range. */
+function ToolsCard({ data, filtered }: { data: ClaudeOverview; filtered: boolean }) {
+  const calls = data.byTool.reduce((n, t) => n + t.calls, 0);
+  const errors = data.byTool.reduce((n, t) => n + t.errors, 0);
+  const rate = (e: number, c: number) => (c ? `${((e / c) * 100).toFixed(1)}%` : '—');
+  const all = data.toolsOverall;
+  return (
+    <Card title="Tools" className="h-full"
+      subTitle={`${formatCompact(calls)} calls · ${rate(errors, calls)} errors${filtered ? ` (all projects: ${rate(all.errors, all.calls)} of ${formatCompact(all.calls)})` : ''} · incl. subagents`}>
+      <ToolTable tools={data.byTool} rows={8} />
+    </Card>
+  );
+}
+
+/** Tokens and estimated cost in the last 5 hours and 7 days, all projects, per model. */
+function RollingCard({ windows, mode }: { windows: ClaudeOverview['rolling']; mode: 'light' | 'dark' }) {
+  return (
+    <Card title="Recent usage" subTitle="All projects, to the hour · estimate from local logs, not your plan's limit" className="h-full" data-testid="rolling-usage">
+      <div className="grid">
+        {windows.map((w) => (
+          <div key={w.key} className="col-12 md:col-6">
+            <div className="text-500 text-sm mb-1">{w.key === '5h' ? 'Last 5 hours' : 'Last 7 days'}</div>
+            <div className="text-3xl font-bold">{formatUsd(w.costUsd)}</div>
+            <small className="text-500">
+              {formatCompact(w.tokens.output)} output · {formatCompact(w.tokens.input + w.tokens.cacheWrite + w.tokens.cacheRead)} input incl. cache · {formatCompact(w.turns)} turns
+              {w.unpricedTurns ? ` · ${w.unpricedTurns} unpriced` : ''}
+            </small>
+            <ul className="list-none m-0 p-0 mt-2 flex flex-column gap-1">
+              {w.byModel.map((m) => (
+                <li key={m.model} className="flex align-items-center gap-2 text-sm">
+                  <span className="heat-legend" style={{ background: categorical(modelSlot(m.model), mode) }} />
+                  <span title={m.model}>{modelLabel(m.model)}</span>
+                  <span className="ml-auto">{formatUsd(m.costUsd)}</span>
+                  <small className="text-500" style={{ minWidth: '4.5rem', textAlign: 'right' }}>{formatCompact(m.tokens.output)} out</small>
+                </li>
+              ))}
+              {!w.byModel.length && <li className="text-500 text-sm">No Claude use.</li>}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }

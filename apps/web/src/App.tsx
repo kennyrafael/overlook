@@ -10,6 +10,7 @@ const ProjectDetailPage = lazy(() => import('./pages/ProjectDetailPage'));
 const BoardPage = lazy(() => import('./pages/BoardPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ClaudePage = lazy(() => import('./pages/InsightsPages').then((m) => ({ default: m.ClaudePage })));
+const SessionDetailPage = lazy(() => import('./insights/SessionDetail'));
 const GitPage = lazy(() => import('./pages/InsightsPages').then((m) => ({ default: m.GitPage })));
 
 const page = (el: ReactElement) => <Suspense fallback={<Skeleton height="20rem" />}>{el}</Suspense>;
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="projects/:id" element={page(<ProjectDetailPage />)} />
         <Route path="board" element={page(<BoardPage />)} />
         <Route path="claude" element={page(<ClaudePage />)} />
+        <Route path="claude/sessions/:id" element={page(<SessionDetailPage />)} />
         <Route path="git" element={page(<GitPage />)} />
         <Route path="settings" element={page(<SettingsPage />)} />
         <Route path="*" element={<Navigate to="/" replace />} />

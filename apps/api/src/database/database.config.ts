@@ -9,6 +9,7 @@ import { SnapshotEntity } from '../projects/snapshot.entity';
 import { ViewEntity } from '../views/view.entity';
 import { Baseline1763424000000 } from './migrations/1763424000000-Baseline';
 import { ParseCache1763510400000 } from './migrations/1763510400000-ParseCache';
+import { PromptSearch1763700000000 } from './migrations/1763700000000-PromptSearch';
 
 /** Where the dashboard keeps its own data (database, plan-file backups, logs). */
 export const dataDir = process.env.CPD_DATA_DIR ?? join(homedir(), '.claude-projects-dashboard');
@@ -20,7 +21,7 @@ export const databaseFile = join(dataDir, 'dashboard.sqlite');
 
 export const entities = [SettingEntity, ProjectOverrideEntity, SnapshotEntity, ViewEntity, ParseCacheEntity];
 /** In order. Never edit a released migration; add a new one. */
-export const migrations = [Baseline1763424000000, ParseCache1763510400000];
+export const migrations = [Baseline1763424000000, ParseCache1763510400000, PromptSearch1763700000000];
 
 export const databaseOptions: TypeOrmModuleOptions = {
   type: 'better-sqlite3',

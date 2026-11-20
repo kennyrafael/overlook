@@ -3,8 +3,9 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { Worker } from 'worker_threads';
 import type { LogSummary } from './session-log';
+import type { ParseKind, ParseResults } from './log-parse.worker';
 
-type Pending = { resolve: (s: LogSummary) => void; reject: (e: Error) => void };
+type Pending = { resolve: (s: unknown) => void; reject: (e: Error) => void };
 
 /**
  * Parses log files on worker threads. Falls back to the main thread when workers are unavailable
@@ -19,18 +20,22 @@ export class LogParserPool {
 
   constructor(private size = 2) {}
 
-  async parse(file: string): Promise<LogSummary> {
+  parse(file: string): Promise<LogSummary> {
+    return this.run(file, 'summary');
+  }
+
+  async run<K extends ParseKind>(file: string, kind: K): Promise<ParseResults[K]> {
     const slot = this.slot();
     if (!slot) {
-      const { parseLogFile } = await import('./log-parse.worker');
-      return parseLogFile(file);
+      const { parseLog } = await import('./log-parse.worker');
+      return parseLog(file, kind);
     }
     const id = this.nextId++;
     slot.busy++;
     try {
-      return await new Promise<LogSummary>((resolve, reject) => {
-        this.pending.set(id, { resolve, reject });
-        slot.w.postMessage({ id, file });
+      return await new Promise<ParseResults[K]>((resolve, reject) => {
+        this.pending.set(id, { resolve: resolve as (s: unknown) => void, reject });
+        slot.w.postMessage({ id, file, kind });
       });
     } finally {
       slot.busy--;
@@ -53,11 +58,11 @@ export class LogParserPool {
       try {
         const w = new Worker(script);
         w.unref();
-        w.on('message', (m: { id: number; summary?: LogSummary; error?: string }) => {
+        w.on('message', (m: { id: number; result?: unknown; error?: string }) => {
           const p = this.pending.get(m.id);
           if (!p) return;
           this.pending.delete(m.id);
-          if (m.summary) p.resolve(m.summary); else p.reject(new Error(m.error ?? 'parse failed'));
+          if (m.result) p.resolve(m.result); else p.reject(new Error(m.error ?? 'parse failed'));
         });
         w.on('error', (e) => {
           this.log.warn(`Log parser worker failed: ${e}`);

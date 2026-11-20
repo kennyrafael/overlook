@@ -13,6 +13,51 @@ export interface UsageBucket {
   cacheRead: number;
 }
 
+/** Token counts of one reply, split by price class. */
+export interface UsageCounts {
+  input: number;
+  output: number;
+  cacheWrite5m: number;
+  cacheWrite1h: number;
+  cacheRead: number;
+}
+
+/** Usage of one model in one clock hour (`hour`: epoch ms at the start of the hour). */
+export interface HourBucket extends UsageCounts {
+  hour: number;
+  model: string;
+  turns: number;
+}
+
+/** Tool calls of one tool on one local day; `errors` are its results marked `is_error`. */
+export interface ToolDayCount {
+  day: string;
+  name: string;
+  calls: number;
+  errors: number;
+}
+
+/**
+ * Hour buckets are kept for this many days up to the log's last reply, not for its whole life.
+ * The rolling window looks back at most 7 days from now, and every hour in that window that a log has
+ * usage in lies within 7 days of the log's last reply (which is never after now), so 8 days always cover
+ * it while a long session's cache row stays small (at most 192 hours per model). Days stay the unit for
+ * everything else; they are too coarse for "the last 5 hours".
+ */
+export const HOUR_BUCKET_DAYS = 8;
+
+/**
+ * Hooks into a parse, for readers that need more than the summary (session detail, search index). They
+ * see each typed prompt, each reply once (deduplicated like the usage), and each tool call once.
+ */
+export interface LogObserver {
+  prompt?(at: number, text: string): void;
+  reply?(at: number, model: string, usage: UsageCounts): void;
+  toolUse?(at: number, name: string, input: unknown, useId: string | null): void;
+  /** A tool result marked `is_error`, for a call seen earlier in the log (once per call). */
+  toolError?(useId: string): void;
+}
+
 export interface LogSummary {
   sessionId: string | null;
   title: string | null;
@@ -29,6 +74,10 @@ export interface LogSummary {
   /** The folder Claude Code ran in (the first `cwd` of the log), for `claude --resume`. */
   cwd: string | null;
   buckets: UsageBucket[];
+  /** Usage per hour for the last HOUR_BUCKET_DAYS days of the log (for the rolling usage window). */
+  hours: HourBucket[];
+  /** Tool calls and errors per day and tool. */
+  tools: ToolDayCount[];
   /** Format check; see `isUnrecognized`. */
   format: LogFormatStats;
 }
@@ -47,7 +96,10 @@ export interface LogFormatStats {
 }
 
 /** Bump when LogSummary or its meaning changes, so persisted cache rows are re-parsed. */
-export const PARSER_VERSION = 3;
+export const PARSER_VERSION = 4;
+
+const HOUR_MS = 3_600_000;
+const TOOL_NAME_CHARS = 120;
 
 const PROMPT_SAMPLE_FIRST = 2;
 const PROMPT_SAMPLE_LAST = 3;
@@ -73,6 +125,12 @@ export function isUnrecognized(f: LogFormatStats): boolean {
 export class LogAccumulator {
   private seen = new Set<string>();
   private buckets = new Map<string, UsageBucket>();
+  private hourBuckets = new Map<string, HourBucket>();
+  private toolCounts = new Map<string, ToolDayCount>();
+  /** tool_use id → its tool and day, so an error result can be charged to the call. */
+  private toolUses = new Map<string, ToolDayCount>();
+  private erroredUses = new Set<string>();
+  private lastReplyAt: number | null = null;
   sessionId: string | null = null;
   title: string | null = null;
   startedAt: number | null = null;
@@ -83,6 +141,8 @@ export class LogAccumulator {
   private firstPrompts: string[] = [];
   private lastPrompts: string[] = [];
   format: LogFormatStats = { lines: 0, typed: 0, assistant: 0, assistantUsable: 0, errors: 0 };
+
+  constructor(private observer: LogObserver = {}) {}
 
   /** Never throws: unexpected shapes are counted in `format` and skipped. */
   add(line: string) {
@@ -105,6 +165,8 @@ export class LogAccumulator {
     const isTitle = kind === 'summary' || kind === 'custom-title';
     if (!isAssistant && !isUser && !isTitle) return;
     if (isUser && line.includes('"tool_result"')) {
+      // Tool output is most of a log's bytes; only results marked as errors are worth parsing.
+      if (/"is_error"\s*:\s*true/.test(line)) this.toolErrors(line);
       this.touch(line);
       return;
     }
@@ -134,7 +196,9 @@ export class LogAccumulator {
         this.prompts++;
         const day = localDay(new Date(ts));
         this.promptDays[day] = (this.promptDays[day] ?? 0) + 1;
-        this.samplePrompt(typeof c === 'string' ? c : c.filter((b: any) => b?.type === 'text' && typeof b.text === 'string').map((b: any) => b.text).join('\n'));
+        const text = typeof c === 'string' ? c : c.filter((b: any) => b?.type === 'text' && typeof b.text === 'string').map((b: any) => b.text).join('\n');
+        this.samplePrompt(text);
+        this.observer.prompt?.(ts, text);
       }
       return;
     }
@@ -142,6 +206,7 @@ export class LogAccumulator {
     if (j.type === 'assistant') {
       this.format.assistant++;
       const msg = j.message;
+      if (!Number.isNaN(ts) && Array.isArray(msg?.content)) this.toolCalls(msg.content, ts);
       const u = msg?.usage;
       const model: unknown = msg?.model;
       if (model === '<synthetic>') { this.format.assistantUsable++; return; }
@@ -152,19 +217,54 @@ export class LogAccumulator {
         if (this.seen.has(id)) return;
         this.seen.add(id);
       }
+      const cw = u.cache_creation && typeof u.cache_creation === 'object' ? u.cache_creation : null;
+      const counts: UsageCounts = {
+        input: tokens(u.input_tokens),
+        output: tokens(u.output_tokens),
+        cacheWrite5m: tokens(cw ? cw.ephemeral_5m_input_tokens : u.cache_creation_input_tokens),
+        cacheWrite1h: tokens(cw?.ephemeral_1h_input_tokens),
+        cacheRead: tokens(u.cache_read_input_tokens),
+      };
       const day = localDay(new Date(ts));
       const key = `${day}|${model}`;
-      const b = this.buckets.get(key) ?? { day, model, turns: 0, input: 0, output: 0, cacheWrite5m: 0, cacheWrite1h: 0, cacheRead: 0 };
-      const cw = u.cache_creation && typeof u.cache_creation === 'object' ? u.cache_creation : null;
-      const cw1h = Number(cw?.ephemeral_1h_input_tokens ?? 0);
-      const cw5m = cw ? Number(cw.ephemeral_5m_input_tokens ?? 0) : Number(u.cache_creation_input_tokens ?? 0);
-      b.turns += 1;
-      b.input += tokens(u.input_tokens);
-      b.output += tokens(u.output_tokens);
-      b.cacheWrite5m += tokens(cw5m);
-      b.cacheWrite1h += tokens(cw1h);
-      b.cacheRead += tokens(u.cache_read_input_tokens);
-      this.buckets.set(key, b);
+      addCounts(this.buckets.get(key) ?? this.buckets.set(key, { day, model, ...zeroCounts() }).get(key)!, counts);
+      const hour = Math.floor(ts / HOUR_MS) * HOUR_MS;
+      const hkey = `${hour}|${model}`;
+      addCounts(this.hourBuckets.get(hkey) ?? this.hourBuckets.set(hkey, { hour, model, ...zeroCounts() }).get(hkey)!, counts);
+      this.lastReplyAt = Math.max(this.lastReplyAt ?? ts, ts);
+      this.observer.reply?.(ts, model, counts);
+    }
+  }
+
+  /** Counts `tool_use` blocks once each (by block id: a resumed log can repeat lines). */
+  private toolCalls(content: unknown[], ts: number) {
+    for (const b of content as any[]) {
+      if (b?.type !== 'tool_use' || typeof b.name !== 'string' || !b.name) continue;
+      const useId = typeof b.id === 'string' && b.id ? b.id : null;
+      if (useId && this.toolUses.has(useId)) continue;
+      const day = localDay(new Date(ts));
+      const name = b.name.slice(0, TOOL_NAME_CHARS);
+      const key = `${day}|${name}`;
+      const t = this.toolCounts.get(key) ?? this.toolCounts.set(key, { day, name, calls: 0, errors: 0 }).get(key)!;
+      t.calls++;
+      if (useId) this.toolUses.set(useId, t);
+      this.observer.toolUse?.(ts, name, b.input, useId);
+    }
+  }
+
+  /** Charges `is_error` tool results to the call they answer (results for unknown calls are ignored). */
+  private toolErrors(line: string) {
+    let j: any;
+    try { j = JSON.parse(line); } catch { this.format.errors++; return; }
+    const c = j?.message?.content;
+    if (!Array.isArray(c)) return;
+    for (const b of c) {
+      if (b?.type !== 'tool_result' || b.is_error !== true || typeof b.tool_use_id !== 'string') continue;
+      const t = this.toolUses.get(b.tool_use_id);
+      if (!t || this.erroredUses.has(b.tool_use_id)) continue;
+      this.erroredUses.add(b.tool_use_id);
+      t.errors++;
+      this.observer.toolError?.(b.tool_use_id);
     }
   }
 
@@ -187,14 +287,30 @@ export class LogAccumulator {
   }
 
   summary(): LogSummary {
+    const keepFrom = (this.lastReplyAt ?? 0) - HOUR_BUCKET_DAYS * 86_400_000;
     return {
       sessionId: this.sessionId, title: this.title, startedAt: this.startedAt, endedAt: this.endedAt,
       prompts: this.prompts, promptDays: this.promptDays,
       promptSample: [...this.firstPrompts, ...this.lastPrompts], cwd: this.cwd,
       buckets: [...this.buckets.values()],
+      hours: [...this.hourBuckets.values()].filter((h) => h.hour >= keepFrom),
+      tools: [...this.toolCounts.values()],
       format: { ...this.format },
     };
   }
+}
+
+function zeroCounts() {
+  return { turns: 0, input: 0, output: 0, cacheWrite5m: 0, cacheWrite1h: 0, cacheRead: 0 };
+}
+
+function addCounts(b: UsageCounts & { turns: number }, c: UsageCounts) {
+  b.turns += 1;
+  b.input += c.input;
+  b.output += c.output;
+  b.cacheWrite5m += c.cacheWrite5m;
+  b.cacheWrite1h += c.cacheWrite1h;
+  b.cacheRead += c.cacheRead;
 }
 
 /** Token counts from the log: anything that is not a finite, non-negative number counts as 0. */
@@ -219,7 +335,7 @@ export function priceFor(model: string, table: PriceTable): ModelPrice | null {
   return best ? table.prices[best] : null;
 }
 
-export function bucketCost(b: UsageBucket, table: PriceTable): number | null {
+export function bucketCost(b: UsageCounts & { model: string }, table: PriceTable): number | null {
   const p = priceFor(b.model, table);
   if (!p) return null;
   return (
@@ -231,7 +347,7 @@ export function bucketCost(b: UsageBucket, table: PriceTable): number | null {
   ) / 1_000_000;
 }
 
-export function bucketTokens(b: UsageBucket): TokenUsage {
+export function bucketTokens(b: UsageCounts): TokenUsage {
   return { input: b.input, output: b.output, cacheWrite: b.cacheWrite5m + b.cacheWrite1h, cacheRead: b.cacheRead };
 }
 

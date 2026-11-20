@@ -1,10 +1,13 @@
-import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, NotFoundException, Param, Query } from '@nestjs/common';
 import { ClaudeUsageService } from './claude-usage.service';
 import { GitService } from './git.service';
 import { LiveActivityService } from './live-activity.service';
 import { SnapshotsService } from '../projects/snapshots.service';
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** Claude Code names session logs `<uuid>.jsonl`; anything else is refused before it can reach a path. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_QUERY_CHARS = 500;
 
 function ids(raw?: string): string[] | undefined {
   const list = raw?.split(',').map((s) => s.trim()).filter(Boolean);
@@ -43,6 +46,29 @@ export class InsightsController {
   taskSessions(@Query('project') project?: string) {
     if (!project) throw new BadRequestException('project is required');
     return this.claude.taskSessions(project);
+  }
+
+  /** One session read from its log: prompts, Claude's work per prompt, tools, edited files. */
+  @Get('sessions/:id')
+  async session(@Param('id') id: string) {
+    if (!UUID_RE.test(id)) throw new BadRequestException('Invalid session id');
+    const s = await this.claude.sessionDetail(id);
+    if (!s) throw new NotFoundException('No such session');
+    return s;
+  }
+
+  /** Sessions whose title or typed prompts match `q` (any text; it is never read as FTS5 syntax). */
+  @Get('search')
+  search(@Query('q') q?: string, @Query('projects') projects?: string) {
+    if (typeof q !== 'string' || !q.trim()) return [];
+    return this.claude.search(q.slice(0, MAX_QUERY_CHARS), ids(projects));
+  }
+
+  /** Estimated Claude cost of the sessions matched to each milestone's tasks. */
+  @Get('milestone-costs')
+  milestoneCosts(@Query('project') project?: string) {
+    if (!project) throw new BadRequestException('project is required');
+    return this.claude.milestoneCosts(project);
   }
 
   /** Daily plan progress (milestones / tasks) summed over the projects, last `days` days. */

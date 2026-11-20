@@ -124,6 +124,12 @@ export interface ClaudeOverview {
   sessions: ClaudeSession[];
   /** Session logs read, and those that do not look like any Claude Code format we know. */
   logFormat: { files: number; unrecognizedFiles: number; examples: string[] };
+  /** Tool calls and errors in the range, for the selected projects (incl. subagents), most-used first. */
+  byTool: ClaudeToolCount[];
+  /** Tool calls and errors in the range over all projects, to compare the selection with. */
+  toolsOverall: { calls: number; errors: number };
+  /** Usage in the last 5 hours and the last 7 days over all projects, whatever the range (estimates from local logs). */
+  rolling: ClaudeUsageWindow[];
 }
 
 /** One item of the task list Claude keeps for itself during a session. */
@@ -403,4 +409,81 @@ export interface AppDataExport {
   settings: Settings;
   projectOverrides: { id: string; name: string | null; status: string | null; tags: string[]; pinned: boolean }[];
   views: { id: string; name: string; filters: ViewFilters; createdAt: string }[];
+}
+
+// Phase 7: time and tokens
+
+/** Calls of one tool; `errors` are its results Claude Code marked as errors. */
+export interface ClaudeToolCount {
+  tool: string;
+  calls: number;
+  errors: number;
+}
+
+/**
+ * Usage in a window that ends now (`hours` long, at hour resolution: hours that overlap the window count
+ * whole). An estimate from local logs at list prices, not a plan's limit.
+ */
+export interface ClaudeUsageWindow {
+  key: '5h' | '7d';
+  hours: number;
+  /** Start of the oldest hour counted. */
+  from: string;
+  turns: number;
+  tokens: TokenUsage;
+  costUsd: number;
+  unpricedTurns: number;
+  byModel: { model: string; turns: number; tokens: TokenUsage; costUsd: number; priced: boolean }[];
+}
+
+/** GET /api/insights/sessions/:id — one session read from its log on demand. */
+export interface ClaudeSessionDetail {
+  id: string;
+  title: string | null;
+  projectId: string | null;
+  projectName: string;
+  /** Where Claude Code ran (the log's first cwd). */
+  cwd: string | null;
+  startedAt: string;
+  endedAt: string;
+  durationMs: number;
+  resumable: boolean;
+  subagents: number;
+  models: string[];
+  task: { id: string; text: string } | null;
+  /** Main log plus subagents. */
+  totals: { prompts: number; turns: number; tokens: TokenUsage; costUsd: number; unpricedTurns: number; subagentCostUsd: number };
+  /** Typed prompts in order, cut to about 500 characters. */
+  prompts: { at: string; text: string; truncated: boolean }[];
+  /** Prompts not listed because the session has very many. */
+  promptsOmitted: number;
+  /** Claude's work after each prompt (main log): `prompt` indexes `prompts`, -1 for replies before the first one. */
+  perPrompt: { prompt: number; at: string; turns: number; tokens: TokenUsage; costUsd: number }[];
+  /** Incl. subagents, most-used first. */
+  tools: ClaudeToolCount[];
+  /** Files Claude changed (Edit, Write, MultiEdit, NotebookEdit; incl. subagents; failed edits left out), relative to the project when inside it. */
+  edited: { path: string; edits: number }[];
+}
+
+/** GET /api/insights/search — a session whose title or typed prompts match. */
+export interface ClaudeSearchHit {
+  id: string;
+  title: string | null;
+  projectId: string | null;
+  projectName: string;
+  endedAt: string;
+  /** Where the best match is. */
+  matchedIn: 'title' | 'prompt';
+  /** When the matching prompt was typed (the session start for a title match). */
+  at: string;
+  /** Text around the match; matched words are between \u0002 and \u0003. */
+  snippet: string;
+  resumable: boolean;
+}
+
+/** GET /api/insights/milestone-costs — estimated Claude cost of the sessions matched to each milestone's tasks. */
+export interface ClaudeMilestoneCosts {
+  milestones: { id: string; title: string; reached: boolean; sessions: number; turns: number; tokens: TokenUsage; costUsd: number }[];
+  /** Sessions of the project that matched no task (or a task in no milestone). */
+  unmatched: { sessions: number; costUsd: number };
 }

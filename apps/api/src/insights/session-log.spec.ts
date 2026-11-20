@@ -48,6 +48,16 @@ test('counts typed prompts only', () => {
   assert.equal(s.startedAt, Date.parse('2026-11-02T09:00:00.000Z'));
 });
 
+test('hour buckets cover only the last 8 days of a log', () => {
+  const acc = new LogAccumulator();
+  acc.add(asst('m1', '2026-11-01T10:15:00.000Z'));
+  acc.add(asst('m2', '2026-11-10T10:59:00.000Z'));
+  acc.add(asst('m3', '2026-11-10T10:01:00.000Z'));
+  const s = acc.summary();
+  assert.equal(s.buckets.reduce((n, b) => n + b.turns, 0), 3);
+  assert.deepEqual(s.hours.map((h) => [new Date(h.hour).toISOString(), h.turns]), [['2026-11-10T10:00:00.000Z', 2]]);
+});
+
 test('falls back to cache_creation_input_tokens as 5-minute writes', () => {
   const acc = new LogAccumulator();
   acc.add(asst('m1', '2026-11-01T10:00:00.000Z', 'claude-opus-5-5', { input_tokens: 1, output_tokens: 1, cache_creation_input_tokens: 400 }));

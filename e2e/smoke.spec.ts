@@ -166,3 +166,22 @@ test('feedback dialog: errors are shown, then only the answers are sent', async 
   await page.getByTestId('feedback-card').getByRole('button', { name: 'Suggest a feature' }).click();
   await expect(page.getByTestId('feedback-dialog').getByLabel('Your idea')).toBeVisible();
 });
+
+test('phase 7: session detail opens from the session table, and search finds a prompt', async ({ page }) => {
+  await page.goto('/claude');
+  await page.getByRole('button', { name: 'All', exact: true }).click();
+  await expect(page.getByTestId('rolling-usage')).toContainText("not your plan's limit");
+  await page.getByRole('link', { name: 'Parser work' }).click();
+  const detail = page.getByTestId('session-detail');
+  await expect(detail.getByRole('heading', { name: 'Parser work' })).toBeVisible();
+  await expect(detail).toContainText('build the parser');
+  await expect(detail).toContainText('src/parser.ts');
+  await expect(detail.locator('canvas')).toBeVisible();
+
+  await page.goto('/claude');
+  await page.getByLabel('Search prompts').fill('parser');
+  const results = page.getByTestId('search-results');
+  await expect(results.locator('mark')).toHaveText('parser');
+  await results.getByRole('link', { name: 'Parser work' }).click();
+  await expect(page.getByTestId('session-detail')).toContainText('build the parser');
+});
