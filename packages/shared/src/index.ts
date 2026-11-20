@@ -487,3 +487,120 @@ export interface ClaudeMilestoneCosts {
   /** Sessions of the project that matched no task (or a task in no milestone). */
   unmatched: { sessions: number; costUsd: number };
 }
+
+// Phase 8: daily overview
+
+/**
+ * A plan task that changed between two reads of a project's plan files (recorded by the server, never
+ * written into the project). A rename is a removal plus an addition; the first read of a project records nothing.
+ */
+export interface TaskEvent {
+  projectId: string;
+  /** Plan file relative to the project folder. */
+  file: string;
+  taskText: string;
+  /** null = the task appeared (added, or renamed to this text). */
+  from: TaskStatus | null;
+  /** null = the task disappeared (deleted, or renamed away). */
+  to: TaskStatus | null;
+  at: string;
+  /** 'dashboard' = changed in Overlook; 'file' = changed on disk (an editor, Claude, git). */
+  source: 'file' | 'dashboard';
+}
+
+/** One commit on a repository's checked-out branch. */
+export interface CommitRef {
+  hash: string;
+  /** Committer date (ISO). */
+  at: string;
+  subject: string;
+  /** Repository path relative to the project folder ('' for the project folder itself). */
+  repo: string;
+}
+
+/** GET /api/insights/away: what happened since this device last pressed "Mark as seen". */
+export interface AwaySummary {
+  /** null on the device's first visit: there is nothing to compare with yet. */
+  since: string | null;
+  until: string;
+  tasksCompleted: number;
+  /** The most recently completed tasks (at most 10). */
+  completed: { projectId: string; projectName: string; text: string; at: string }[];
+  commits: number;
+  sessions: number;
+  /** Estimate at API list prices. */
+  costUsd: number;
+  projects: { projectId: string; name: string; tasksCompleted: number; commits: number; sessions: number; costUsd: number }[];
+}
+
+/** A task's net move within the summary range (first `from`, last `to`). */
+export interface TaskMove {
+  file: string;
+  taskText: string;
+  from: TaskStatus | null;
+  to: TaskStatus | null;
+  at: string;
+}
+
+export interface SummaryProject {
+  /** null = Claude sessions outside any project. */
+  projectId: string | null;
+  name: string;
+  /** Status changes only (added and removed tasks are counted, not listed). */
+  moved: TaskMove[];
+  tasksCompleted: number;
+  tasksAdded: number;
+  tasksRemoved: number;
+  commits: number;
+  /** Newest first, at most 10. */
+  recentCommits: CommitRef[];
+  sessions: number;
+  /** Sum of session durations inside the range. */
+  durationMs: number;
+  costUsd: number;
+}
+
+/** GET /api/insights/summary?from&to (local days, inclusive, at most 31). */
+export interface WorkSummary {
+  from: string;
+  to: string;
+  generatedAt: string;
+  totals: { tasksCompleted: number; tasksMoved: number; commits: number; sessions: number; durationMs: number; costUsd: number };
+  projects: SummaryProject[];
+}
+
+export interface BranchInfo {
+  name: string;
+  current: boolean;
+  upstream: string | null;
+  ahead: number;
+  behind: number;
+  /** The upstream branch was deleted on the remote. */
+  upstreamGone: boolean;
+  lastCommitAt: string | null;
+  lastCommitSubject: string | null;
+  /** Fully merged into the checked-out branch. */
+  merged: boolean;
+  /** Not checked out and no commit for `staleDays` days. */
+  stale: boolean;
+}
+
+export interface WorktreeInfo {
+  path: string;
+  branch: string | null;
+  head: string | null;
+  main: boolean;
+  bare: boolean;
+  detached: boolean;
+  locked: boolean;
+  prunable: boolean;
+}
+
+/** GET /api/insights/git/branches?project&repo: local branches and worktrees of one repository (read-only). */
+export interface RepoBranches {
+  path: string;
+  staleDays: number;
+  branches: BranchInfo[];
+  worktrees: WorktreeInfo[];
+  error?: string;
+}

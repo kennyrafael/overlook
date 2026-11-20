@@ -1,5 +1,6 @@
 import type { ActionResult, ClaudeActionBody, TaskSessionRef, LiveSession,ClaudeOverview, GitOverview, Project, ProjectAction, ProjectDetail, ProjectPatch, SavedView, Settings, TaskStatus, ViewFilters, SystemTools, SystemInfo, AppDataExport, AboutInfo, FeedbackInput } from '@overlook/shared';
 import type { ClaudeMilestoneCosts, ClaudeSearchHit, ClaudeSessionDetail } from '@overlook/shared';
+import type { AwaySummary, RepoBranches, WorkSummary } from '@overlook/shared';
 
 export class ApiError extends Error {
   /** Field errors from a 400 answer (feedback form), keyed by field name. */
@@ -78,4 +79,12 @@ export const api = {
   },
   milestoneCosts: (projectId: string) =>
     request<ClaudeMilestoneCosts>(`/insights/milestone-costs?project=${encodeURIComponent(projectId)}`),
+  // Phase 8: daily overview
+  away: (device: string) => request<AwaySummary>(`/insights/away?device=${encodeURIComponent(device)}`),
+  markSeen: (device: string) =>
+    request<{ lastSeenAt: string }>('/insights/away/seen', { method: 'POST', body: JSON.stringify({ device }) }),
+  summary: (from: string, to: string) =>
+    request<WorkSummary>(`/insights/summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+  gitBranches: (projectId: string, repo: string) =>
+    request<RepoBranches>(`/insights/git/branches?project=${encodeURIComponent(projectId)}&repo=${encodeURIComponent(repo)}`),
 };

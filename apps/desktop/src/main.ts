@@ -16,6 +16,7 @@ import { createServer } from 'net';
 import { homedir } from 'os';
 import { delimiter, join } from 'path';
 import { checkNow, initUpdater, setAutoCheck } from './updater';
+import { TRAY_EVENTS, apiRequest, dynamicItems, sseEventNames, startClaudePath, type TrayData } from './tray-menu';
 
 const TOKEN_COOKIE = 'cpd_token';
 const READY_TIMEOUT_MS = 30_000;
@@ -35,6 +36,8 @@ let server: UtilityProcess | null = null;
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let origin = '';
+/** Per-launch token (set in boot()), so the tray can call the app's own API. */
+let apiToken = '';
 let quitting = false;
 
 // ---------------------------------------------------------------------------------------------
@@ -276,7 +279,7 @@ function showWindow() {
   mainWindow.focus();
 }
 
-async function createWindow() {
+async function createWindow(path = '/') {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -305,23 +308,106 @@ async function createWindow() {
     }
   });
   mainWindow.on('closed', () => { mainWindow = null; });
-  await mainWindow.loadURL(origin + '/');
+  await mainWindow.loadURL(origin + path);
 }
 
-function createTray() {
-  if (!existsSync(iconPath)) return;
-  // Linux panels (AppIndicator / StatusNotifier) draw tray icons at about 22 px; Windows uses 16.
-  const size = IS_LINUX ? 22 : 16;
-  tray = new Tray(nativeImage.createFromPath(iconPath).resize({ width: size, height: size }));
-  tray.setToolTip('Overlook');
+const TRAY_REFRESH_MS = 60_000;
+let trayTimer: NodeJS.Timeout | null = null;
+let trayDebounce: NodeJS.Timeout | null = null;
+let trayData: TrayData = { live: [], projects: [] };
+
+/** A call to the app's own server (token cookie + client header); null on any failure. */
+async function callApi<T>(path: string, method: 'GET' | 'POST' = 'GET'): Promise<T | null> {
+  if (!server || !origin || !apiToken) return null;
+  try {
+    const { url, init } = apiRequest(origin, apiToken, path, method);
+    const res = await fetch(url, init);
+    return res.ok ? ((await res.json()) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Shows the window on a project (opening it there directly when the window was closed). */
+async function openProjectFromTray(projectId: string) {
+  if (!PROJECT_ID_RE.test(projectId)) return;
+  if (!mainWindow) { await createWindow(`/projects/${projectId}`).catch(() => undefined); return; }
+  showWindow();
+  mainWindow.webContents.send('overlook:open-project', projectId);
+}
+
+async function startClaudeFromTray(projectId: string) {
+  let path: string;
+  try { path = startClaudePath(projectId); } catch { return; }
+  const ok = await callApi(path, 'POST');
+  if (!ok) dialog.showErrorBox('Overlook', 'Claude could not be started in this project. Open Overlook for details.');
+  scheduleTrayRefresh(5000);
+}
+
+function setTrayMenu() {
+  if (!tray) return;
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Open Overlook', click: showWindow },
+    ...dynamicItems(trayData, {
+      openProject: (id) => { void openProjectFromTray(id); },
+      startClaude: (id) => { void startClaudeFromTray(id); },
+    }),
+    { type: 'separator' },
     { label: 'Check for updates', click: checkNow },
     { type: 'separator' },
     { label: 'Quit', click: () => { quitting = true; app.quit(); } },
   ]));
-  // Windows and most Linux panels send clicks; AppIndicator panels (Ubuntu) only open the menu, which has "Open Overlook".
+}
+
+/** Re-reads live sessions and projects and rebuilds the menu. Only while the server is up; never throws. */
+async function refreshTray() {
+  try {
+    if (!tray || !server || quitting) return;
+    const [live, projects] = await Promise.all([
+      callApi<TrayData['live']>('/api/insights/live'),
+      callApi<TrayData['projects']>('/api/projects'),
+    ]);
+    trayData = { live: Array.isArray(live) ? live : [], projects: Array.isArray(projects) ? projects : trayData.projects };
+    setTrayMenu();
+  } catch { /* the tray keeps its previous menu */ }
+}
+
+function scheduleTrayRefresh(ms = 2000) {
+  if (trayDebounce) clearTimeout(trayDebounce);
+  trayDebounce = setTimeout(() => { trayDebounce = null; void refreshTray(); }, ms);
+}
+
+/** Follows the server's event stream and rebuilds the menu after relevant changes; reconnects while the server is up. */
+async function followEvents() {
+  while (server && !quitting) {
+    try {
+      const { url, init } = apiRequest(origin, apiToken, '/api/events');
+      const res = await fetch(url, { headers: init.headers });
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      while (reader) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (sseEventNames(decoder.decode(value, { stream: true })).some((e) => TRAY_EVENTS.has(e))) scheduleTrayRefresh();
+      }
+    } catch { /* reconnect below */ }
+    await new Promise((r) => setTimeout(r, 10_000));
+  }
+}
+
+function createTray() {
+  if (!existsSync(iconPath)) return;
+  // Linux panels (AppIndicator / StatusNotifier) draw tray icons at about 22 px; Windows and the macOS menu bar use 16.
+  const size = IS_LINUX ? 22 : 16;
+  tray = new Tray(nativeImage.createFromPath(iconPath).resize({ width: size, height: size }));
+  tray.setToolTip('Overlook');
+  setTrayMenu();
+  // Windows and most Linux panels send clicks; AppIndicator panels (Ubuntu) and the macOS menu bar open the menu,
+  // which has "Open Overlook".
   tray.on('click', showWindow);
+  void refreshTray();
+  trayTimer = setInterval(() => { void refreshTray(); }, TRAY_REFRESH_MS);
+  void followEvents();
 }
 
 /** Sends a menu command to the page (the preload only accepts the commands it knows). */
@@ -368,6 +454,7 @@ async function boot() {
   prefs = readPrefs();
   const port = await freePort();
   const token = randomBytes(32).toString('hex');
+  apiToken = token;
   origin = `http://127.0.0.1:${port}`;
 
   harden();
@@ -430,6 +517,8 @@ if (!app.requestSingleInstanceLock()) {
   let stopped = false;
   app.on('before-quit', (event) => {
     quitting = true;
+    if (trayTimer) clearInterval(trayTimer);
+    if (trayDebounce) clearTimeout(trayDebounce);
     if (stopped) return;
     event.preventDefault();
     void stopServer().finally(() => {

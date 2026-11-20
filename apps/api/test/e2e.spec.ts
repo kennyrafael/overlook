@@ -395,3 +395,113 @@ describe('phase 7: time and tokens', () => {
     assert.ok(Math.abs(body.unmatched.costUsd - s.costUsd) < 1e-9);
   });
 });
+
+describe('phase 8 daily overview', () => {
+  const { execFileSync } = require('child_process') as typeof import('child_process');
+  const hasGit = (() => { try { execFileSync('git', ['--version']); return true; } catch { return false; } })();
+  const device = 'e2e-device-0123456789';
+  const OLD = new Date(Date.now() - 60 * 86_400_000).toISOString();
+  /** git in a fixture folder (never in the user's repos), with a fixed identity and optional dates. */
+  const gitIn = (cwd: string, args: string[], date?: string) => execFileSync('git', ['-c', 'user.name=E2E', '-c', 'user.email=e2e@example.invalid', '-c', 'commit.gpgsign=false', '-c', 'core.autocrlf=false', ...args], {
+    cwd, encoding: 'utf8', env: { ...process.env, ...(date ? { GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date } : {}) },
+  });
+  const localDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const shift = (days: number) => localDay(new Date(Date.now() + days * 86_400_000));
+  // Yesterday..tomorrow covers the fixture session (UTC today) and "now" in any time zone.
+  const range = { from: shift(-1), to: shift(1) };
+  const openTask = async (name: string) => {
+    const p = await project(name);
+    const detail = (await api(`/projects/${p.id}`)).body;
+    return { project: p, task: detail.milestones.flatMap((m: any) => m.tasks).find((t: any) => t.status === 'todo') };
+  };
+
+  test('away: the first visit shows nothing; "mark as seen" starts the count', async () => {
+    const first = await api(`/insights/away?device=${device}`);
+    assert.equal(first.status, 200);
+    assert.equal(first.body.since, null);
+    assert.equal(first.body.tasksCompleted, 0);
+    const seen = await api('/insights/away/seen', { method: 'POST', body: JSON.stringify({ device }) });
+    assert.equal(seen.status, 200);
+    const again = await api(`/insights/away?device=${device}`);
+    assert.equal(again.body.since, seen.body.lastSeenAt);
+    assert.deepEqual([again.body.tasksCompleted, again.body.commits, again.body.completed], [0, 0, []]);
+  });
+
+  test('away: device ids are validated and marking needs the client header', async () => {
+    assert.equal((await api('/insights/away?device=short')).status, 400);
+    assert.equal((await api('/insights/away')).status, 400);
+    assert.equal((await api('/insights/away/seen', { method: 'POST', body: JSON.stringify({ device: 'a b/../c-0123456789' }) })).status, 400);
+    assert.equal(await rawStatus('/insights/away/seen', { host: new URL(base).host }, 'POST'), 403);
+  });
+
+  test('away: a task completed through the API and new commits are counted', { skip: !hasGit && 'git not installed' }, async () => {
+    // beta becomes a git repository: an old commit on a branch that goes stale, then two commits today.
+    gitIn(fx.beta, ['init', '-q']);
+    gitIn(fx.beta, ['symbolic-ref', 'HEAD', 'refs/heads/main']);
+    writeFileSync(join(fx.beta, 'a.txt'), 'a\n');
+    gitIn(fx.beta, ['add', '-A']);
+    gitIn(fx.beta, ['commit', '-q', '-m', 'Old start'], OLD);
+    gitIn(fx.beta, ['branch', 'old-spike']);
+    for (const f of ['b', 'c']) {
+      writeFileSync(join(fx.beta, `${f}.txt`), `${f}\n`);
+      gitIn(fx.beta, ['add', '-A']);
+      gitIn(fx.beta, ['commit', '-q', '-m', `Add ${f}`]);
+    }
+
+    const { project: alpha, task } = await openTask('alpha');
+    assert.ok(task, 'alpha has an open task');
+    assert.equal((await api(`/projects/${alpha.id}/tasks/${task.id}`, { method: 'PATCH', body: JSON.stringify({ status: 'done' }) })).status, 200);
+
+    const away = (await api(`/insights/away?device=${device}`)).body;
+    assert.equal(away.tasksCompleted, 1);
+    assert.equal(away.completed[0].text, task.text);
+    assert.equal(away.completed[0].projectName, 'alpha');
+    assert.equal(away.commits, 2);
+    assert.equal(away.projects.find((p: any) => p.name === 'beta').commits, 2);
+  });
+
+  test('summary: the edit is a task move and the commits match git log', { skip: !hasGit && 'git not installed' }, async () => {
+    const r = await api(`/insights/summary?from=${range.from}&to=${range.to}`);
+    assert.equal(r.status, 200);
+    const s = r.body;
+    const alpha = s.projects.find((p: any) => p.name === 'alpha');
+    const beta = s.projects.find((p: any) => p.name === 'beta');
+    assert.ok(alpha.moved.some((m: any) => m.to === 'done' && m.file === 'PLAN.md'), 'the API edit is in the history');
+    assert.equal(alpha.tasksCompleted, alpha.moved.filter((m: any) => m.to === 'done').length);
+    assert.ok(alpha.sessions >= 1 && alpha.durationMs > 0 && alpha.costUsd > 0, 'fixture session counted');
+
+    const since = new Date(`${range.from}T00:00:00`).toISOString();
+    const until = new Date(new Date(`${range.to}T00:00:00`).getTime() + 86_400_000).toISOString();
+    const log = gitIn(fx.beta, ['log', `--since=${since}`, `--until=${until}`, '--format=%H%x09%s', 'HEAD']).trim().split('\n').map((l) => l.split('\t'));
+    assert.deepEqual(beta.recentCommits.map((c: any) => [c.hash, c.subject]), log);
+    assert.equal(beta.commits, log.length);
+    assert.deepEqual(log.map(([, subject]) => subject), ['Add c', 'Add b']);
+
+    const sum = (k: string) => s.projects.reduce((n: number, p: any) => n + p[k], 0);
+    assert.equal(s.totals.commits, sum('commits'));
+    assert.equal(s.totals.sessions, sum('sessions'));
+    assert.equal(s.totals.tasksCompleted, sum('tasksCompleted'));
+  });
+
+  test('summary: dates are validated and limited to 31 days', async () => {
+    for (const q of ['', '?from=2026-11-01', '?from=2026-11-10&to=2026-11-01', '?from=2026-02-30&to=2026-03-01', '?from=2026-01-01&to=2026-02-15', '?from=x&to=y']) {
+      assert.equal((await api(`/insights/summary${q}`)).status, 400, q);
+    }
+    assert.equal((await api('/insights/summary?from=2026-01-01&to=2026-01-31')).status, 200);
+  });
+
+  test('branches and worktrees of a repository, read-only and only for known repos', { skip: !hasGit && 'git not installed' }, async () => {
+    const beta = await project('beta');
+    const r = await api(`/insights/git/branches?project=${beta.id}&repo=`);
+    assert.equal(r.status, 200);
+    const byName = Object.fromEntries(r.body.branches.map((b: any) => [b.name, b]));
+    assert.deepEqual([byName.main.current, byName.main.stale, byName.main.upstream], [true, false, null]);
+    assert.deepEqual([byName['old-spike'].stale, byName['old-spike'].merged], [true, true]);
+    assert.equal(r.body.worktrees.length, 1);
+    assert.equal(r.body.worktrees[0].main, true);
+    assert.equal(r.body.worktrees[0].branch, 'main');
+    assert.equal((await api(`/insights/git/branches?project=${beta.id}&repo=..`)).status, 404);
+    assert.equal((await api('/insights/git/branches?project=000000000000')).status, 404);
+    assert.equal((await api('/insights/git/branches?project=../x')).status, 400);
+  });
+});

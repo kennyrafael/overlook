@@ -18,6 +18,7 @@ import { useTheme } from '../theme/ThemeContext';
 import CommitHeatmap from './CommitHeatmap';
 import { useLive } from '../store/live';
 import { useOnChange } from '../store/useOnChange';
+import RepoBranchesDetail from './RepoBranches';
 
 interface Props {
   /** Restrict to these projects; undefined = all. */
@@ -57,6 +58,8 @@ export default function GitInsights({ projectIds, single }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [view, setView] = useState<'all' | 'attention'>('all');
+  // Branches and worktrees are read per repository when its row is expanded (keeps the overview light).
+  const [expanded, setExpanded] = useState<Row[]>([]);
   const key = projectIds?.join(',') ?? 'all';
 
   const load = useCallback(async (refresh = false) => {
@@ -189,7 +192,10 @@ export default function GitInsights({ projectIds, single }: Props) {
             <Button icon="pi pi-refresh" label="Refresh" outlined size="small" loading={refreshing} onClick={() => load(true)} />
           </div>
           <DataTable value={shown} dataKey="path" size="small" stripedRows removableSort sortField="lastCommitAt" sortOrder={-1}
-            emptyMessage="Everything is committed and in sync." paginator={shown.length > 15} rows={15}>
+            emptyMessage="Everything is committed and in sync." paginator={shown.length > 15} rows={15}
+            expandedRows={expanded} onRowToggle={(e) => setExpanded(e.data as Row[])}
+            rowExpansionTemplate={(r: Row) => <RepoBranchesDetail projectId={r.projectId} repo={r.relPath} />}>
+            <Column expander={(r: Row) => !r.error} style={{ width: '3rem' }} header={<span className="sr-only">Branches and worktrees</span>} />
             {!single && (
               <Column field="projectName" header="Project" sortable
                 body={(r: Row) => <Link to={`/projects/${r.projectId}`} className="text-color no-underline hover:text-primary font-semibold">{r.projectName}</Link>} />

@@ -12,6 +12,7 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ClaudePage = lazy(() => import('./pages/InsightsPages').then((m) => ({ default: m.ClaudePage })));
 const SessionDetailPage = lazy(() => import('./insights/SessionDetail'));
 const GitPage = lazy(() => import('./pages/InsightsPages').then((m) => ({ default: m.GitPage })));
+const SummaryPage = lazy(() => import('./pages/SummaryPage'));
 
 const page = (el: ReactElement) => <Suspense fallback={<Skeleton height="20rem" />}>{el}</Suspense>;
 
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="claude" element={page(<ClaudePage />)} />
         <Route path="claude/sessions/:id" element={page(<SessionDetailPage />)} />
         <Route path="git" element={page(<GitPage />)} />
+        <Route path="summary" element={page(<SummaryPage />)} />
         <Route path="settings" element={page(<SettingsPage />)} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

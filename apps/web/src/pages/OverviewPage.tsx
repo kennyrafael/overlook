@@ -14,6 +14,7 @@ import { baseOptions, chartTokens, selectColor } from '../chartTheme';
 import { sourceLabel } from '../format';
 import { useTheme } from '../theme/ThemeContext';
 import { MOD } from '../platform';
+import AwayCard from '../overview/AwayCard';
 
 const SOURCES: ProjectSource[] = ['root', 'claude', 'both'];
 type ClickEvent = { native?: MouseEvent | null };
@@ -260,6 +261,7 @@ export default function OverviewPage() {
   return (
     <div className="flex flex-column gap-3">
       <FilterBar />
+      <AwayCard />
       <div className="grid">
         <div className="col-6 md:col-4 xl:col-2"><Kpi label="Projects" value={kpi.count} icon="pi pi-folder" sub={`${kpi.planned} with a plan`} /></div>
         <div className="col-6 md:col-4 xl:col-2"><Kpi label="Active" value={kpi.active} icon="pi pi-bolt" sub={`${kpi.stale} paused`} /></div>
