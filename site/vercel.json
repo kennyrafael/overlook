@@ -11,7 +11,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'; connect-src 'self' https://overlook-downloads.kennyrafael-cg.workers.dev https://overlook-feedback.kennyrafael-cg.workers.dev; base-uri 'none'; frame-ancestors 'none'"
+          "value": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'sha256-HNH1sTUpogstgTPr6yyMb9HFOMYxCbOxs0FQwGPo73Y='; font-src 'self'; connect-src 'self' https://overlook-downloads.kennyrafael-cg.workers.dev https://overlook-feedback.kennyrafael-cg.workers.dev; base-uri 'none'; frame-ancestors 'none'"
         },
         {
           "key": "X-Content-Type-Options",
@@ -37,7 +37,7 @@
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "public, max-age=86400"
+          "value": "public, max-age=604800"
         }
       ]
     }

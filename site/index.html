@@ -6,7 +6,8 @@
 <title>Overlook by AgentHub</title>
 <meta name="description" content="A free, local-only project dashboard for Claude Code users: plan progress, a Kanban board that edits your plan files, git activity and usage. Windows, macOS and Linux.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<script src="/theme-init.js"></script>
+<!-- Inline copy of public/theme-init.js (allowed by hash in vercel.json CSP); keep both in sync. -->
+<script>try{var t=localStorage.getItem('overlook-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
 <noscript><style>.hero { height: auto !important; } .hero-stage { position: relative !important; } .lens-caption { display: none !important; }</style></noscript>
 <link rel="preconnect" href="https://overlook-downloads.kennyrafael-cg.workers.dev" crossorigin>
 <link rel="canonical" href="https://overlook.agenthub.pt/">
@@ -56,7 +57,7 @@
           <source type="image/avif" media="(prefers-color-scheme: dark)" srcset="./src/assets/shots/overview-dark@sm.avif 900w, ./src/assets/shots/overview-dark@1x.avif 1440w, ./src/assets/shots/overview-dark@2x.avif 2880w" sizes="100vw">
           <source type="image/webp" media="(prefers-color-scheme: dark)" srcset="./src/assets/shots/overview-dark@sm.webp 900w, ./src/assets/shots/overview-dark@1x.webp 1440w, ./src/assets/shots/overview-dark@2x.webp 2880w" sizes="100vw">
           <source type="image/avif" srcset="./src/assets/shots/overview-light@sm.avif 900w, ./src/assets/shots/overview-light@1x.avif 1440w, ./src/assets/shots/overview-light@2x.avif 2880w" sizes="100vw">
-          <img src="./src/assets/shots/overview-light@1x.webp" srcset="./src/assets/shots/overview-light@sm.webp 900w, ./src/assets/shots/overview-light@1x.webp 1440w, ./src/assets/shots/overview-light@2x.webp 2880w" sizes="100vw" width="1440" height="900" alt="" decoding="async">
+          <img src="./src/assets/shots/overview-light@1x.webp" srcset="./src/assets/shots/overview-light@sm.webp 900w, ./src/assets/shots/overview-light@1x.webp 1440w, ./src/assets/shots/overview-light@2x.webp 2880w" sizes="100vw" width="1440" height="900" alt="" fetchpriority="high" decoding="async">
         </picture>
         <div class="lens-glass"></div>
       </div>
