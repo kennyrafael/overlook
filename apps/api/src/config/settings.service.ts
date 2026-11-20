@@ -34,6 +34,12 @@ export class SettingsService {
     for (const k of ['cacheWrite5mMultiplier', 'cacheWrite1hMultiplier', 'staleDays', 'maxDepth'] as const) {
       if (k in clean && !(Number.isFinite(clean[k]) && (clean[k] as number) >= 0)) delete clean[k];
     }
+    if ('staleTaskDays' in clean) {
+      // Whole days, at least 1 (0 would call every in-progress task stale); anything else keeps the old value.
+      const n = clean.staleTaskDays as number;
+      if (Number.isFinite(n) && n >= 1) clean.staleTaskDays = Math.min(3650, Math.floor(n));
+      else delete clean.staleTaskDays;
+    }
     if ('claudeTaskPrompt' in clean) {
       // One line, bounded, and always about the task: an empty template goes back to the default.
       let t = (clean.claudeTaskPrompt as string).replace(/[\u0000-\u001f\u007f]+/g, ' ').trim().slice(0, 500);

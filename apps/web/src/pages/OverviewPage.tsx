@@ -15,6 +15,7 @@ import { sourceLabel } from '../format';
 import { useTheme } from '../theme/ThemeContext';
 import { MOD } from '../platform';
 import AwayCard from '../overview/AwayCard';
+import StaleTasksCard from '../plans/StaleTasksCard';
 
 const SOURCES: ProjectSource[] = ['root', 'claude', 'both'];
 type ClickEvent = { native?: MouseEvent | null };
@@ -289,6 +290,7 @@ export default function OverviewPage() {
         <div className="col-12">
           <ProgressChart projectIds={scope.ids} />
         </div>
+        <StaleTasksCard className="col-12" projectIds={visible.map((p) => p.id)} />
 
         <div className="col-12 lg:col-6">
           <ChartCard title="Progress by project" subTitle={`Milestones reached · ${hint}`} height={charts.progress.height}

@@ -17,6 +17,7 @@ import LiveSessions, { TaskSuggestion } from './LiveSessions';
 import { useLiveSessions } from './useLiveSessions';
 import { useTaskSessions } from './useTaskSessions';
 import { resumeSession, startClaudeOnTask, useClaudeAvailable } from '../actions/projectActions';
+import { daysInProgress, dueInfo, isStale, useStaleTaskDays } from '../plans/planTrust';
 
 const COLUMNS: { status: TaskStatus; icon: string; accent: string }[] = [
   { status: 'todo', icon: 'pi pi-circle', accent: 'var(--surface-400)' },
@@ -37,8 +38,10 @@ interface Props {
   onConflict?: () => void;
 }
 
-function TaskCard({ card, showProject, dragging, onOpen, suggestion, onStartClaude, sessions = 0 }: {
+function TaskCard({ card, showProject, dragging, onOpen, suggestion, onStartClaude, sessions = 0, staleDays = null }: {
   card: Card; showProject: boolean; dragging?: boolean; onOpen?: () => void;
+  /** Days in progress, when that is longer than Settings → staleTaskDays. */
+  staleDays?: number | null;
   suggestion?: { onAccept: () => void; onDismiss: () => void };
   /** Shown for open tasks when Claude Code is installed. */
   onStartClaude?: () => void;
@@ -48,6 +51,7 @@ function TaskCard({ card, showProject, dragging, onOpen, suggestion, onStartClau
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.key, data: card });
   // Keep the button's pointer and key events away from the drag sensor and the card's own click.
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
+  const due = dueInfo(card.milestone);
   return (
     <div
       ref={setNodeRef}
@@ -61,7 +65,11 @@ function TaskCard({ card, showProject, dragging, onOpen, suggestion, onStartClau
     >
       <div className="flex flex-wrap gap-1 mb-2">
         {showProject && <Tag value={card.project.name} severity="info" />}
-        <Tag value={card.milestone.title} severity="secondary" className="board-milestone-tag" />
+        <Tag value={card.milestone.title} severity={due?.overdue ? 'danger' : 'secondary'} className="board-milestone-tag"
+          icon={due ? 'pi pi-calendar' : undefined} title={due ? `${card.milestone.title} · ${due.label}` : card.milestone.title} />
+        {staleDays !== null && (
+          <Tag value={`${staleDays} d`} severity="warning" icon="pi pi-hourglass" className="board-stale-tag" title={`In progress for ${staleDays} days (last change to this line in git)`} />
+        )}
       </div>
       <div className={`board-card-text ${card.task.status === 'done' ? 'line-through text-500' : ''}`}>{card.task.text}</div>
       <div className="flex align-items-center gap-2 mt-2">
@@ -110,6 +118,8 @@ export default function TaskBoard({ projects, onProjectChanged, onConflict }: Pr
   const [milestoneFilter, setMilestoneFilter] = useState<string[]>([]);
   const [query, setQuery] = useState('');
   const [hideReached, setHideReached] = useState(false);
+  const [staleOnly, setStaleOnly] = useState(false);
+  const staleLimit = useStaleTaskDays();
   const [active, setActive] = useState<Card | null>(null);
   const [pending, setPending] = useState<Record<string, TaskStatus>>({});
   const [dialog, setDialog] = useState<TaskDialogState>(null);
@@ -136,12 +146,15 @@ export default function TaskBoard({ projects, onProjectChanged, onConflict }: Pr
         if (hideReached && milestone.reached) continue;
         for (const task of milestone.tasks) {
           if (q && !task.text.toLowerCase().includes(q) && !milestone.title.toLowerCase().includes(q)) continue;
+          if (staleOnly && !isStale(task, staleLimit)) continue;
           out.push({ key: `${project.id}|${task.id}`, project, milestone, task });
         }
       }
     }
     return out;
-  }, [projects, milestoneFilter, query, hideReached]);
+  }, [projects, milestoneFilter, query, hideReached, staleOnly, staleLimit]);
+  const staleCount = useMemo(() => projects.reduce((n, p) => n + p.milestones.reduce((m, ms) => m + ms.tasks.filter((t) => isStale(t, staleLimit)).length, 0), 0), [projects, staleLimit]);
+  const staleDaysOf = (c: Card) => (isStale(c.task, staleLimit) ? daysInProgress(c.task) : null);
 
   const statusOf = useCallback((c: Card) => pending[c.key] ?? c.task.status, [pending]);
 
@@ -170,10 +183,17 @@ export default function TaskBoard({ projects, onProjectChanged, onConflict }: Pr
     setPending((p) => { const { [card.key]: _drop, ...rest } = p; return rest; });
   };
 
-  const openEdit = (c: Card) => setDialog({ mode: 'edit', projectId: c.project.id, task: c.task, milestoneTitle: c.milestone.title, relFile: c.milestone.relFile });
+  const openEdit = (c: Card) => setDialog({ mode: 'edit', projectId: c.project.id, task: c.task, milestoneTitle: c.milestone.title, relFile: c.milestone.relFile, milestoneId: c.milestone.id });
 
   const onSave: Parameters<typeof TaskDialog>[0]['onSave'] = async ({ projectId, milestoneId, task, text, status }) => {
     if (!task) return !!(await actions.add(projectId, milestoneId!, text, status));
+    if (milestoneId) {
+      // One write: status and text change with the move, so the task id is never stale in between.
+      return !!(await actions.move(projectId, task, milestoneId, {
+        status: status !== task.status ? status : undefined,
+        text: text.trim() !== task.text ? text : undefined,
+      }));
+    }
     // Status first (keeps the id), then text (changes the id).
     if (status !== task.status && !(await actions.setStatus(projectId, task, status))) return false;
     if (text.trim() !== task.text && !(await actions.rename(projectId, task, text))) return false;
@@ -204,6 +224,9 @@ export default function TaskBoard({ projects, onProjectChanged, onConflict }: Pr
           placeholder="All milestones" filter showClear maxSelectedLabels={1} selectedItemsLabel="{0} milestones" style={{ minWidth: '14rem' }} />
         <Button label={hideReached ? 'Show reached' : 'Hide reached'} icon={hideReached ? 'pi pi-eye' : 'pi pi-eye-slash'}
           outlined size="small" onClick={() => setHideReached((v) => !v)} />
+        <Button label={`Stale only${staleCount ? ` (${staleCount})` : ''}`} icon="pi pi-hourglass" size="small" outlined={!staleOnly}
+          aria-pressed={staleOnly} title={`In progress for more than ${staleLimit} days, from git (Settings → Task stale after)`}
+          onClick={() => setStaleOnly((v) => !v)} />
       </div>
 
       {totalTasks === 0 ? (
@@ -218,7 +241,7 @@ export default function TaskBoard({ projects, onProjectChanged, onConflict }: Pr
               <Column key={col.status} {...col} cards={colCards.length} onAdd={() => setDialog({ mode: 'add', status: col.status })}>
                 {colCards.map((c) => (
                   <TaskCard key={c.key} card={c} showProject={multi} onOpen={() => openEdit(c)} suggestion={suggestionFor(c)}
-                    sessions={linked.get(c.key)?.length ?? 0}
+                    sessions={linked.get(c.key)?.length ?? 0} staleDays={staleDaysOf(c)}
                     onStartClaude={claudeOk && c.project.exists && statusOf(c) !== 'done' ? () => { void startOn(c); } : undefined} />
                 ))}
                 {!colCards.length && <div className="text-500 text-sm p-3 text-center">Drop tasks here</div>}

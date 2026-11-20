@@ -11,19 +11,39 @@ import type { Milestone, Task, TaskStatus } from '@overlook/shared';
  *   Indented lines after an item that are not themselves list items are
  *   continuation lines of that item.
  * - Content inside fenced code blocks is ignored.
+ * - A heading ending in `(due YYYY-MM-DD)` gets that target date. The suffix is not part of the
+ *   title, so adding or changing a date keeps the milestone's id.
  */
 
-const HEADING_RE = /^(#{1,6})\s+(.*?)\s*#*\s*$/;
-const TASK_RE = /^(\s*)[-*+]\s+\[([ xX~/\-])\]\s+(.*)$/;
+// Exported for the plan linter, which looks for lines that almost match these.
+export const HEADING_RE = /^(#{1,6})\s+(.*?)\s*#*\s*$/;
+export const TASK_RE = /^(\s*)[-*+]\s+\[([ xX~/\-])\]\s+(.*)$/;
 const LIST_ITEM_RE = /^\s*(?:[-*+]|\d+[.)])\s+/;
-const FENCE_RE = /^\s*(```|~~~)/;
-const HEADING_DONE_RE = /(✅|☑|✔|\[[xX]\])/;
-const HEADING_OPEN_RE = /\[ \]/;
+export const FENCE_RE = /^\s*(```|~~~)/;
+export const HEADING_DONE_RE = /(✅|☑|✔|\[[xX]\])/;
+export const HEADING_OPEN_RE = /\[ \]/;
+/** `(due 2026-12-15)` at the end of a heading, checked after the done/open markers are removed. */
+const DUE_RE = /\s*\(due (\d{4}-\d{2}-\d{2})\)$/;
+
+/** A YYYY-MM-DD string that is a real calendar date (2026-02-30 is not). */
+export function isCalendarDate(s: string): boolean {
+  const d = new Date(`${s}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+}
+
+/** Splits a cleaned heading title into the title and its `(due …)` date, if it has a valid one. */
+export function splitDue(title: string): { title: string; due: string | null } {
+  const m = DUE_RE.exec(title);
+  if (!m || !isCalendarDate(m[1])) return { title, due: null };
+  const rest = title.slice(0, m.index).trim();
+  return rest ? { title: rest, due: m[1] } : { title, due: null };
+}
 
 interface Section {
   level: number;
   title: string;
   rawTitle: string;
+  due: string | null;
   line: number;
   lineEnd: number;
   breadcrumb: string[];
@@ -41,7 +61,8 @@ function hash(...parts: (string | number)[]): string {
   return createHash('sha1').update(parts.join('\u0000')).digest('hex').slice(0, 12);
 }
 
-function cleanTitle(raw: string): string {
+/** Heading text without the done/open markers. */
+export function cleanTitle(raw: string): string {
   return raw.replace(HEADING_DONE_RE, '').replace(HEADING_OPEN_RE, '').replace(/\s+/g, ' ').trim();
 }
 
@@ -74,10 +95,13 @@ export function parsePlan(content: string, file: string, relFile: string): Miles
       const level = h[1].length;
       while (stack.length && stack[stack.length - 1].level >= level) stack.pop();
       const explicit = HEADING_DONE_RE.test(h[2]) ? 'done' : HEADING_OPEN_RE.test(h[2]) ? 'open' : null;
+      // Headings without a date keep exactly the title (and so the id) they had before due dates.
+      const { title, due } = splitDue(cleanTitle(h[2]) || h[2]);
       current = {
         level,
         rawTitle: h[2],
-        title: cleanTitle(h[2]) || h[2],
+        title,
+        due,
         line: lineNo,
         lineEnd: lineNo,
         breadcrumb: stack.map((s) => s.title),
@@ -94,7 +118,7 @@ export function parsePlan(content: string, file: string, relFile: string): Miles
     if (t) {
       if (!current) {
         // Checkboxes before any heading: implicit section named after the file.
-        current = { level: 0, rawTitle: relFile, title: relFile, line: 1, lineEnd: 1, breadcrumb: [], explicit: null, tasks: [] };
+        current = { level: 0, rawTitle: relFile, title: relFile, due: null, line: 1, lineEnd: 1, breadcrumb: [], explicit: null, tasks: [] };
         sections.push(current);
       }
       const indent = t[1].replace(/\t/g, '  ').length;
@@ -147,6 +171,7 @@ export function parsePlan(content: string, file: string, relFile: string): Miles
     milestones.push({
       id,
       title: s.title,
+      due: s.due,
       reached,
       file,
       relFile,

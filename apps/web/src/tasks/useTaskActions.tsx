@@ -72,5 +72,9 @@ export function useTaskActions(onChanged: (p: ProjectDetail) => void, onConflict
   const remove = useCallback((projectId: string, task: Task) =>
     run(() => api.deleteTask(projectId, task.id), 'Task deleted'), [run]);
 
-  return { setStatus, rename, add, remove };
+  /** Moves a task (and its sub-tasks) to another milestone of the project, with any status/text change in the same write. */
+  const move = useCallback((projectId: string, task: Task, milestoneId: string, change: { status?: TaskStatus; text?: string } = {}) =>
+    run(() => api.moveTask(projectId, task.id, { milestoneId, ...change }), 'Task moved'), [run]);
+
+  return { setStatus, rename, add, remove, move };
 }

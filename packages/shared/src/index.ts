@@ -14,11 +14,19 @@ export interface Task {
   lineEnd: number;
   /** Nesting depth (0 = top-level checkbox). */
   depth: number;
+  /**
+   * In-progress tasks on GET /projects/:id only: when the checkbox line was last committed (git blame
+   * author time, ISO). null when unknown: the line is uncommitted, the file untracked, or no git.
+   */
+  inProgressSince?: string | null;
 }
 
 export interface Milestone {
   id: string;
+  /** Heading text without done/open markers and without a `(due …)` suffix. */
   title: string;
+  /** Target date from a heading ending in `(due YYYY-MM-DD)`, else null. */
+  due: string | null;
   reached: boolean;
   /** Absolute path of the plan file. */
   file: string;
@@ -214,6 +222,8 @@ export interface Project {
 /** A project with its full milestone/task breakdown (GET /projects/:id). */
 export interface ProjectDetail extends Project {
   milestones: Milestone[];
+  /** Plan health: mistakes in the project's plan files that make them parse differently than intended. */
+  planWarnings: PlanWarning[];
 }
 
 /** Fields the user can change on a project; stored as overrides in SQLite. */
@@ -229,6 +239,8 @@ export interface Settings {
   ignore: string[];
   planFiles: string[];
   staleDays: number;
+  /** An in-progress task counts as stale after this many days (from git blame of its line). At least 1. */
+  staleTaskDays: number;
   /** How deep to look under each root for project folders. */
   maxDepth: number;
   /** Merge in folders Claude Code has been used in (~/.claude/projects). */
@@ -258,6 +270,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ignore: ['node_modules', '.git', 'dist', 'build', '.next', 'coverage'],
   planFiles: ['PLAN.md', 'ROADMAP.md', 'CLAUDE.md', 'TODO.md'],
   staleDays: 14,
+  staleTaskDays: 7,
   maxDepth: 3,
   useClaudeHistory: true,
   useWsl: true,
@@ -603,4 +616,55 @@ export interface RepoBranches {
   branches: BranchInfo[];
   worktrees: WorktreeInfo[];
   error?: string;
+}
+
+// Phase 6: plans you can trust
+
+/** What a plan health warning is about. */
+export type PlanWarningKind =
+  | 'task-outside-milestone'
+  | 'duplicate-task'
+  | 'malformed-task'
+  | 'malformed-heading'
+  | 'file-too-large';
+
+/** One plan-file mistake found by the linter; `line` is 1-based (0 = the whole file). */
+export interface PlanWarning {
+  kind: PlanWarningKind;
+  /** Absolute path of the plan file. */
+  file: string;
+  /** Plan file path relative to the project folder, for display. */
+  relFile: string;
+  line: number;
+  /** What is wrong, in one sentence. */
+  message: string;
+  /** What to change in the file. */
+  fix: string;
+}
+
+/** An in-progress task whose checkbox line has not changed in git for Settings → staleTaskDays (GET /api/plans/stale). */
+export interface StaleTask {
+  projectId: string;
+  projectName: string;
+  taskId: string;
+  text: string;
+  milestoneTitle: string;
+  relFile: string;
+  line: number;
+  /** Author time of the line's last commit (ISO). */
+  since: string;
+  days: number;
+}
+
+/** Starter plan files offered by POST /api/projects/:id/plan-file. The text is fixed on the server. */
+export type PlanTemplateId = 'basic' | 'phases';
+
+export interface PlanTemplate {
+  id: PlanTemplateId;
+  label: string;
+  description: string;
+  /** The file name that will be written (the first entry of Settings → planFiles). */
+  fileName: string;
+  /** Exact content that will be written. */
+  content: string;
 }

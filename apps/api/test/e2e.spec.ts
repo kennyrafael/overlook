@@ -54,7 +54,8 @@ before(async () => {
 
 after(async () => {
   await app?.close();
-  rmSync(fx.base, { recursive: true, force: true });
+  // Retries: on Windows a watcher on a fixture repo's .git can hold the folder for a moment after close.
+  rmSync(fx.base, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 });
 
 const project = async (name: string) => (await api<any[]>('/projects')).body.find((p) => p.name === name);
@@ -503,5 +504,114 @@ describe('phase 8 daily overview', () => {
     assert.equal((await api(`/insights/git/branches?project=${beta.id}&repo=..`)).status, 404);
     assert.equal((await api('/insights/git/branches?project=000000000000')).status, 404);
     assert.equal((await api('/insights/git/branches?project=../x')).status, 400);
+  });
+});
+
+describe('phase 6: plans you can trust', () => {
+  const { execFileSync } = require('child_process') as typeof import('child_process');
+  const gitOk = (() => { try { execFileSync('git', ['--version'], { stdio: 'ignore' }); return true; } catch { return false; } })();
+  const detail = async (name: string) => (await api(`/projects/${(await project(name)).id}`)).body;
+
+  before(async () => {
+    // The messy and fresh projects live in a second root, so the tests above keep seeing two projects.
+    if (gitOk) {
+      // Commit the messy plan 30 days ago: its in-progress task is then stale.
+      const old = new Date(Date.now() - 30 * 86_400_000).toISOString();
+      const env = { ...process.env, GIT_AUTHOR_DATE: old, GIT_COMMITTER_DATE: old };
+      const g = (...args: string[]) => execFileSync('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'commit.gpgsign=false', ...args], { cwd: fx.messy, env, stdio: 'ignore' });
+      g('init', '-q');
+      g('add', 'PLAN.md');
+      g('commit', '-q', '-m', 'plan');
+    }
+    await api('/settings', { method: 'PUT', body: JSON.stringify({ roots: [fx.root, fx.extraRoot], staleTaskDays: 7 }) });
+    await api('/projects/rescan', { method: 'POST' });
+  });
+
+  after(async () => {
+    await api('/settings', { method: 'PUT', body: JSON.stringify({ roots: [fx.root] }) });
+    await api('/projects/rescan', { method: 'POST' });
+  });
+
+  test('the fixture project with known mistakes gets every warning', async () => {
+    const d = await detail('messy');
+    const got = d.planWarnings.map((w: any) => `${w.relFile}:${w.line} ${w.kind}`).sort();
+    const want = [
+      'PLAN.md:1 task-outside-milestone',
+      'PLAN.md:5 malformed-heading', // ##Phase 1
+      'PLAN.md:8 malformed-heading', // ✓
+      'PLAN.md:11 malformed-heading', // (due 2026-02-30)
+      ...[12, 13, 14, 15, 16, 17, 18].map((l) => `PLAN.md:${l} malformed-task`),
+      'PLAN.md:20 duplicate-task',
+      'TODO.md:0 file-too-large',
+    ].sort();
+    assert.deepEqual(got, want);
+    for (const w of d.planWarnings) {
+      assert.ok(w.message && w.fix, `message and fix for ${w.kind}`);
+      assert.equal(w.file, join(fx.messy, w.relFile));
+    }
+    // Healthy plans show nothing, and the list endpoint stays small.
+    assert.deepEqual((await detail('alpha')).planWarnings, []);
+    assert.equal('planWarnings' in (await project('alpha')), false);
+  });
+
+  test('due dates: title without the suffix, date on the milestone', async () => {
+    const d = await detail('messy');
+    const p4 = d.milestones.find((m: any) => m.title === 'Phase 4');
+    assert.equal(p4.due, '2020-01-15');
+    assert.equal(d.milestones.find((m: any) => m.title.startsWith('Phase 3')).due, null); // not a real date
+    assert.ok((await detail('alpha')).milestones.every((m: any) => m.due === null));
+  });
+
+  test('stale work comes from git blame and Settings → staleTaskDays', { skip: !gitOk && 'git not installed' }, async () => {
+    const d = await detail('messy');
+    const t = d.milestones.find((m: any) => m.title === 'Phase 4').tasks[0];
+    assert.ok(t.inProgressSince, 'committed line has a time');
+    const stale = (await api('/plans/stale')).body;
+    const s = stale.find((x: any) => x.text === 'overdue work');
+    assert.ok(s && s.days >= 29 && s.projectName === 'messy', JSON.stringify(stale));
+    // An uncommitted change to the line resets it to "unknown", never stale.
+    const res = await api(`/projects/${d.id}/tasks/${t.id}`, { method: 'PATCH', body: JSON.stringify({ text: 'overdue work, again' }) });
+    const changed = res.body.milestones.find((m: any) => m.title === 'Phase 4').tasks[0];
+    assert.equal(changed.inProgressSince, null);
+    assert.ok(!(await api('/plans/stale')).body.some((x: any) => x.projectName === 'messy'));
+    // The setting is validated: below 1 keeps the old value.
+    assert.equal((await api('/settings', { method: 'PUT', body: JSON.stringify({ staleTaskDays: 0 }) })).body.staleTaskDays, 7);
+    assert.equal((await api('/settings', { method: 'PUT', body: JSON.stringify({ staleTaskDays: 3.7 }) })).body.staleTaskDays, 3);
+  });
+
+  test('move a task to a milestone in another plan file; both backed up; stale ids are a 409', async () => {
+    const d = await detail('messy');
+    const task = d.milestones.find((m: any) => m.title.startsWith('Phase 2')).tasks[0];
+    const backlog = d.milestones.find((m: any) => m.title === 'Backlog');
+    const backupsBefore = readdirSync(join(fx.dataDir, 'backups')).length;
+    const r = await api(`/projects/${d.id}/tasks/${task.id}`, { method: 'PATCH', body: JSON.stringify({ milestoneId: backlog.id }) });
+    assert.equal(r.status, 200);
+    assert.doesNotMatch(readFileSync(join(fx.messy, 'PLAN.md'), 'utf8'), /done thing/);
+    assert.match(readFileSync(join(fx.messy, 'TODO.md'), 'utf8'), /^- \[ \] someday\n- \[x\] done thing\n/m);
+    assert.ok(readdirSync(join(fx.dataDir, 'backups')).length >= backupsBefore + 1);
+    // The old id is gone: refused, nothing written.
+    const todo = readFileSync(join(fx.messy, 'TODO.md'), 'utf8');
+    assert.equal((await api(`/projects/${d.id}/tasks/${task.id}`, { method: 'PATCH', body: JSON.stringify({ milestoneId: backlog.id }) })).status, 409);
+    assert.equal((await api(`/projects/${d.id}/tasks/${task.id}`, { method: 'PATCH', body: JSON.stringify({ milestoneId: 7 }) })).status, 400);
+    assert.equal(readFileSync(join(fx.messy, 'TODO.md'), 'utf8'), todo);
+    assert.deepEqual(readdirSync(fx.messy).sort(), ['.git', 'PLAN.md', 'TODO.md'].filter((n) => gitOk || n !== '.git'));
+  });
+
+  test('create a plan file: fixed templates, preview equals what is written, never overwrites', async () => {
+    const fresh = await project('fresh');
+    assert.equal(fresh.milestonesTotal, 0);
+    const templates = (await api(`/projects/${fresh.id}/plan-templates`)).body;
+    assert.deepEqual(templates.map((t: any) => t.id), ['basic', 'phases']);
+    assert.equal(templates[0].fileName, 'PLAN.md');
+    const post = (id: string, body: unknown) => api(`/projects/${id}/plan-file`, { method: 'POST', body: JSON.stringify(body) });
+    assert.equal((await post(fresh.id, { template: '# my own text' })).status, 400);
+    assert.equal(existsSync(join(fx.fresh, 'PLAN.md')), false, 'nothing written before a valid request');
+    const made = await post(fresh.id, { template: 'basic' });
+    assert.equal(made.status, 201);
+    assert.equal(made.body.milestonesTotal, 3);
+    assert.equal(readFileSync(join(fx.fresh, 'PLAN.md'), 'utf8'), templates[0].content);
+    assert.equal((await post(fresh.id, { template: 'phases' })).status, 409);
+    assert.equal(readFileSync(join(fx.fresh, 'PLAN.md'), 'utf8'), templates[0].content);
+    assert.equal((await post((await project('alpha')).id, { template: 'basic' })).status, 409);
   });
 });

@@ -7,7 +7,7 @@
     "dev": "concurrently -k -n tsc,api -c gray,blue \"tsc -w -p tsconfig.json --preserveWatchOutput\" \"node --watch dist/main.js\"",
     "start": "node dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsc -p tsconfig.json && node --import tsx --test src/plans/plan-parser.spec.ts src/plans/plan-writer.spec.ts src/insights/session-log.spec.ts src/insights/live-activity.spec.ts src/discovery/claude-roots.spec.ts src/insights/log-fixtures.spec.ts src/database/migrations.spec.ts src/actions/mac-terminal.spec.ts src/actions/linux-terminal.spec.ts src/actions/claude-launch.spec.ts src/insights/git-branches.spec.ts src/projects/task-events.spec.ts src/insights/prompt-index.spec.ts",
+    "test": "tsc -p tsconfig.json && node --import tsx --test src/plans/plan-parser.spec.ts src/plans/plan-writer.spec.ts src/insights/session-log.spec.ts src/insights/live-activity.spec.ts src/discovery/claude-roots.spec.ts src/insights/log-fixtures.spec.ts src/database/migrations.spec.ts src/actions/mac-terminal.spec.ts src/actions/linux-terminal.spec.ts src/actions/claude-launch.spec.ts src/insights/git-branches.spec.ts src/projects/task-events.spec.ts src/insights/prompt-index.spec.ts src/plans/plan-lint.spec.ts",
     "predev": "tsc -p tsconfig.json",
     "test:e2e": "tsc -p tsconfig.json && node --import tsx --test --test-force-exit --test-concurrency=1 test/e2e.spec.ts"
   },

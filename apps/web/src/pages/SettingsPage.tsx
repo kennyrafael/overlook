@@ -120,6 +120,11 @@ export default function SettingsPage() {
                 <span>Paused after (days idle)</span>
                 <InputNumber value={settings.staleDays} min={1} showButtons onValueChange={(e) => set('staleDays', e.value ?? 14)} />
               </label>
+              <label className="flex flex-column gap-2" title="From git: days since the in-progress checkbox line was last committed">
+                <span>Task stale after (days in progress)</span>
+                <InputNumber inputId="stale-task-days" value={settings.staleTaskDays} min={1} max={3650} showButtons
+                  onValueChange={(e) => set('staleTaskDays', Math.max(1, e.value ?? 7))} />
+              </label>
             </div>
           </div>
         </Card>

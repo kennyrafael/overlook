@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { readFileSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import type { Fixture } from '../apps/api/test/fixture';
 
@@ -239,4 +239,46 @@ test('a git row expands to its branches and worktrees', async ({ page }) => {
   await expect(detail).toContainText('Local branches (2)');
   await expect(detail).toContainText('spike');
   await expect(detail).toContainText('Worktrees (1)');
+});
+
+test.describe('phase 6: plans you can trust', () => {
+  const api = (path: string) => `http://127.0.0.1:${Number(process.env.SMOKE_PORT ?? 4399)}/api${path}`;
+  const headers = { 'Content-Type': 'application/json', 'x-cpd-client': '1' };
+  // The messy and fresh fixture projects sit in a second root; add it for these tests only.
+  test.beforeEach(async ({ request }) => {
+    await request.put(api('/settings'), { headers, data: { roots: [fx().root, fx().extraRoot] } });
+  });
+  test.afterEach(async ({ request }) => {
+    await request.put(api('/settings'), { headers, data: { roots: [fx().root] } });
+  });
+
+  test('plan health panel lists the mistakes with what to change, and the due date shows', async ({ page }) => {
+    await openProject(page, 'messy');
+    const panel = page.locator('.plan-health');
+    await expect(panel).toContainText('13 warnings');
+    await expect(panel).toContainText('PLAN.md:12');
+    await expect(panel).toContainText('There is no space between the bullet and the checkbox');
+    await expect(panel).toContainText('TODO.md');
+    await expect(page.getByText('Overdue since', { exact: false }).first()).toBeVisible();
+    // A healthy plan shows no panel.
+    await openProject(page, 'alpha');
+    await expect(page.locator('.plan-health')).toHaveCount(0);
+  });
+
+  test('Create PLAN.md previews the template and writes only on confirm', async ({ page }) => {
+    const target = join(fx().fresh, 'PLAN.md');
+    await openProject(page, 'fresh');
+    await page.getByRole('button', { name: 'Create PLAN.md' }).click();
+    const preview = page.getByLabel('Plan preview');
+    await expect(preview).toContainText('## Now');
+    await page.getByRole('button', { name: 'Phases' }).click();
+    await expect(preview).toContainText('## Phase 1: Foundations');
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    expect(existsSync(target)).toBe(false);
+    await page.getByRole('button', { name: 'Create PLAN.md' }).click();
+    await page.getByRole('button', { name: 'Write PLAN.md' }).click();
+    await expect.poll(() => existsSync(target)).toBe(true);
+    expect(readFileSync(target, 'utf8')).toContain('## Phase 3: Release (due ');
+    await expect(page.getByText('Phase 1: Foundations').first()).toBeVisible();
+  });
 });
