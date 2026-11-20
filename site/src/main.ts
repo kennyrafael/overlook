@@ -17,8 +17,10 @@ import { initMotion, reveal, whenIdle } from './motion/motion.ts';
 import { initNav } from './nav.ts';
 import { initTheme } from './theme.ts';
 import { inject } from '@vercel/analytics';
+import { injectSpeedInsights } from '@vercel/speed-insights';
 
 inject();
+injectSpeedInsights();
 
 // Before anything else, so the screenshots load in the chosen theme and the toggle shows the right icon.
 initTheme();
