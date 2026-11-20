@@ -110,15 +110,14 @@ const config = {
       // Shown when "Start Claude Code" asks to control Terminal or iTerm (AppleScript) for the first time.
       NSAppleEventsUsageDescription: 'Overlook opens Terminal or iTerm at your project folder to start Claude Code there.',
     },
+    // Names the .zip (signed builds only: the update payload electron-updater downloads on macOS, which cannot
+    // install a .dmg); the .dmg has its own name below. "arm64" in the name is how electron-updater picks the
+    // file for the Mac's arch. electron-builder has no top-level `zip` option and rejects unknown keys.
+    artifactName: 'Overlook-${version}-${arch}-mac.${ext}',
   },
   dmg: {
     artifactName: 'Overlook-${version}-${arch}.${ext}',
     title: 'Overlook ${version}',
-  },
-  // Signed builds only: the update payload electron-updater downloads on macOS (it cannot install a .dmg).
-  // "arm64" in the name is how electron-updater picks the right file for the Mac's arch.
-  zip: {
-    artifactName: 'Overlook-${version}-${arch}-mac.${ext}',
   },
   // Read at runtime by updater.ts: turns on macOS auto-update for signed builds only.
   extraMetadata: { overlookMacAutoUpdate: MAC_SIGNED },
