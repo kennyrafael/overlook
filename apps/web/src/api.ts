@@ -1,4 +1,5 @@
 import type { ActionResult, ClaudeActionBody, TaskSessionRef, LiveSession,ClaudeOverview, GitOverview, Project, ProjectAction, ProjectDetail, ProjectPatch, SavedView, Settings, TaskStatus, ViewFilters, SystemTools, SystemInfo, AppDataExport, AboutInfo, FeedbackInput } from '@overlook/shared';
+import type { ClaudeMilestoneCosts, ClaudeSearchHit, ClaudeSessionDetail } from '@overlook/shared';
 
 export class ApiError extends Error {
   /** Field errors from a 400 answer (feedback form), keyed by field name. */
@@ -69,4 +70,12 @@ export const api = {
   settings: () => request<Settings>('/settings'),
   saveSettings: (s: Partial<Settings>) =>
     request<Settings>('/settings', { method: 'PUT', body: JSON.stringify(s) }),
+  claudeSession: (id: string) => request<ClaudeSessionDetail>(`/insights/sessions/${encodeURIComponent(id)}`),
+  searchClaude: (q: string, projectIds?: string[]) => {
+    const p = new URLSearchParams({ q });
+    if (projectIds) p.set('projects', projectIds.join(','));
+    return request<ClaudeSearchHit[]>(`/insights/search?${p}`);
+  },
+  milestoneCosts: (projectId: string) =>
+    request<ClaudeMilestoneCosts>(`/insights/milestone-costs?project=${encodeURIComponent(projectId)}`),
 };

@@ -4,6 +4,7 @@ import TaskBoard from '../tasks/TaskBoard';
 import GitInsights from '../insights/GitInsights';
 import ClaudeInsights from '../insights/ClaudeInsights';
 import ProgressChart from '../insights/ProgressChart';
+import MilestoneCosts from '../insights/MilestoneCosts';
 import { ProjectActionsButton } from '../actions/projectActions';
 import { useTaskActions } from '../tasks/useTaskActions';
 import { useLive } from '../store/live';
@@ -269,6 +270,7 @@ export default function ProjectDetailPage() {
                   </Accordion>
                 )}
               </div>
+              <div className="col-12"><MilestoneCosts projectId={p.id} /></div>
             </div>
           )}
         </TabPanel>

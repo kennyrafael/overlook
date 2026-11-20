@@ -461,7 +461,7 @@ export interface ClaudeSessionDetail {
   perPrompt: { prompt: number; at: string; turns: number; tokens: TokenUsage; costUsd: number }[];
   /** Incl. subagents, most-used first. */
   tools: ClaudeToolCount[];
-  /** Files Claude changed (Edit, Write, MultiEdit, NotebookEdit; incl. subagents), relative to the project when inside it. */
+  /** Files Claude changed (Edit, Write, MultiEdit, NotebookEdit; incl. subagents; failed edits left out), relative to the project when inside it. */
   edited: { path: string; edits: number }[];
 }
 
