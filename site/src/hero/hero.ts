@@ -1,6 +1,7 @@
 // Drives the hero scene (markup in index.html, look in src/styles/hero.css, story in frame.ts).
 // The still scene needs no JavaScript. This adds the scroll story and pointer parallax, but only when
-// motion is allowed and the device is not low-end; otherwise the still scene stays.
+// motion is allowed and the device is not low-end; otherwise the still scene stays. Phones always get
+// the still scene: the lens is replaced there by a readable crop of the Overview (see hero.css).
 import { onReducedMotion, pointerParallax, scrollProgress, whenIdle } from '../motion/motion.ts';
 import { drawContours } from '../textures/contours.ts';
 import { heroFrame, type LensGeometry, type Shot } from './frame.ts';
@@ -51,7 +52,7 @@ export function initHero(hero: HTMLElement): void {
 
   // The tall, sticky layout comes from CSS (when motion is allowed), so starting needs a single layout
   // read and no class change on the section. Very slow devices opt out with .is-still (rare).
-  const still = lowEnd();
+  const still = lowEnd() || matchMedia('(max-width: 760px)').matches;
   if (still) hero.classList.add('is-still');
 
   const setAnimated = (on: boolean) => {

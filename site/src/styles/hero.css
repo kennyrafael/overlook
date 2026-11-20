@@ -308,27 +308,44 @@
   transform: rotate(45deg);
 }
 
-/* Phones and narrow windows: copy on top, the lens below it. */
+/* The Overview as a readable crop (overview-phone-*): the lens would show a few words of a shrunken desktop
+   page on a phone, so the lens is hidden there and the crop sits under the copy. Desktop never shows it. */
+.phone-shot { display: none; }
+.phone-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-l);
+  border: 1px solid rgb(255 255 255 / 0.2);
+  box-shadow: 0 24px 60px rgb(8 10 40 / 0.45);
+  /* The crop stops mid-chart: fade it out rather than cut it. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 78%, transparent);
+  mask-image: linear-gradient(to bottom, #000 78%, transparent);
+}
+.phone-shot figcaption { margin-top: var(--space-4); color: rgb(255 255 255 / 0.85); font-size: var(--step--1); }
+
+/* Phones and narrow windows: copy on top, the Overview crop below it, the hills under it. hero.ts keeps
+   the still scene here, so nothing is sticky and the text does not fade. */
 @media (max-width: 760px) {
   .hero-stage {
-    /* The lens rests near the bottom edge, below the text, whatever the phone's height. */
-    --cx0: 50%;
-    --r0: min(22vw, 11svh, 90px);
-    --cy0: calc(100% - var(--r0) - 30px);
-    --stage-min: 740px; /* short phones: the lens sits just below the fold, the button stays above it */
-    min-height: var(--stage-min);
+    height: auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 92px var(--gutter) 200px; /* the bottom room shows the hills */
   }
+  .lens { display: none; }
   .hero-copy {
-    top: 92px;
-    left: var(--gutter);
-    right: var(--gutter);
+    position: relative;
+    top: auto;
+    left: auto;
     width: auto;
   }
   .hero-copy h1 { margin-bottom: var(--space-4); }
   .hero-copy .lede { font-size: var(--step-0); margin-bottom: var(--space-5); }
-  .land { height: 34%; }
+  .land { height: 200px; }
   .scroll-hint { display: none; }
-  .lens-caption { white-space: normal; width: calc(100% - 2 * var(--gutter)); text-align: center; }
+  .phone-shot { display: block; position: relative; z-index: 3; margin: var(--space-7) 0 0; }
 }
 
 @media (prefers-color-scheme: dark) {

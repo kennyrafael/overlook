@@ -123,6 +123,12 @@ async function main() {
               await img.clone().avif({ quality: 60, effort: 6 }).toFile(join(out, `${s.name}-${theme}@${scale}.avif`));
               await img.clone().webp({ quality: 82 }).toFile(join(out, `${s.name}-${theme}@${scale}.webp`));
             }
+            if (s.name === 'overview') {
+              // Phones: a readable crop of the top of the page (sidebar left out), 480 × 550 CSS px at 2x.
+              const crop = sharp(png).extract({ left: 480, top: 0, width: 960, height: 1100 });
+              await crop.clone().avif({ quality: 70, effort: 6 }).toFile(join(out, `overview-phone-${theme}.avif`));
+              await crop.clone().webp({ quality: 85 }).toFile(join(out, `overview-phone-${theme}.webp`));
+            }
             console.log(`  ${s.name} (${theme})`);
           }
           await ctx.close();
