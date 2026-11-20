@@ -206,6 +206,84 @@ projects at once.**
 - [x] Deploy to `overlook.agenthub.pt` (2026-11-19; the Vercel build had failed since 4b-1 because `site/tsconfig.json` extended a file outside the Root Directory); checked live: CSP and security headers, Brotli, immutable asset caching, robots/sitemap/og, the real feed (CORS), all four installers, Windows and Mac visitors get the right main button, all demos load in Chrome, Firefox and WebKit with no console errors
 - [ ] Acceptance: a first-time visitor understands what Overlook does from the hero and one demo, finds the right download without scrolling, and the page meets the performance and accessibility budget (mobile performance pass done 2026-11-19: Lighthouse mobile 98–99 with LCP 1.96 s in every run, blocking time ~100 ms, in an A/B against the previous build, which flipped between 91 and 97; the earlier live 81–86 was this laptop under load. Still to do: PageSpeed Insights once its quota allows, and the first-visitor test)
 
+## Feature plan: rules (2026-11-19)
+
+Phases 5–8 make the free app more useful day to day. They are ordered by value per effort and
+build on data the app already reads (plan files, git, `~/.claude/projects` logs, the live
+session tracker). Rules for every item:
+- Local only. Nothing new leaves the machine; anything that reaches the network is listed in
+  Settings → Network activity.
+- Nothing new is written inside projects. The one exception is creating a plan file, and only
+  after the user confirms it (Phase 6).
+- Programs start without a shell, as quick actions do today. Text such as task titles goes in
+  as an argument and is never put into a command line string.
+- The free/Pro line in `packages/shared/src/feedback.ts` (`PRO_FEATURES`) stays: budgets, PDF/CSV
+  reports, forecasts, sync, team and integrations stay off this list until the feedback forms
+  show what people would pay for.
+- Each phase ships with unit/e2e tests and a smoke test, and updates the README table.
+
+## Phase 5: Claude ↔ board, the core loop
+Use the live tracker (`apps/api/src/insights/live-activity.ts` already knows when a session is
+waiting) and the board together, so the dashboard is where you start and follow Claude work.
+- [x] Desktop notification when a live session ends its turn and waits for you ("alpha: Claude
+  is waiting"); click shows the window on that project. Settings → Desktop app: on/off and "Not
+  for these projects". Native, through the main process (`overlook:notify` IPC; web notifications
+  stay blocked); a browser tab marks its title instead (`useWaitingNotifier.ts`)
+- [x] **Start Claude on this task**: ▶ on open board cards and in the task dialog. The server
+  builds the prompt from the task id (Settings → "Start Claude on this task" prompt with
+  `{task}`, `{milestone}`, `{file}`), one line, never from the request. Passed as one argument
+  where that is safe (Windows Terminal with claude.exe, macOS `quoted form of`, Linux terminals);
+  copied to the clipboard instead with a claude.cmd wrapper, the cmd.exe fallback or a generic
+  x-terminal-emulator
+- [x] Moving a card to In progress offers "Start Claude" in the Moved toast (never automatic)
+- [x] **Resume session**: `claude --resume <uuid>` in the folder the session ran in (the log's
+  `cwd`, when inside the project), from the Claude session table and idle live sessions; WSL
+  sessions are refused
+- [x] Link sessions to tasks: sessions are matched to a plan task from their title and sampled
+  prompts (`taskMatcher`, parse cache v3); cards show a session count, the task dialog lists them
+  with Resume, the session table shows the likely task. Loaded for boards of up to 8 projects
+- [ ] Acceptance: from the board, start Claude on a task, get notified when it waits, resume a
+  past session, on Windows, macOS and Linux
+
+## Phase 6: Plans you can trust
+- [ ] Plan health panel on the project page: tasks outside any milestone, duplicate task text
+  (which makes edits ambiguous), headings that look like milestones but parse as nothing, files
+  over a size limit. Each warning says what to change in the file
+- [ ] Stale work: tasks in progress for more than N days (from the plan file's git history),
+  shown on Overview and as a board filter
+- [ ] Create a plan file for a project that has none: preview of a starter `PLAN.md` (milestones
+  from a template), written only after confirmation, backed up like every other write
+- [ ] Move a task to another milestone (drag across milestone groups on the project board),
+  keeping indent, bullet and sub-tasks
+- [ ] Optional target dates on milestones (`## Phase 2: API (due 2026-12-15)`): shown on the
+  milestone, overdue highlighted; files without dates parse exactly as before
+- [ ] Acceptance: the fixture project with known plan mistakes gets every warning; existing plan
+  files of the dashboard's own repos parse identically before and after
+
+## Phase 7: Know where the time and tokens go
+- [ ] Session detail page: prompts in order, tool calls by type, files Claude edited, tokens and
+  estimated cost per turn, duration; opened from the Claude page and project Claude tab
+- [ ] Tool breakdown: most-used tools and tool error rate, per project and overall
+- [ ] Search across prompts and session titles (SQLite FTS5 index, built from the parse cache,
+  kept local); results open the session detail or resume it
+- [ ] Rolling usage window: tokens and estimated cost in the last 5 hours and 7 days, so you can
+  see a heavy stretch coming (an estimate from local logs, labelled as such; not your plan's limit)
+- [ ] Cost per reached milestone: estimated Claude cost between a milestone's first task moving
+  and its completion (from burnup history), on the project page
+- [ ] Acceptance: on the fixture logs, session detail and tool counts match a hand count; search
+  returns in under 200 ms on 1,000 sessions
+
+## Phase 8: Daily overview
+- [ ] **Since you were away** card on Overview: tasks completed, commits, sessions and cost since
+  the last visit (per device, stored in the app's database), with "mark as seen"
+- [ ] Weekly summary page (pick a week): per project, what moved on the board, commits, Claude
+  time and cost; **Copy as Markdown** for a standup or a note
+- [ ] Git: branches ahead/behind their upstream, stale local branches, and worktrees listed per
+  repo (read-only, same `GIT_OPTIONAL_LOCKS=0` rules)
+- [ ] Tray / menu-bar menu: live sessions (click to open), recent projects, "Start Claude in…"
+- [ ] Acceptance: after a day of work, the away card and Markdown summary match what happened in
+  `git log` and the board
+
 ## Later: if there is demand
 Start only when there are real users asking for more (for example: steady downloads, waitlist signups, feature requests).
 - [ ] Code signing: Apple Developer Program ($99/yr) with notarization; Windows Azure Trusted Signing or OV certificate

@@ -48,10 +48,12 @@ export function terminalBehind(realPath: string): LinuxTerminal {
 /**
  * Arguments that open `term` in `dir`, running `program` (an absolute path) when given. The process is
  * also started with `dir` as its cwd, which is all xterm and the generic x-terminal-emulator can use.
- * `dir` is an absolute path, so it can never be read as an option.
+ * `dir` is an absolute path, so it can never be read as an option. `args` go to `program`, after it; every
+ * terminal here passes everything after its run option on unchanged, except the generic x-terminal-emulator
+ * (see `passesTextArgs`).
  */
-export function linuxTerminalArgs(term: LinuxTerminal, dir: string, program: string | null): string[] {
-  const run = (flag: string | null) => (program ? (flag ? [flag, program] : [program]) : []);
+export function linuxTerminalArgs(term: LinuxTerminal, dir: string, program: string | null, args: string[] = []): string[] {
+  const run = (flag: string | null) => (program ? (flag ? [flag, program, ...args] : [program, ...args]) : []);
   switch (term) {
     case 'gnome-terminal': return [`--working-directory=${dir}`, ...run('--')];
     case 'ptyxis': return ['--new-window', `--working-directory=${dir}`, ...run('--')];
@@ -62,4 +64,12 @@ export function linuxTerminalArgs(term: LinuxTerminal, dir: string, program: str
     case 'xterm': return run('-e');
     case 'x-terminal-emulator': return run('-e');
   }
+}
+
+/**
+ * Whether an argument with spaces reaches the program as one argument. Debian's x-terminal-emulator wrappers
+ * re-split what follows -e on spaces, so free text (a task prompt) is not handed to them.
+ */
+export function passesTextArgs(term: LinuxTerminal): boolean {
+  return term !== 'x-terminal-emulator';
 }

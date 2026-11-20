@@ -15,6 +15,8 @@ import TaskDialog, { type TaskDialogState } from './TaskDialog';
 import { TASK_STATUS_LABEL, useTaskActions } from './useTaskActions';
 import LiveSessions, { TaskSuggestion } from './LiveSessions';
 import { useLiveSessions } from './useLiveSessions';
+import { useTaskSessions } from './useTaskSessions';
+import { resumeSession, startClaudeOnTask, useClaudeAvailable } from '../actions/projectActions';
 
 const COLUMNS: { status: TaskStatus; icon: string; accent: string }[] = [
   { status: 'todo', icon: 'pi pi-circle', accent: 'var(--surface-400)' },
@@ -35,11 +37,17 @@ interface Props {
   onConflict?: () => void;
 }
 
-function TaskCard({ card, showProject, dragging, onOpen, suggestion }: {
+function TaskCard({ card, showProject, dragging, onOpen, suggestion, onStartClaude, sessions = 0 }: {
   card: Card; showProject: boolean; dragging?: boolean; onOpen?: () => void;
   suggestion?: { onAccept: () => void; onDismiss: () => void };
+  /** Shown for open tasks when Claude Code is installed. */
+  onStartClaude?: () => void;
+  /** Recent Claude sessions that worked on this task. */
+  sessions?: number;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.key, data: card });
+  // Keep the button's pointer and key events away from the drag sensor and the card's own click.
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation();
   return (
     <div
       ref={setNodeRef}
@@ -56,7 +64,19 @@ function TaskCard({ card, showProject, dragging, onOpen, suggestion }: {
         <Tag value={card.milestone.title} severity="secondary" className="board-milestone-tag" />
       </div>
       <div className={`board-card-text ${card.task.status === 'done' ? 'line-through text-500' : ''}`}>{card.task.text}</div>
-      <small className="text-500 block mt-2">{card.milestone.relFile}:{card.task.line}</small>
+      <div className="flex align-items-center gap-2 mt-2">
+        <small className="text-500">{card.milestone.relFile}:{card.task.line}</small>
+        {sessions > 0 && (
+          <small className="text-500 flex align-items-center gap-1" title={`${sessions} recent Claude session${sessions === 1 ? '' : 's'} worked on this`}>
+            <i className="pi pi-comments text-xs" />{sessions}
+          </small>
+        )}
+        {onStartClaude && !dragging && (
+          <Button icon="pi pi-play" rounded text size="small" className="board-card-claude ml-auto p-0" style={{ width: '1.75rem', height: '1.75rem' }}
+            aria-label={`Start Claude on: ${card.task.text}`} title="Start Claude on this task"
+            onPointerDown={stop} onKeyDown={stop} onClick={(e) => { e.stopPropagation(); onStartClaude(); }} />
+        )}
+      </div>
       {suggestion && <TaskSuggestion {...suggestion} />}
     </div>
   );
@@ -98,6 +118,9 @@ export default function TaskBoard({ projects, onProjectChanged, onConflict }: Pr
   const actions = useTaskActions(onProjectChanged, handleConflict);
   const multi = projects.length > 1;
   const live = useLiveSessions(projects.map((p) => p.id));
+  const claudeOk = useClaudeAvailable();
+  const linked = useTaskSessions(projects.map((p) => p.id));
+  const startOn = (c: Card) => startClaudeOnTask(c.project, c.task);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -139,7 +162,11 @@ export default function TaskBoard({ projects, onProjectChanged, onConflict }: Pr
   const move = async (card: Card, to: TaskStatus) => {
     if (statusOf(card) === to) return;
     setPending((p) => ({ ...p, [card.key]: to })); // optimistic
-    await actions.setStatus(card.project.id, card.task, to);
+    // Moving work to In progress offers to start Claude on it (never starts it by itself).
+    const offer = to === 'in_progress' && claudeOk && card.project.exists
+      ? { label: 'Start Claude', icon: 'pi pi-play', onClick: () => { void startOn(card); } }
+      : undefined;
+    await actions.setStatus(card.project.id, card.task, to, offer);
     setPending((p) => { const { [card.key]: _drop, ...rest } = p; return rest; });
   };
 
@@ -189,7 +216,11 @@ export default function TaskBoard({ projects, onProjectChanged, onConflict }: Pr
             const colCards = cards.filter((c) => statusOf(c) === col.status);
             return (
               <Column key={col.status} {...col} cards={colCards.length} onAdd={() => setDialog({ mode: 'add', status: col.status })}>
-                {colCards.map((c) => <TaskCard key={c.key} card={c} showProject={multi} onOpen={() => openEdit(c)} suggestion={suggestionFor(c)} />)}
+                {colCards.map((c) => (
+                  <TaskCard key={c.key} card={c} showProject={multi} onOpen={() => openEdit(c)} suggestion={suggestionFor(c)}
+                    sessions={linked.get(c.key)?.length ?? 0}
+                    onStartClaude={claudeOk && c.project.exists && statusOf(c) !== 'done' ? () => { void startOn(c); } : undefined} />
+                ))}
                 {!colCards.length && <div className="text-500 text-sm p-3 text-center">Drop tasks here</div>}
               </Column>
             );
@@ -204,6 +235,12 @@ export default function TaskBoard({ projects, onProjectChanged, onConflict }: Pr
         onHide={() => setDialog(null)}
         onSave={onSave}
         onDelete={async (projectId, task) => !!(await actions.remove(projectId, task))}
+        sessionsFor={(projectId, taskId) => linked.get(`${projectId}|${taskId}`) ?? []}
+        onStartClaude={claudeOk ? (projectId, task) => {
+          const p = projects.find((x) => x.id === projectId);
+          if (p) void startClaudeOnTask(p, task);
+        } : undefined}
+        onResume={claudeOk ? (projectId, s) => { void resumeSession(projectId, s.id, s.title); } : undefined}
       />
     </div>
   );

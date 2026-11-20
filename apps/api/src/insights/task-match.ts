@@ -41,29 +41,37 @@ export function words(text: string): string[] {
 
 /** `corpus` = every task of the project (for word rarity); `open` = the tasks that may be suggested. */
 export function matchTask(sessionText: string, open: MatchTask[], corpus: MatchTask[] = open): TaskMatch | null {
-  if (!open.length) return null;
-  const bag = new Set(words(sessionText));
-  if (!bag.size) return null;
+  return taskMatcher(open, corpus)(sessionText);
+}
+
+/**
+ * The same match with the task side prepared once, for matching many sessions against one project's tasks
+ * (word rarity and each task's words are computed up front).
+ */
+export function taskMatcher(open: MatchTask[], corpus: MatchTask[] = open): (sessionText: string) => TaskMatch | null {
+  if (!open.length) return () => null;
   const df = new Map<string, number>();
   for (const t of corpus) for (const w of new Set(words(t.text))) df.set(w, (df.get(w) ?? 0) + 1);
   const n = Math.max(corpus.length, 1);
   const idf = (w: string) => Math.log((n + 1) / ((df.get(w) ?? 0) + 1)) + 0.1;
+  const prepared = open.map((t) => {
+    const ws = [...new Set(words(t.text))].map((w) => ({ w, i: idf(w) }));
+    return { taskId: t.id, ws, all: ws.reduce((s, x) => s + x.i, 0) };
+  });
 
-  const scored = open.map((t) => {
-    const ws = [...new Set(words(t.text))];
-    let hit = 0;
-    let all = 0;
-    let hits = 0;
-    for (const w of ws) {
-      const i = idf(w);
-      all += i;
-      if (bag.has(w)) { hit += i; hits++; }
-    }
-    return { taskId: t.id, score: all ? hit / all : 0, hits };
-  }).sort((a, b) => b.score - a.score);
+  return (sessionText) => {
+    const bag = new Set(words(sessionText));
+    if (!bag.size) return null;
+    const scored = prepared.map((t) => {
+      let hit = 0;
+      let hits = 0;
+      for (const { w, i } of t.ws) if (bag.has(w)) { hit += i; hits++; }
+      return { taskId: t.taskId, score: t.all ? hit / t.all : 0, hits };
+    }).sort((a, b) => b.score - a.score);
 
-  const [best, next] = scored;
-  if (best.hits < MIN_HITS || best.score < MIN_SCORE) return null;
-  if (next && best.score - next.score < MIN_MARGIN) return null;
-  return { taskId: best.taskId, score: Math.round(best.score * 100) / 100 };
+    const [best, next] = scored;
+    if (best.hits < MIN_HITS || best.score < MIN_SCORE) return null;
+    if (next && best.score - next.score < MIN_MARGIN) return null;
+    return { taskId: best.taskId, score: Math.round(best.score * 100) / 100 };
+  };
 }

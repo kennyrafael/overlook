@@ -38,6 +38,13 @@ export class InsightsController {
     return this.live.sessions(ids(projects));
   }
 
+  /** Plan task id → recent sessions of the project that worked on it (matched, never written anywhere). */
+  @Get('task-sessions')
+  taskSessions(@Query('project') project?: string) {
+    if (!project) throw new BadRequestException('project is required');
+    return this.claude.taskSessions(project);
+  }
+
   /** Daily plan progress (milestones / tasks) summed over the projects, last `days` days. */
   @Get('progress')
   progress(@Query('projects') projects?: string, @Query('days') days?: string) {

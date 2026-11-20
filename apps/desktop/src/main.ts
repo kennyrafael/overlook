@@ -6,7 +6,7 @@
  * locked-down BrowserWindow. The only internet access is the update check (updater.ts).
  */
 import {
-  app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, session, shell, Tray, utilityProcess,
+  app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, Notification, session, shell, Tray, utilityProcess,
   type IpcMainInvokeEvent, type UtilityProcess,
 } from 'electron';
 import { execFile } from 'child_process';
@@ -46,14 +46,29 @@ interface DesktopPrefs {
   closeToTray: boolean;
   /** Check the release feed for a new version at start-up and once a day. */
   autoUpdate: boolean;
+  /** Notify when a Claude Code session ends its turn and waits for the user. */
+  notifyWaiting: boolean;
+  /** Project ids (12 hex characters) that never notify. */
+  mutedProjects: string[];
 }
-const DEFAULT_PREFS: DesktopPrefs = { closeToTray: false, autoUpdate: true };
+const DEFAULT_PREFS: DesktopPrefs = { closeToTray: false, autoUpdate: true, notifyWaiting: true, mutedProjects: [] };
 const prefsFile = () => join(app.getPath('userData'), 'desktop.json');
+const PROJECT_ID_RE = /^[0-9a-f]{12}$/;
+
+/** Valid project ids only, at most 500. */
+function cleanIds(x: unknown): string[] {
+  return Array.isArray(x) ? [...new Set(x.filter((v): v is string => typeof v === 'string' && PROJECT_ID_RE.test(v)))].slice(0, 500) : [];
+}
 
 function readPrefs(): DesktopPrefs {
   try {
     const raw = JSON.parse(readFileSync(prefsFile(), 'utf8'));
-    return { closeToTray: raw?.closeToTray === true, autoUpdate: raw?.autoUpdate !== false };
+    return {
+      closeToTray: raw?.closeToTray === true,
+      autoUpdate: raw?.autoUpdate !== false,
+      notifyWaiting: raw?.notifyWaiting !== false,
+      mutedProjects: cleanIds(raw?.mutedProjects),
+    };
   } catch {
     return { ...DEFAULT_PREFS };
   }
@@ -164,9 +179,11 @@ function harden() {
     callback({ responseHeaders: headers });
   });
 
-  // No camera, microphone, notifications, geolocation, etc.
-  ses.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
-  ses.setPermissionCheckHandler(() => false);
+  // No camera, microphone, web notifications, geolocation, etc. Writing to the clipboard (never reading) is
+  // allowed, for "Start Claude on this task" when the prompt has to be pasted. Notifications go through IPC.
+  const allowed = (permission: string) => permission === 'clipboard-sanitized-write';
+  ses.setPermissionRequestHandler((_wc, permission, callback) => callback(allowed(permission)));
+  ses.setPermissionCheckHandler((_wc, permission) => allowed(permission));
 
   app.on('web-contents-created', (_event, contents) => {
     // Stay on the app origin; anything else opens in the user's browser (http/https only).
@@ -219,12 +236,32 @@ function registerIpc() {
     if (!fromApp(event) || typeof patch !== 'object' || patch === null) return null;
     const p = patch as Record<string, unknown>;
     if (typeof p.closeToTray === 'boolean') prefs = { ...prefs, closeToTray: p.closeToTray };
+    if (typeof p.notifyWaiting === 'boolean') prefs = { ...prefs, notifyWaiting: p.notifyWaiting };
+    if (Array.isArray(p.mutedProjects)) prefs = { ...prefs, mutedProjects: cleanIds(p.mutedProjects) };
     if (typeof p.autoUpdate === 'boolean' && p.autoUpdate !== prefs.autoUpdate) {
       prefs = { ...prefs, autoUpdate: p.autoUpdate };
       setAutoCheck(prefs.autoUpdate);
     }
     try { writeFileSync(prefsFile(), JSON.stringify(prefs, null, 2)); } catch { /* keep in memory */ }
     return { ...prefs };
+  });
+
+  // "Claude is waiting" notifications. Text is plain and bounded; the project id is checked, and a click only
+  // shows the window and tells the page which project to open.
+  ipcMain.handle('overlook:notify', (event, n: unknown) => {
+    if (!fromApp(event) || !prefs.notifyWaiting || !Notification.isSupported()) return false;
+    const o = (typeof n === 'object' && n !== null ? n : {}) as Record<string, unknown>;
+    const text = (x: unknown, max: number) => (typeof x === 'string' ? x.replace(/[\u0000-\u001f\u007f]+/g, ' ').trim().slice(0, max) : '');
+    const projectId = typeof o.projectId === 'string' && PROJECT_ID_RE.test(o.projectId) ? o.projectId : null;
+    const title = text(o.title, 120);
+    if (!title || !projectId || prefs.mutedProjects.includes(projectId)) return false;
+    const note = new Notification({ title, body: text(o.body, 240), icon: existsSync(iconPath) ? iconPath : undefined, silent: false });
+    note.on('click', () => {
+      showWindow();
+      mainWindow?.webContents.send('overlook:open-project', projectId);
+    });
+    note.show();
+    return true;
   });
 }
 

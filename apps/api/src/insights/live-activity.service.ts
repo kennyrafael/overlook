@@ -82,6 +82,7 @@ export class LiveActivityService {
           title: acc.title,
           lastActivityAt: new Date(acc.lastAt).toISOString(),
           state: working ? 'working' : 'idle',
+          waiting: acc.waiting,
           steps,
           current,
           suggestion,

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { LINUX_TERMINAL_LABEL, linuxTerminalArgs, linuxTerminalOrder, terminalBehind, type LinuxTerminal } from './linux-terminal';
+import { LINUX_TERMINAL_LABEL, linuxTerminalArgs, linuxTerminalOrder, passesTextArgs, terminalBehind, type LinuxTerminal } from './linux-terminal';
 
 const evil = `/home/me/it's "quoted" $(rm -rf ~); x && echo; -e --x`;
 const claude = '/home/me/.local/bin/claude';
@@ -56,4 +56,18 @@ test('x-terminal-emulator is resolved to the terminal behind it when it is a kno
   assert.equal(terminalBehind('/usr/bin/xfce4-terminal.wrapper'), 'xfce4-terminal');
   assert.equal(terminalBehind('/usr/bin/terminator'), 'x-terminal-emulator');
   assert.equal(terminalBehind('/usr/bin/x-terminal-emulator'), 'x-terminal-emulator');
+});
+
+test('extra program arguments follow the program, unchanged', () => {
+  const prompt = `Work on: it's "x" $(rm -rf ~); y`;
+  assert.deepEqual(linuxTerminalArgs('gnome-terminal', '/p', claude, ['--resume', 'id']), ['--working-directory=/p', '--', claude, '--resume', 'id']);
+  assert.deepEqual(linuxTerminalArgs('konsole', '/p', claude, [prompt]), ['--workdir', '/p', '-e', claude, prompt]);
+  assert.deepEqual(linuxTerminalArgs('kitty', '/p', claude, [prompt]), ['--directory', '/p', claude, prompt]);
+  assert.deepEqual(linuxTerminalArgs('xterm', '/p', claude, [prompt]), ['-e', claude, prompt]);
+  assert.deepEqual(linuxTerminalArgs('gnome-terminal', '/p', null, [prompt]), ['--working-directory=/p']);
+});
+
+test('free text is not handed to the generic x-terminal-emulator, which re-splits on spaces', () => {
+  assert.equal(passesTextArgs('x-terminal-emulator'), false);
+  for (const t of ['gnome-terminal', 'ptyxis', 'konsole', 'xfce4-terminal', 'kitty', 'alacritty', 'xterm'] as const) assert.equal(passesTextArgs(t), true);
 });

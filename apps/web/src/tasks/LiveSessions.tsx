@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from 'primereact/button';
 import type { LiveSession } from '@overlook/shared';
 import { relativeTime } from '../format';
+import { resumeSession, useClaudeAvailable } from '../actions/projectActions';
 
 /**
  * "Claude is working" strip above the board: one row per session with recent activity, with the
@@ -9,6 +10,7 @@ import { relativeTime } from '../format';
  */
 export default function LiveSessions({ sessions, projectName }: { sessions: LiveSession[]; projectName?: (id: string) => string | undefined }) {
   const [open, setOpen] = useState<string | null>(null);
+  const claudeOk = useClaudeAvailable();
   if (!sessions.length) return null;
   return (
     <div className="flex flex-column gap-2" aria-label="Live Claude sessions">
@@ -24,6 +26,12 @@ export default function LiveSessions({ sessions, projectName }: { sessions: Live
               {name && <span className="text-500">in {name}</span>}
               {s.title && <span className="text-600 live-title" title={s.title}>· {s.title}</span>}
               <small className="text-500 ml-auto">{relativeTime(s.lastActivityAt)}</small>
+              {claudeOk && s.state === 'idle' && (
+                // Idle only: resuming a session that is still running in a terminal would start a second copy.
+                <Button text size="small" className="p-1" icon="pi pi-replay" label="Resume"
+                  title="Continue this session in a new terminal (claude --resume)"
+                  onClick={() => { void resumeSession(s.projectId, s.id, s.title); }} />
+              )}
               {s.steps.length > 0 && (
                 <Button text size="small" className="p-1" icon={expanded ? 'pi pi-chevron-up' : 'pi pi-chevron-down'}
                   label={`${done}/${s.steps.length} steps`} aria-expanded={expanded}

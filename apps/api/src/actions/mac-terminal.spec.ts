@@ -18,3 +18,13 @@ for (const iterm of [false, true]) {
     assert.match(text, iterm ? /tell application "iTerm"/ : /tell application "Terminal"/);
   });
 }
+
+test('macOS: extra arguments (resume id, task prompt) are passed as arguments and each shell-quoted by the script', () => {
+  const prompt = `Work on: it's "x" $(rm -rf ~); y`;
+  const args = macClaudeArgs('/p', '/bin/claude', false, ['--resume', 'abc', prompt]);
+  assert.deepEqual(args.slice(-5), ['/p', '/bin/claude', '--resume', 'abc', prompt]);
+  const text = args.slice(0, -5).filter((_, i) => i % 2 === 1).join('\n');
+  assert.ok(!text.includes(prompt));
+  assert.match(text, /repeat with i from 3 to count of argv/);
+  assert.match(text, /quoted form of \(item i of argv\)/);
+});

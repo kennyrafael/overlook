@@ -10,6 +10,7 @@ import { request as httpRequest } from 'http';
 import type { AddressInfo } from 'net';
 import { join } from 'path';
 import { createFixture, PLAN, type Fixture } from './fixture';
+import { DEFAULT_CLAUDE_TASK_PROMPT } from '@overlook/shared';
 
 let fx: Fixture;
 let base = '';
@@ -190,6 +191,30 @@ describe('quick actions', () => {
     const alpha = await project('alpha');
     assert.equal((await api(`/projects/${alpha.id}/actions/rm`, { method: 'POST' })).status, 400);
     assert.equal((await api('/projects/unknown/actions/explorer', { method: 'POST' })).status, 404);
+  });
+  // None of these reach a launch: each is refused first (503 where Claude Code is not installed, e.g. in CI).
+  test('Claude task and resume requests are validated before anything starts', async () => {
+    const alpha = await project('alpha');
+    const post = (action: string, body: unknown) => api(`/projects/${alpha.id}/actions/${action}`, { method: 'POST', body: JSON.stringify(body) });
+    assert.equal((await post('vscode', { taskId: 'x' })).status, 400);
+    assert.equal((await post('claude', { taskId: 'x', resume: '3f2b9c1e-8a4d-4e2f-9b6a-1c2d3e4f5a6b' })).status, 400);
+    assert.ok([400, 503].includes((await post('claude', { resume: '..\\..\\evil; rm -rf ~' })).status));
+    assert.ok([404, 503].includes((await post('claude', { resume: '3f2b9c1e-8a4d-4e2f-9b6a-1c2d3e4f5a6b' })).status));
+    assert.ok([404, 503].includes((await post('claude', { taskId: 'no-such-task' })).status));
+  });
+  test('task sessions need a project and answer a map', async () => {
+    const alpha = await project('alpha');
+    assert.equal((await api('/insights/task-sessions')).status, 400);
+    const r = await api(`/insights/task-sessions?project=${alpha.id}`);
+    assert.equal(r.status, 200);
+    assert.equal(typeof r.body, 'object');
+  });
+  test('the task prompt setting is one bounded line that mentions the task', async () => {
+    const put = (claudeTaskPrompt: string) => api('/settings', { method: 'PUT', body: JSON.stringify({ claudeTaskPrompt }) });
+    assert.equal((await put('Do\nthis')).body.claudeTaskPrompt, 'Do this {task}');
+    assert.equal((await put('   ')).body.claudeTaskPrompt, DEFAULT_CLAUDE_TASK_PROMPT);
+    assert.equal((await put('Fix {task} now' + 'x'.repeat(900))).body.claudeTaskPrompt.length, 500);
+    await put(DEFAULT_CLAUDE_TASK_PROMPT);
   });
   test('tool detection reports what is installed', async () => {
     const { status, body } = await api('/system/tools');

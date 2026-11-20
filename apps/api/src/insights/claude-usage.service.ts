@@ -3,11 +3,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { readdir, stat } from 'fs/promises';
 import { join } from 'path';
 import { In, Repository } from 'typeorm';
-import type { ClaudeDay, ClaudeOverview, ClaudeSession, TokenUsage } from '@overlook/shared';
+import type { ClaudeDay, ClaudeOverview, ClaudeSession, TaskSessionRef, TokenUsage } from '@overlook/shared';
 import { SettingsService } from '../config/settings.service';
 import { claudeRoots } from '../discovery/claude-roots';
 import { ProjectsService } from '../projects/projects.service';
-import { mapLimit } from './limit';
+import { localDay, mapLimit } from './limit';
+import { taskMatcher } from './task-match';
 import { LogParserPool } from './log-parser-pool';
 import { ParseCacheEntity } from './parse-cache.entity';
 import { PARSER_VERSION, isUnrecognized, LogSummary, PriceTable, UsageBucket, ZERO_TOKENS, addTokens, bucketCost, bucketTokens } from './session-log';
@@ -20,6 +21,8 @@ interface SessionFiles {
   id: string;
   main: string;
   subagents: string[];
+  /** Logged on this machine (not inside WSL), so `claude --resume` can continue it here. */
+  local: boolean;
 }
 
 export interface ClaudeQuery {
@@ -106,6 +109,7 @@ export class ClaudeUsageService implements OnApplicationBootstrap, OnModuleDestr
 
     const inRange = (day: string) => (!q.from || day >= q.from) && (!q.to || day <= q.to);
     const wanted = q.projectIds?.length ? new Set(q.projectIds) : null;
+    const matchers = await this.taskMatchers(wanted);
 
     const days = new Map<string, ClaudeDay>();
     const models = new Map<string, ClaudeOverview['byModel'][number]>();
@@ -191,6 +195,8 @@ export class ClaudeUsageService implements OnApplicationBootstrap, OnModuleDestr
         models: [...sessionModels].sort(),
         tokens,
         costUsd: cost,
+        task: project ? matchers.get(project.id)?.(main) ?? null : null,
+        resumable: s.local,
       });
     }
 
@@ -205,6 +211,41 @@ export class ClaudeUsageService implements OnApplicationBootstrap, OnModuleDestr
       sessions: outSessions.sort((a, b) => b.endedAt.localeCompare(a.endedAt)),
       logFormat: { files: this.files.size, unrecognizedFiles: unrecognized, examples: unrecognizedExamples },
     };
+  }
+
+  /**
+   * Per project: a function from a session's summary to the plan task it most likely worked on (any status;
+   * matched on its title and sampled prompts, the same rules as the live suggestion).
+   */
+  private async taskMatchers(wanted: Set<string> | null) {
+    const out = new Map<string, (s: LogSummary) => { id: string; text: string } | null>();
+    let projects;
+    try { projects = await this.projects.detailed(); } catch { return out; }
+    for (const p of projects) {
+      if (wanted && !wanted.has(p.id)) continue;
+      const tasks = p.milestones.flatMap((m) => m.tasks).map((t) => ({ id: t.id, text: t.text }));
+      if (!tasks.length) continue;
+      const match = taskMatcher(tasks, tasks);
+      const byId = new Map(tasks.map((t) => [t.id, t]));
+      out.set(p.id, (s) => {
+        const m = match([s.title ?? '', ...(s.promptSample ?? [])].join('\n'));
+        return m ? byId.get(m.taskId) ?? null : null;
+      });
+    }
+    return out;
+  }
+
+  /** Task id → the sessions of the last `days` days that worked on it, newest first (at most 5 per task). */
+  async taskSessions(projectId: string, days = 90): Promise<Record<string, TaskSessionRef[]>> {
+    const from = localDay(new Date(Date.now() - days * 86_400_000));
+    const data = await this.overview({ from, projectIds: [projectId] });
+    const out: Record<string, TaskSessionRef[]> = {};
+    for (const s of data.sessions) {
+      if (!s.task) continue;
+      const list = (out[s.task.id] ??= []);
+      if (list.length < 5) list.push({ id: s.id, title: s.title, endedAt: s.endedAt, resumable: s.resumable });
+    }
+    return out;
   }
 
   /** Re-reads any new or changed log files; returns the session file layout. */
@@ -233,12 +274,12 @@ export class ClaudeUsageService implements OnApplicationBootstrap, OnModuleDestr
       } catch {
         continue;
       }
-      out.push(...await this.sessionsIn(dirs));
+      out.push(...await this.sessionsIn(dirs, root.label === 'local'));
     }
     return out;
   }
 
-  private async sessionsIn(dirs: string[]): Promise<SessionFiles[]> {
+  private async sessionsIn(dirs: string[], local: boolean): Promise<SessionFiles[]> {
     const out: SessionFiles[] = [];
     for (const dir of dirs) {
       let entries: string[];
@@ -249,7 +290,7 @@ export class ClaudeUsageService implements OnApplicationBootstrap, OnModuleDestr
         try {
           subagents = (await readdir(join(dir, id, 'subagents'))).filter((e) => e.endsWith('.jsonl')).map((e) => join(dir, id, 'subagents', e));
         } catch { /* no subagents */ }
-        out.push({ dir, id, main: join(dir, f), subagents });
+        out.push({ dir, id, main: join(dir, f), subagents, local });
       }
     }
     return out;

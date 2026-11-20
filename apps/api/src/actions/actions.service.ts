@@ -2,13 +2,15 @@ import { BadRequestException, Injectable, Logger, NotFoundException, ServiceUnav
 import { execFile, spawn } from 'child_process';
 import { accessSync, constants, existsSync, realpathSync, statSync } from 'fs';
 import { homedir } from 'os';
-import { delimiter, dirname, join } from 'path';
-import type { ProjectAction, SystemTools } from '@overlook/shared';
+import { delimiter, dirname, join, resolve as resolvePath } from 'path';
+import { isInside } from '../discovery/path-utils';
+import type { ActionResult, ClaudeActionBody, ProjectAction, SystemTools } from '@overlook/shared';
 import { PROJECT_ACTIONS } from '@overlook/shared';
 import { SettingsService } from '../config/settings.service';
 import { claudeRoots } from '../discovery/claude-roots';
-import { ProjectsService } from '../projects/projects.service';
-import { LINUX_TERMINAL_LABEL, linuxTerminalArgs, linuxTerminalOrder, terminalBehind, type LinuxTerminal } from './linux-terminal';
+import { ProjectsService, type ProjectRef } from '../projects/projects.service';
+import { isBatchFile, SESSION_ID_RE, sessionCwd, taskPrompt, windowsTerminalText } from './claude-launch';
+import { LINUX_TERMINAL_LABEL, linuxTerminalArgs, linuxTerminalOrder, passesTextArgs, terminalBehind, type LinuxTerminal } from './linux-terminal';
 
 const IS_WIN = process.platform === 'win32';
 const IS_MAC = process.platform === 'darwin';
@@ -60,9 +62,15 @@ function macApp(name: string): string | null {
  * fixed; the folder and the program come in as arguments (`on run argv`) and are shell-quoted with
  * `quoted form of`, so nothing from the project path is ever interpreted as script or shell code.
  */
-const MAC_TERMINAL_SCRIPT = [
+const MAC_COMMAND = [
   'on run argv',
   '  set cmd to "cd " & quoted form of (item 1 of argv) & " && " & quoted form of (item 2 of argv)',
+  '  repeat with i from 3 to count of argv',
+  '    set cmd to cmd & " " & quoted form of (item i of argv)',
+  '  end repeat',
+];
+const MAC_TERMINAL_SCRIPT = [
+  ...MAC_COMMAND,
   '  tell application "Terminal"',
   '    activate',
   '    do script cmd',
@@ -70,8 +78,7 @@ const MAC_TERMINAL_SCRIPT = [
   'end run',
 ];
 const MAC_ITERM_SCRIPT = [
-  'on run argv',
-  '  set cmd to "cd " & quoted form of (item 1 of argv) & " && " & quoted form of (item 2 of argv)',
+  ...MAC_COMMAND,
   '  tell application "iTerm"',
   '    activate',
   '    set w to (create window with default profile)',
@@ -79,9 +86,16 @@ const MAC_ITERM_SCRIPT = [
   '  end tell',
   'end run',
 ];
-/** `osascript` arguments that open Terminal (or iTerm) at `path` and run `program` there. */
-export function macClaudeArgs(path: string, program: string, iterm: boolean): string[] {
-  return [...(iterm ? MAC_ITERM_SCRIPT : MAC_TERMINAL_SCRIPT).flatMap((l) => ['-e', l]), path, program];
+/** `osascript` arguments that open Terminal (or iTerm) at `path` and run `program` there with `args` (each shell-quoted). */
+export function macClaudeArgs(path: string, program: string, iterm: boolean, args: string[] = []): string[] {
+  return [...(iterm ? MAC_ITERM_SCRIPT : MAC_TERMINAL_SCRIPT).flatMap((l) => ['-e', l]), path, program, ...args];
+}
+
+/** What to run in the terminal: the program, its fixed arguments, and an optional free-text prompt (last). */
+interface TerminalRun {
+  program: string;
+  args: string[];
+  prompt: string | null;
 }
 
 /**
@@ -139,25 +153,72 @@ export class ActionsService {
     return existsSync(exe) ? exe : null;
   }
 
-  async run(projectId: string, action: string): Promise<{ ok: true; action: ProjectAction }> {
+  /**
+   * Runs a quick action. Only `claude` takes a body: `taskId` (a plan task of this project; the prompt is built
+   * here from the task and Settings) or `resume` (a session id of this project). Both are optional.
+   */
+  async run(projectId: string, action: string, body: ClaudeActionBody = {}): Promise<ActionResult> {
     if (!PROJECT_ACTIONS.includes(action as ProjectAction)) throw new BadRequestException(`Unknown action ${action}`);
     const ref = (await this.projects.refs()).find((r) => r.id === projectId);
     if (!ref) throw new NotFoundException(`Project ${projectId} not found`);
     if (!ref.exists || !existsSync(ref.path)) throw new NotFoundException('The project folder no longer exists');
 
     const a = action as ProjectAction;
+    const taskId = typeof body?.taskId === 'string' && body.taskId ? body.taskId : null;
+    const resume = typeof body?.resume === 'string' && body.resume ? body.resume : null;
+    if (a !== 'claude' && (taskId || resume)) throw new BadRequestException(`${a} takes no task or session`);
+    if (taskId && resume) throw new BadRequestException('Give a task or a session to resume, not both');
+
+    let result: ActionResult = { ok: true, action: a };
+    let where = ref.path;
     try {
       if (a === 'explorer') await this.openFolder(ref.path);
       else if (a === 'vscode') await this.openVsCode(ref.path);
       else if (a === 'terminal') await this.openTerminal(ref.path, null);
-      else if (a === 'claude') await this.openTerminal(ref.path, await this.require('claude', 'Claude Code (claude)'));
+      else if (a === 'claude') {
+        const claude = await this.require('claude', 'Claude Code (claude)');
+        if (resume) {
+          where = await this.resumeFolder(ref, resume);
+          await this.openTerminal(where, { program: claude, args: ['--resume', resume], prompt: null });
+        } else if (taskId) {
+          const prompt = await this.promptFor(ref.id, taskId);
+          const passed = await this.openTerminal(ref.path, { program: claude, args: [], prompt });
+          result = { ...result, promptPassed: passed, prompt };
+        } else {
+          await this.openTerminal(ref.path, { program: claude, args: [], prompt: null });
+        }
+      }
     } catch (e) {
-      if (e instanceof ServiceUnavailableException) throw e;
-      this.log.warn(`${a} failed for ${ref.path}: ${e}`);
+      if (e instanceof ServiceUnavailableException || e instanceof NotFoundException || e instanceof BadRequestException) throw e;
+      this.log.warn(`${a} failed for ${where}: ${e}`);
       throw new ServiceUnavailableException(`Could not start ${a}: ${e instanceof Error ? e.message : e}`);
     }
-    this.log.log(`${a} → ${ref.path}`);
-    return { ok: true, action: a };
+    this.log.log(`${a}${resume ? ' --resume' : taskId ? ' (task)' : ''} → ${where}`);
+    return result;
+  }
+
+  /** The prompt for a plan task of the project, from Settings → claudeTaskPrompt. */
+  private async promptFor(projectId: string, taskId: string): Promise<string> {
+    const [project, settings] = await Promise.all([this.projects.get(projectId), this.settings.get()]);
+    for (const m of project.milestones) {
+      const t = m.tasks.find((x) => x.id === taskId);
+      if (t) return taskPrompt(settings.claudeTaskPrompt, { task: t.text, milestone: m.title, file: m.relFile });
+    }
+    throw new NotFoundException('That task is no longer in the plan file; reload the page');
+  }
+
+  /**
+   * The folder to resume a session in: where it ran (its log's cwd), when that is still there and inside the
+   * project; otherwise the project folder. Only sessions logged on this machine can be resumed.
+   */
+  private async resumeFolder(ref: ProjectRef, sessionId: string): Promise<string> {
+    if (!SESSION_ID_RE.test(sessionId)) throw new BadRequestException('Not a session id');
+    const dir = ref.claudeDirs.find((d) => existsSync(join(d, `${sessionId}.jsonl`)));
+    if (!dir) throw new NotFoundException('That session is not one of this project\'s');
+    if (IS_WIN && dir.startsWith('\\\\')) throw new BadRequestException('Sessions from WSL can only be resumed inside WSL');
+    const cwd = await sessionCwd(join(dir, `${sessionId}.jsonl`));
+    const inProject = cwd && [ref.path, ...ref.subpaths].some((p) => isInside(resolvePath(cwd), p));
+    return cwd && inProject && existsSync(cwd) ? cwd : ref.path;
   }
 
   private async resolve(cmd: string): Promise<string | null> {
@@ -203,21 +264,34 @@ export class ActionsService {
     return launch(exe, [path], path);
   }
 
-  /** Opens a terminal in `path`, optionally running `program` (an absolute executable path) in it. */
-  private async openTerminal(path: string, program: string | null) {
+  /**
+   * Opens a terminal in `path`, optionally running a program (an absolute executable path) in it. Fixed
+   * arguments (`--resume <uuid>`) are always passed; the free-text prompt only where it arrives as one argument
+   * untouched by a shell. Resolves to whether the prompt was passed (true when there was none).
+   */
+  private async openTerminal(path: string, run: TerminalRun | null): Promise<boolean> {
+    const args = run?.args ?? [];
     if (IS_WIN) {
       const wt = await this.resolve('wt.exe');
+      const textOk = !!run?.prompt && !!wt && !isBatchFile(run.program);
+      const all = [...args, ...(textOk ? [windowsTerminalText(run!.prompt!)] : [])];
       // `-d .` + cwd keeps the folder out of wt's own argument parsing (which treats ';' specially).
-      if (wt) return launch(wt, program ? ['-d', '.', program] : ['-d', '.'], path);
-      return launch('cmd.exe', program ? ['/c', 'start', '', program] : ['/c', 'start', '', 'cmd.exe'], path);
+      if (wt) await launch(wt, run ? ['-d', '.', run.program, ...all] : ['-d', '.'], path);
+      // cmd.exe parses its whole command line, so only the fixed arguments go this way.
+      else await launch('cmd.exe', run ? ['/c', 'start', '', run.program, ...args] : ['/c', 'start', '', 'cmd.exe'], path);
+      return !run?.prompt || textOk;
     }
     if (IS_MAC) {
       const iterm = macApp('iTerm.app');
-      if (!program) return launch('open', ['-a', iterm ?? 'Terminal', path], path);
-      return launch('osascript', macClaudeArgs(path, program, !!iterm), path);
+      if (!run) { await launch('open', ['-a', iterm ?? 'Terminal', path], path); return true; }
+      // Every argument is shell-quoted by AppleScript's `quoted form of`.
+      await launch('osascript', macClaudeArgs(path, run.program, !!iterm, [...args, ...(run.prompt ? [run.prompt] : [])]), path);
+      return true;
     }
     const found = await this.linuxTerminal();
     if (!found) throw new ServiceUnavailableException('No terminal emulator found (GNOME Terminal, Konsole, xterm, …)');
-    return launch(found.file, linuxTerminalArgs(found.term, path, program), path);
+    const textOk = !!run?.prompt && passesTextArgs(found.term);
+    await launch(found.file, linuxTerminalArgs(found.term, path, run?.program ?? null, [...args, ...(textOk ? [run!.prompt!] : [])]), path);
+    return !run?.prompt || textOk;
   }
 }

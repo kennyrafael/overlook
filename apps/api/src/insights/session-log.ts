@@ -21,6 +21,13 @@ export interface LogSummary {
   /** Prompts the user typed (excludes tool results and meta/system-injected messages). */
   prompts: number;
   promptDays: Record<string, number>;
+  /**
+   * The first and the last few typed prompts, cut short (PROMPT_SAMPLE_*), to tell which plan task the session
+   * worked on. Kept only in the local parse cache.
+   */
+  promptSample: string[];
+  /** The folder Claude Code ran in (the first `cwd` of the log), for `claude --resume`. */
+  cwd: string | null;
   buckets: UsageBucket[];
   /** Format check; see `isUnrecognized`. */
   format: LogFormatStats;
@@ -40,7 +47,11 @@ export interface LogFormatStats {
 }
 
 /** Bump when LogSummary or its meaning changes, so persisted cache rows are re-parsed. */
-export const PARSER_VERSION = 2;
+export const PARSER_VERSION = 3;
+
+const PROMPT_SAMPLE_FIRST = 2;
+const PROMPT_SAMPLE_LAST = 3;
+const PROMPT_SAMPLE_CHARS = 300;
 
 /**
  * True when a log does not look like any Claude Code format we know: most lines are not typed
@@ -68,6 +79,9 @@ export class LogAccumulator {
   endedAt: number | null = null;
   prompts = 0;
   promptDays: Record<string, number> = {};
+  cwd: string | null = null;
+  private firstPrompts: string[] = [];
+  private lastPrompts: string[] = [];
   format: LogFormatStats = { lines: 0, typed: 0, assistant: 0, assistantUsable: 0, errors: 0 };
 
   /** Never throws: unexpected shapes are counted in `format` and skipped. */
@@ -108,6 +122,7 @@ export class LogAccumulator {
       this.endedAt = this.endedAt === null ? ts : Math.max(this.endedAt, ts);
     }
     this.sessionId ??= typeof j.sessionId === 'string' ? j.sessionId : null;
+    if (this.cwd === null && typeof j.cwd === 'string' && j.cwd) this.cwd = j.cwd;
 
     if (j.type === 'user') {
       if (j.isMeta || j.isSidechain || Number.isNaN(ts)) return;
@@ -119,6 +134,7 @@ export class LogAccumulator {
         this.prompts++;
         const day = localDay(new Date(ts));
         this.promptDays[day] = (this.promptDays[day] ?? 0) + 1;
+        this.samplePrompt(typeof c === 'string' ? c : c.filter((b: any) => b?.type === 'text' && typeof b.text === 'string').map((b: any) => b.text).join('\n'));
       }
       return;
     }
@@ -152,6 +168,14 @@ export class LogAccumulator {
     }
   }
 
+  private samplePrompt(text: string) {
+    const t = text.replace(/\s+/g, ' ').trim().slice(0, PROMPT_SAMPLE_CHARS);
+    if (!t) return;
+    if (this.firstPrompts.length < PROMPT_SAMPLE_FIRST) { this.firstPrompts.push(t); return; }
+    this.lastPrompts.push(t);
+    if (this.lastPrompts.length > PROMPT_SAMPLE_LAST) this.lastPrompts.shift();
+  }
+
   /** Track time range from lines we skip parsing fully. */
   private touch(line: string) {
     const m = /"timestamp":"([^"]+)"/.exec(line);
@@ -165,7 +189,9 @@ export class LogAccumulator {
   summary(): LogSummary {
     return {
       sessionId: this.sessionId, title: this.title, startedAt: this.startedAt, endedAt: this.endedAt,
-      prompts: this.prompts, promptDays: this.promptDays, buckets: [...this.buckets.values()],
+      prompts: this.prompts, promptDays: this.promptDays,
+      promptSample: [...this.firstPrompts, ...this.lastPrompts], cwd: this.cwd,
+      buckets: [...this.buckets.values()],
       format: { ...this.format },
     };
   }

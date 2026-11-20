@@ -18,6 +18,7 @@ import type { MenuItem } from 'primereact/menuitem';
 import { useTheme } from '../theme/ThemeContext';
 import { useProjects } from '../store/projects';
 import { connectLive, useLive } from '../store/live';
+import { useWaitingNotifier } from '../tasks/useWaitingNotifier';
 import { MOD } from '../platform';
 import { desktop } from '../desktop';
 
@@ -39,6 +40,7 @@ export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const loadProjects = useProjects((s) => s.load);
+  useWaitingNotifier();
 
   useEffect(() => {
     loadProjects();

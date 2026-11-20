@@ -34,14 +34,15 @@ export function useTaskActions(onChanged: (p: ProjectDetail) => void, onConflict
     }
   }, [onChanged, onConflict, refreshList]);
 
-  const setStatus = useCallback(async (projectId: string, task: Task, status: TaskStatus) => {
+  /** `extra` adds a second button to the "Moved" toast (e.g. "Start Claude" after a move to In progress). */
+  const setStatus = useCallback(async (projectId: string, task: Task, status: TaskStatus, extra?: { label: string; icon: string; onClick: () => void }) => {
     if (task.status === status) return null;
     const p = await run(() => api.updateTask(projectId, task.id, { status }));
     if (p) {
       const previous = task.status;
       appToast.current?.show({
         severity: 'success',
-        life: 5000,
+        life: extra ? 8000 : 5000,
         content: () => (
           <div className="flex align-items-center gap-3 w-full">
             <i className="pi pi-check-circle text-xl" />
@@ -49,6 +50,7 @@ export function useTaskActions(onChanged: (p: ProjectDetail) => void, onConflict
               <div className="font-semibold">Moved to {TASK_STATUS_LABEL[status]}</div>
               <small className="line-height-2" style={{ display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{task.text}</small>
             </div>
+            {extra && <Button label={extra.label} icon={extra.icon} size="small" outlined onClick={() => { appToast.current?.clear(); extra.onClick(); }} />}
             <Button label="Undo" size="small" text onClick={() => {
               appToast.current?.clear();
               // Status edits keep the task id, so the same id can be reverted.

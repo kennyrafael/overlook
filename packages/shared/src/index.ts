@@ -90,6 +90,18 @@ export interface ClaudeSession {
   models: string[];
   tokens: TokenUsage;
   costUsd: number;
+  /** The plan task this session most likely worked on (matched from its title and prompts), if one stands out. */
+  task: { id: string; text: string } | null;
+  /** Can be continued with `claude --resume` on this machine (a local log; WSL sessions cannot). */
+  resumable: boolean;
+}
+
+/** A recent session that worked on a plan task (GET /api/insights/task-sessions). */
+export interface TaskSessionRef {
+  id: string;
+  title: string | null;
+  endedAt: string;
+  resumable: boolean;
 }
 
 export interface ClaudeDay {
@@ -132,6 +144,8 @@ export interface LiveSession {
   lastActivityAt: string;
   /** working = mid-turn; idle = the turn ended or the log went quiet. */
   state: 'working' | 'idle';
+  /** Claude ended its turn and is waiting for the user (not just quiet mid-turn). */
+  waiting: boolean;
   steps: LiveStep[];
   /** The step Claude marked in progress, if any. */
   current: string | null;
@@ -227,7 +241,11 @@ export interface Settings {
   /** Cache-write price as a multiple of the input price. */
   cacheWrite5mMultiplier: number;
   cacheWrite1hMultiplier: number;
+  /** First prompt for "Start Claude on this task": {task} is the task text, {milestone} and {file} say where it is. */
+  claudeTaskPrompt: string;
 }
+
+export const DEFAULT_CLAUDE_TASK_PROMPT = 'Work on this task from {file} ({milestone}): {task}';
 
 export const DEFAULT_SETTINGS: Settings = {
   roots: [],
@@ -244,6 +262,7 @@ export const DEFAULT_SETTINGS: Settings = {
   modelPrices: DEFAULT_MODEL_PRICES,
   cacheWrite5mMultiplier: 1.25,
   cacheWrite1hMultiplier: 2,
+  claudeTaskPrompt: DEFAULT_CLAUDE_TASK_PROMPT,
 };
 
 export const PROJECT_STATUSES: ProjectStatus[] = ['active', 'paused', 'blocked', 'done', 'archived'];
@@ -290,6 +309,27 @@ export interface SystemTools {
 
 export type ProjectAction = 'vscode' | 'terminal' | 'explorer' | 'claude';
 export const PROJECT_ACTIONS: ProjectAction[] = ['vscode', 'terminal', 'explorer', 'claude'];
+
+/**
+ * Optional body of POST /api/projects/:id/actions/claude: start Claude on a plan task (the server builds the
+ * prompt from the task and Settings → claudeTaskPrompt), or resume one of the project's sessions.
+ */
+export interface ClaudeActionBody {
+  taskId?: string;
+  resume?: string;
+}
+
+export interface ActionResult {
+  ok: true;
+  action: ProjectAction;
+  /**
+   * Set when a task prompt was asked for. False when the prompt cannot be handed over safely on this machine
+   * (a claude.cmd wrapper, the cmd.exe fallback, a generic x-terminal-emulator): Claude starts without it and
+   * the UI copies `prompt` to the clipboard.
+   */
+  promptPassed?: boolean;
+  prompt?: string;
+}
 
 /** Global filter state, as stored in a saved view. */
 export interface ViewFilters {

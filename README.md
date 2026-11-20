@@ -103,6 +103,21 @@ history the first day the dashboard sees them.
   Settings → Cost estimates (matched by model-id prefix, longest wins); cache writes are priced at
   1.25× (5 min) and 2× (1 h) the input price.
 
+## Claude and the board
+
+- **Start Claude on a task**: ▶ on an open card (or **Start Claude** in the task dialog) opens Claude
+  Code at the project with the task as its first prompt. The prompt is built from the plan file using
+  Settings → "Start Claude on this task" prompt (`{task}`, `{milestone}`, `{file}`). Where a terminal
+  or a `claude.cmd` wrapper would re-read the text through a shell, Claude starts without it and the
+  prompt is copied to your clipboard. Moving a card to **In progress** offers the same in its toast.
+- **Resume**: idle live sessions and the Claude session table have **Resume**
+  (`claude --resume <id>` in the folder the session ran in). Sessions from WSL resume inside WSL only.
+- **Sessions on a task**: each session is matched to the plan task it most likely worked on, from its
+  title and a few of its prompts. Cards show how many recent sessions did, the task dialog lists them,
+  and the session table shows the task. It is a guess; nothing is written.
+- **"Claude is waiting"**: the desktop app shows a notification when a session finishes its turn
+  (Settings → Desktop app, with a list of projects to leave out); a browser tab marks its title.
+
 ## Quick actions and shortcuts
 
 - Project header and the ↗ menu on each row: **Open in VS Code**, **Start Claude Code**

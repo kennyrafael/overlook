@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { DEFAULT_SETTINGS, ModelPrice, Settings } from '@overlook/shared';
+import { DEFAULT_CLAUDE_TASK_PROMPT, DEFAULT_SETTINGS, ModelPrice, Settings } from '@overlook/shared';
 import { SettingEntity } from './setting.entity';
 
 const KEY = 'settings';
@@ -33,6 +33,13 @@ export class SettingsService {
     }
     for (const k of ['cacheWrite5mMultiplier', 'cacheWrite1hMultiplier', 'staleDays', 'maxDepth'] as const) {
       if (k in clean && !(Number.isFinite(clean[k]) && (clean[k] as number) >= 0)) delete clean[k];
+    }
+    if ('claudeTaskPrompt' in clean) {
+      // One line, bounded, and always about the task: an empty template goes back to the default.
+      let t = (clean.claudeTaskPrompt as string).replace(/[\u0000-\u001f\u007f]+/g, ' ').trim().slice(0, 500);
+      if (!t) t = DEFAULT_CLAUDE_TASK_PROMPT;
+      else if (!t.includes('{task}')) t = `${t} {task}`;
+      clean.claudeTaskPrompt = t;
     }
     const next = { ...(await this.get()), ...clean };
     await this.repo.save({ key: KEY, value: JSON.stringify(next) });

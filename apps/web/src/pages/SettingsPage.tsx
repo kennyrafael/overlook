@@ -8,7 +8,8 @@ import { Toast } from 'primereact/toast';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { InputText } from 'primereact/inputtext';
-import { DEFAULT_MODEL_PRICES, type ModelPrice, type Settings } from '@overlook/shared';
+import { MultiSelect } from 'primereact/multiselect';
+import { DEFAULT_CLAUDE_TASK_PROMPT, DEFAULT_MODEL_PRICES, type ModelPrice, type Settings } from '@overlook/shared';
 import { api } from '../api';
 import { useProjects } from '../store/projects';
 import { useTools } from '../store/tools';
@@ -29,6 +30,8 @@ export default function SettingsPage() {
   useEffect(() => { api.settings().then(setSettings); }, []);
   useEffect(() => { void useTools.getState().load(true); }, []);
   useEffect(() => { void desktop?.getPrefs().then(setPrefs); }, []);
+  const allProjects = useProjects((s) => s.projects);
+  const projectOptions = allProjects.map((p) => ({ label: p.name, value: p.id }));
 
   if (!settings) return null;
   const set = <K extends keyof Settings>(k: K, v: Settings[K]) => setSettings({ ...settings, [k]: v });
@@ -159,6 +162,15 @@ export default function SettingsPage() {
             {tools?.platform === 'win32' && toggle('useWsl', 'Include Claude Code in WSL', 'History inside running WSL distros (\\wsl.localhost); never starts a distro')}
             {toggle('includeScratch', 'Include scratch workspaces', 'Temporary per-session folders from the desktop app')}
             {toggle('includeMissing', 'Include missing folders', 'Projects in history whose folder was deleted')}
+            <label className="flex flex-column gap-2">
+              <span>“Start Claude on this task” prompt</span>
+              <InputText value={settings.claudeTaskPrompt} maxLength={500}
+                onChange={(e) => set('claudeTaskPrompt', e.target.value)} placeholder={DEFAULT_CLAUDE_TASK_PROMPT} />
+              <small className="text-500">
+                The first message Claude gets. <code>{'{task}'}</code> is the task text, <code>{'{milestone}'}</code> its
+                milestone and <code>{'{file}'}</code> the plan file. Leave empty for the default.
+              </small>
+            </label>
           </div>
         </Card>
         {desktop && prefs && (
@@ -177,6 +189,24 @@ export default function SettingsPage() {
               </div>
               <InputSwitch checked={prefs.autoUpdate} onChange={(e) => void setPref({ autoUpdate: !!e.value })} aria-label="Check for updates automatically" />
             </div>
+            {prefs.notifyWaiting !== undefined && (
+              <>
+                <div className="flex align-items-center justify-content-between gap-3 mt-3">
+                  <div>
+                    <div>Notify me when Claude is waiting</div>
+                    <small className="text-500">A desktop notification when a Claude Code session finishes its turn and waits for you. Click it to open the project.</small>
+                  </div>
+                  <InputSwitch checked={prefs.notifyWaiting} onChange={(e) => void setPref({ notifyWaiting: !!e.value })} aria-label="Notify me when Claude is waiting" />
+                </div>
+                {prefs.notifyWaiting && (
+                  <label className="flex flex-column gap-2 mt-3">
+                    <span className="text-sm">Not for these projects</span>
+                    <MultiSelect value={prefs.mutedProjects ?? []} options={projectOptions} filter display="chip" placeholder="Notify for every project"
+                      onChange={(e) => void setPref({ mutedProjects: e.value })} />
+                  </label>
+                )}
+              </>
+            )}
           </Card>
         )}
         <Card title="Tools on this computer" className="mt-3">

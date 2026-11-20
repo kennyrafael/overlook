@@ -31,6 +31,53 @@ export async function runProjectAction(project: Pick<Project, 'id' | 'name' | 'e
   }
 }
 
+/** Copies text; false when the clipboard is not available (an http page in some browsers, a denied permission). */
+async function copyText(text: string): Promise<boolean> {
+  try { await navigator.clipboard.writeText(text); return true; } catch { return false; }
+}
+
+const failed = (summary: string, e: unknown) =>
+  appToast.current?.show({ severity: 'error', summary, detail: e instanceof Error ? e.message : String(e) });
+
+/**
+ * "Start Claude on this task": opens Claude Code at the project with a prompt the server builds from the task
+ * (Settings → Claude task prompt). Where the prompt cannot be passed safely, Claude starts without it and the
+ * prompt goes to the clipboard.
+ */
+export async function startClaudeOnTask(project: { id: string; name: string }, task: { id: string; text: string }) {
+  try {
+    const r = await api.runAction(project.id, 'claude', { taskId: task.id });
+    if (r.promptPassed === false && r.prompt) {
+      const copied = await copyText(r.prompt);
+      appToast.current?.show({
+        severity: 'info', life: 6000, summary: 'Starting Claude Code',
+        detail: copied ? 'The task prompt is on your clipboard: paste it into Claude.' : `Paste this into Claude: ${r.prompt}`,
+      });
+    } else {
+      appToast.current?.show({ severity: 'info', summary: 'Starting Claude on this task', detail: task.text, life: 2500 });
+    }
+  } catch (e) {
+    failed('Could not start Claude', e);
+  }
+}
+
+/** "Resume session": `claude --resume <id>` in the folder the session ran in. */
+export async function resumeSession(projectId: string, sessionId: string, label?: string | null) {
+  try {
+    await api.runAction(projectId, 'claude', { resume: sessionId });
+    appToast.current?.show({ severity: 'info', summary: 'Resuming the session', detail: label ?? undefined, life: 2500 });
+  } catch (e) {
+    failed('Could not resume the session', e);
+  }
+}
+
+/** Claude Code and a terminal are installed (or not known yet), so the Claude actions can be offered. */
+export function useClaudeAvailable(): boolean {
+  const tools = useTools((s) => s.tools);
+  useEffect(() => { void useTools.getState().load(); }, []);
+  return actionAvailable(tools, 'claude');
+}
+
 /** Actions that can run on this machine (VS Code hidden when not installed, etc.). */
 export function useAvailableActions(): ProjectAction[] {
   const tools = useTools((s) => s.tools);

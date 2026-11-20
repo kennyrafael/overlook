@@ -112,3 +112,7 @@ body .p-inputswitch.p-inputswitch-checked .p-inputswitch-slider:before { backgro
 /* Visually hidden, still read by screen readers. */
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .chips-full .p-chips-multiple-container { width: 100%; }
+
+/* Task dialog footer: buttons keep their label on one line; the row wraps instead. */
+.task-dialog-footer .p-button { white-space: nowrap; }
+.task-dialog-footer .p-button + .p-button { margin-left: 0; }

@@ -49,6 +49,11 @@ export class ProjectsService implements OnApplicationBootstrap {
     return p;
   }
 
+  /** Every project with its milestones and tasks (one discovery pass, from the cache when fresh). */
+  detailed(): Promise<ProjectDetail[]> {
+    return this.listDetailed();
+  }
+
   private async listDetailed(): Promise<ProjectDetail[]> {
     const settings = await this.settings.get();
     const [found, rows] = await Promise.all([this.discovered(settings, false), this.overrides.find()]);

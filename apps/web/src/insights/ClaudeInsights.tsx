@@ -21,6 +21,8 @@ import { useTheme } from '../theme/ThemeContext';
 import { MAX_MODEL_SERIES, categorical, modelLabel, modelSlot } from './palette';
 import { useLive } from '../store/live';
 import { useOnChange } from '../store/useOnChange';
+import { Button } from 'primereact/button';
+import { resumeSession, useClaudeAvailable } from '../actions/projectActions';
 
 type Preset = '7' | '30' | '90' | 'all' | 'custom';
 
@@ -61,6 +63,7 @@ function Kpi({ label, value, sub, icon }: { label: string; value: string | numbe
 export default function ClaudeInsights({ projectIds, single }: Props) {
   const { mode, version: themeVersion } = useTheme();
   const filters = useFilters();
+  const claudeOk = useClaudeAvailable();
   const [preset, setPreset] = useState<Preset>('30');
   const [custom, setCustom] = useState<(Date | null)[] | null>(null);
   const [data, setData] = useState<ClaudeOverview | null>(null);
@@ -271,6 +274,11 @@ export default function ClaudeInsights({ projectIds, single }: Props) {
                 <Column field="title" header="Session" sortable body={(s: ClaudeSession) => (
                   <div className="flex flex-column" style={{ maxWidth: '20rem' }}>
                     <span className="white-space-nowrap overflow-hidden text-overflow-ellipsis" title={s.title ?? s.id}>{s.title ?? <em className="text-500">untitled</em>}</span>
+                    {s.task && (
+                      <small className="text-500 white-space-nowrap overflow-hidden text-overflow-ellipsis" title={`Likely plan task: ${s.task.text}`}>
+                        <i className="pi pi-check-square text-xs mr-1" />{s.task.text}
+                      </small>
+                    )}
                     {!single && (s.projectId
                       ? <Link to={`/projects/${s.projectId}`} className="text-500 text-sm no-underline hover:text-primary">{s.projectName}</Link>
                       : <small className="text-500">{s.projectName}</small>)}
@@ -290,6 +298,12 @@ export default function ClaudeInsights({ projectIds, single }: Props) {
                   </div>
                 )} />
                 <Column field="costUsd" header="Est. cost" sortable body={(s: ClaudeSession) => formatUsd(s.costUsd)} />
+                {claudeOk && (
+                  <Column header={<span className="sr-only">Resume</span>} body={(s: ClaudeSession) => (s.projectId && s.resumable ? (
+                    <Button icon="pi pi-replay" rounded text size="small" aria-label={`Resume ${s.title ?? 'session'}`}
+                      title="Resume in a terminal (claude --resume)" onClick={() => { void resumeSession(s.projectId!, s.id, s.title); }} />
+                  ) : null)} />
+                )}
               </DataTable>
             </Card>
           </div>

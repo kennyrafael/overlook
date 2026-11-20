@@ -7,6 +7,9 @@ export interface DesktopBridge {
   setPrefs(patch: Partial<DesktopPrefs>): Promise<DesktopPrefs | null>;
   /** macOS app menu commands. Older builds do not have it. */
   onCommand?(cb: (cmd: 'about' | 'settings') => void): void;
+  /** Native notification; clicking it shows the window and calls onOpenProject. Older builds do not have it. */
+  notify?(n: { title: string; body: string; projectId: string }): Promise<boolean>;
+  onOpenProject?(cb: (projectId: string) => void): void;
 }
 
 export interface DesktopPrefs {
@@ -14,6 +17,10 @@ export interface DesktopPrefs {
   closeToTray: boolean;
   /** Check for updates at start-up and once a day (Windows). */
   autoUpdate: boolean;
+  /** Notify when a Claude session waits for the user (absent in older builds). */
+  notifyWaiting?: boolean;
+  /** Project ids that never notify. */
+  mutedProjects?: string[];
 }
 
 /** The desktop bridge, or null when running in a normal browser tab. */
