@@ -28,6 +28,7 @@ const NAV = [
   { label: 'Board', icon: 'pi pi-th-large', to: '/board' },
   { label: 'Claude', icon: 'pi pi-microchip-ai', to: '/claude' },
   { label: 'Git', icon: 'pi pi-github', to: '/git' },
+  { label: 'Summary', icon: 'pi pi-calendar', to: '/summary' },
   { label: 'Settings', icon: 'pi pi-cog', to: '/settings' },
 ];
 

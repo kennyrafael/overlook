@@ -1,0 +1,24 @@
+/* Phase 8: away card, weekly summary, branches detail. Kept apart from app.css so phases merge cleanly. */
+.away-card { border-left: 4px solid var(--primary-color); }
+.away-card .p-card-body { padding: 1rem 1.25rem; }
+.away-card .p-card-content { padding: 0; }
+.away-list li { min-width: 0; }
+.away-project { display: inline-flex; flex-direction: column; gap: 0.1rem; padding: 0.35rem 0.6rem; border: 1px solid var(--surface-border); border-radius: var(--border-radius); background: var(--surface-ground); }
+.away-project:hover { border-color: var(--primary-color); }
+
+.summary-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.summary-week { font-weight: 700; min-width: 12rem; text-align: center; }
+.summary-project h3 { margin: 0; font-size: 1.05rem; }
+.summary-section-title { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-color-secondary); margin: 0.75rem 0 0.25rem; }
+.summary-list { list-style: none; margin: 0; padding: 0; }
+.summary-list li { display: flex; gap: 0.5rem; align-items: baseline; padding: 0.15rem 0; min-width: 0; }
+.summary-list .summary-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.summary-hash { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.75rem; color: var(--text-color-secondary); flex: none; }
+.summary-markdown { width: 100%; min-height: 14rem; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.8rem; }
+
+.repo-branches { padding: 0.5rem 0.75rem; }
+.repo-branches h4 { margin: 0 0 0.4rem; font-size: 0.85rem; color: var(--text-color-secondary); text-transform: uppercase; letter-spacing: 0.03em; }
+.repo-branches table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.repo-branches td, .repo-branches th { padding: 0.25rem 0.5rem; text-align: left; border-bottom: 1px solid var(--surface-border); vertical-align: top; }
+.repo-branches th { font-weight: 600; color: var(--text-color-secondary); }
+.repo-branches code { font-size: 0.8rem; word-break: break-all; }
